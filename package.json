@@ -1,0 +1,26 @@
+{
+  "type": "module",
+  "name": "upt-lab-dashboard",
+  "version": "1.0.0",
+  "description": "UPT Laboratorium Perindustrian – Kabupaten Tegal dashboard",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.5.0",
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.4",
+    "pinia": "^2.1.6",
+    "@heroicons/vue": "^2.0.18"
+  },
+  "devDependencies": {
+    "vite": "^4.4.9",
+    "@vitejs/plugin-vue": "^4.2.3",
+    "tailwindcss": "^3.4.1",
+    "postcss": "^8.4.31",
+    "autoprefixer": "^10.4.14"
+  }
+}

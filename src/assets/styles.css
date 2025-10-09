@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Additional global styles can be added here.  The Tailwind directives
+  above will include the base styles, component classes, and utility
+  classes based on the configuration in `tailwind.config.js`.
+*/
