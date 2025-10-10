@@ -63,19 +63,21 @@
           {{ pageTitle }}
         </h1>
         <div class="flex items-center gap-4 px-6">
-          <!-- Display the current user's name if logged in, otherwise a placeholder -->
-          <span class="hidden sm:block text-gray-600">
+          <span class="hidden sm:block text-gray-100">
             {{ authStore.currentUser?.name || 'Guest' }}
           </span>
-          <img
-            src="https://placehold.co/32x32"
-            alt="Profile"
-            class="w-8 h-8 rounded-full"
-          />
-          <!-- Theme toggle button -->
-          
+
+          <!-- Avatar jadi link ke profile -->
+          <router-link to="/profile" title="My Profile">
+            <img
+              :src="userAvatar"
+              alt="Profile"
+              class="w-8 h-8 rounded-full ring-2 ring-white cursor-pointer hover:opacity-80 transition"
+            />
+          </router-link>
         </div>
       </header>
+
       <!-- Page content -->
       <!-- Menggunakan lebar penuh untuk area konten utama tanpa membatasi max width.
            Padding horizontal diatur secara responsif: px-4 pada layar kecil, sm:px-6 pada lebar ≥640px,
@@ -93,7 +95,6 @@ import { useRoute } from 'vue-router';
 import {
   HomeIcon,
   ClipboardDocumentListIcon,
-  DocumentTextIcon,
   CheckCircleIcon,
   IdentificationIcon,
   BriefcaseIcon,
@@ -127,6 +128,7 @@ const navByRole = {
     { path: '/keuangan', label: 'Keuangan', icon: CreditCardIcon },
     { path: '/laporan', label: 'Laporan', icon: ChartBarIcon },
     { path: '/users', label: 'Users', icon: UserGroupIcon },
+    { path: '/profile', label: 'Profile', icon: IdentificationIcon },
   ],
   'Admin Penerima': [
     { path: '/dashboard', label: 'Dashboard', icon: HomeIcon },

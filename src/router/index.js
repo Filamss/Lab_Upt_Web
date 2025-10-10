@@ -14,14 +14,14 @@ const LaporanPage = () => import('../pages/LaporanPage.vue');
 const UsersPage = () => import('../pages/UsersPage.vue');
 const KajiUlangPrint = () => import('../pages/print/KajiUlangPrint.vue');
 const PrintPage = () => import('../pages/print/PrintPage.vue');
-
+const ProfilePage = () => import('../pages/ProfilePage.vue')
 const routes = [
   { path: '/', redirect: '/dashboard' },
 
   // 👇 halaman login tanpa layout (fullscreen)
   { path: '/login', component: LoginPage, meta: { layout: 'auth' } },
-
   { path: '/dashboard', component: DashboardPage },
+  { path: '/profile', component: ProfilePage },
   { path: '/kaji-ulang', component: KajiUlangPage },
   { path: '/validasi', component: ValidasiPage },
   { path: '/kartu-kendali', component: KartuKendaliPage },

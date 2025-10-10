@@ -16,14 +16,6 @@ export const useUserStore = defineStore('user', {
         password: 'password1',
         active: true,
       },
-      {
-        id: 2,
-        name: 'Andi',
-        role: 'Admin Penerima',
-        email: 'andi@example.com',
-        password: 'password2',
-        active: true,
-      },
     ],
   }),
 });
