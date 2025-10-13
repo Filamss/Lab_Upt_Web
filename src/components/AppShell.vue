@@ -3,7 +3,7 @@
     <!-- Sidebar -->
     <aside
       :class="[
-        'bg-surface text-gray-800 transition-all duration-300 ease-in-out overflow-y-auto',
+        'bg-surface text-gray-800 transition-all duration-300 ease-in-out flex flex-col',
         collapsed ? 'w-16' : 'w-64',
       ]"
     >
@@ -11,9 +11,9 @@
       <div
         class="flex items-center justify-between h-16 px-4 border-b border-border"
       >
-        <span class="font-bold text-lg text-primaryDark" v-if="!collapsed">
-          SIAPEL
-        </span>
+        <span class="font-bold text-lg text-primaryDark" v-if="!collapsed"
+          >SIAPEL</span
+        >
         <button
           class="focus:outline-none"
           @click="collapsed = !collapsed"
@@ -37,35 +37,43 @@
       </div>
 
       <!-- Navigation -->
-      <nav class="mt-4">
+      <nav class="mt-4 flex-1 overflow-y-auto relative">
         <ul>
           <!-- Dashboard -->
-          <li>
+          <li class="relative group">
             <router-link
               to="/Dashboard"
+              :title="'Dashboard'"
               class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2"
               :class="{
                 'bg-gradient-to-r from-primaryLight to-primaryDark text-white':
                   route.path === '/Dashboard',
+                'justify-center': collapsed,
               }"
             >
-              <HomeIcon class="w-5 h-5" />
+              <HomeIcon class="w-5 h-5 shrink-0" />
               <span v-if="!collapsed">Dashboard</span>
             </router-link>
           </li>
 
           <!-- Dropdown Groups -->
-          <li v-for="group in groupedMenu" :key="group.label" class="mb-2">
+          <li
+            v-for="group in groupedMenu"
+            :key="group.label"
+            class="relative group mb-2"
+          >
             <button
               class="flex items-center justify-between w-[calc(100%-1rem)] px-3 py-3 rounded-md mx-2 mb-1 hover:bg-primaryLight hover:text-white"
+              :title="collapsed ? group.label : ''"
               :class="{
                 'bg-gradient-to-r from-primaryLight to-primaryDark text-white':
                   openGroup === group.label,
+                'justify-center': collapsed,
               }"
               @click="toggleGroup(group.label)"
             >
               <div class="flex items-center gap-3">
-                <component :is="group.icon" class="w-5 h-5" />
+                <component :is="group.icon" class="w-5 h-5 shrink-0" />
                 <span v-if="!collapsed">{{ group.label }}</span>
               </div>
               <svg
@@ -89,16 +97,22 @@
             <!-- Submenu -->
             <transition name="fade">
               <ul v-if="openGroup === group.label" class="pl-4 pr-3">
-                <li v-for="child in group.children" :key="child.path">
+                <li
+                  v-for="child in group.children"
+                  :key="child.path"
+                  class="relative group"
+                >
                   <router-link
                     :to="child.path"
-                    class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2 w-[calc(100%-0.5rem)]"
+                    :title="collapsed ? child.label : ''"
+                    class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2 transition-all duration-200 w-[calc(100%-0.5rem)]"
                     :class="{
                       'bg-gradient-to-r from-primaryLight to-primaryDark text-white':
                         route.path === child.path,
+                      'justify-center': collapsed,
                     }"
                   >
-                    <component :is="child.icon" class="w-5 h-5" />
+                    <component :is="child.icon" class="w-5 h-5 shrink-0" />
                     <span v-if="!collapsed">{{ child.label }}</span>
                   </router-link>
                 </li>
@@ -108,39 +122,44 @@
         </ul>
       </nav>
 
-      <div class="mt-auto border-t border-border p-3">
-        <!-- Profile -->
-        <router-link
-          to="/profile"
-          class="flex items-center justify-start gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-1 mb-2 transition-all duration-200"
-          :class="{ 'justify-center': collapsed }"
-        >
-          <IdentificationIcon class="w-6 h-6 shrink-0" />
-          <span v-if="!collapsed">Profile</span>
-        </router-link>
-
-        <!-- Logout -->
-        <button
-          @click="logout"
-          class="flex items-center justify-start gap-3 p-3 rounded-md hover:bg-danger hover:text-white mx-1 mb-2 w-[calc(100%-0.5rem)] transition-all duration-200"
-          :class="{ 'justify-center': collapsed }"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-6 h-6 shrink-0"
+      <!-- Footer (Profile & Logout) -->
+      <div class="border-t border-border p-3 mt-auto">
+        <div class="relative group">
+          <router-link
+            to="/profile"
+            :title="collapsed ? 'Profile' : ''"
+            class="flex items-center justify-start gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-1 mb-2 w-full transition-all duration-200"
+            :class="{ 'justify-center': collapsed }"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M15.75 9V5.25a.75.75 0 00-.75-.75H5.25A.75.75 0 004.5 5.25v13.5a.75.75 0 00.75.75h9.75a.75.75 0 00.75-.75V15m3 0l3-3m0 0l-3-3m3 3H9"
-            />
-          </svg>
-          <span v-if="!collapsed">Logout</span>
-        </button>
+            <IdentificationIcon class="w-6 h-6 shrink-0" />
+            <span v-if="!collapsed">Profile</span>
+          </router-link>
+        </div>
+
+        <div class="relative group">
+          <button
+            @click="logout"
+            :title="collapsed ? 'Logout' : ''"
+            class="flex items-center justify-start gap-3 p-3 rounded-md hover:bg-danger hover:text-white mx-1 mb-2 w-full transition-all duration-200"
+            :class="{ 'justify-center': collapsed }"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-6 h-6 shrink-0"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M15.75 9V5.25a.75.75 0 00-.75-.75H5.25A.75.75 0 004.5 5.25v13.5a.75.75 0 00.75.75h9.75a.75.75 0 00.75-.75V15m3 0l3-3m0 0l-3-3m3 3H9"
+              />
+            </svg>
+            <span v-if="!collapsed">Logout</span>
+          </button>
+        </div>
       </div>
     </aside>
 
