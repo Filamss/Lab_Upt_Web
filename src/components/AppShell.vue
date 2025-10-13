@@ -3,10 +3,11 @@
     <!-- Sidebar -->
     <aside
       :class="[
-        'bg-surface text-gray-800 transition-all duration-300 ease-in-out',
+        'bg-surface text-gray-800 transition-all duration-300 ease-in-out overflow-y-auto',
         collapsed ? 'w-16' : 'w-64',
       ]"
     >
+      <!-- Header -->
       <div
         class="flex items-center justify-between h-16 px-4 border-b border-border"
       >
@@ -14,7 +15,7 @@
           SIAPEL
         </span>
         <button
-          class="text-gradient-to-r from-primaryLight to-primaryDark focus:outline-none"
+          class="focus:outline-none"
           @click="collapsed = !collapsed"
           title="Toggle sidebar"
         >
@@ -34,23 +35,113 @@
           </svg>
         </button>
       </div>
+
+      <!-- Navigation -->
       <nav class="mt-4">
         <ul>
-          <li v-for="item in navItems" :key="item.path">
+          <!-- Dashboard -->
+          <li>
             <router-link
-              :to="item.path"
+              to="/Dashboard"
               class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2"
               :class="{
                 'bg-gradient-to-r from-primaryLight to-primaryDark text-white':
-                  route.path === item.path,
+                  route.path === '/Dashboard',
               }"
             >
-              <component :is="item.icon" class="w-5 h-5" />
-              <span v-if="!collapsed">{{ item.label }}</span>
+              <HomeIcon class="w-5 h-5" />
+              <span v-if="!collapsed">Dashboard</span>
             </router-link>
+          </li>
+
+          <!-- Dropdown Groups -->
+          <li v-for="group in groupedMenu" :key="group.label" class="mb-2">
+            <button
+              class="flex items-center justify-between w-[calc(100%-1rem)] px-3 py-3 rounded-md mx-2 mb-1 hover:bg-primaryLight hover:text-white"
+              :class="{
+                'bg-gradient-to-r from-primaryLight to-primaryDark text-white':
+                  openGroup === group.label,
+              }"
+              @click="toggleGroup(group.label)"
+            >
+              <div class="flex items-center gap-3">
+                <component :is="group.icon" class="w-5 h-5" />
+                <span v-if="!collapsed">{{ group.label }}</span>
+              </div>
+              <svg
+                v-if="!collapsed"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-4 h-4 transform transition-transform duration-200"
+                :class="{ 'rotate-90': openGroup === group.label }"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                />
+              </svg>
+            </button>
+
+            <!-- Submenu -->
+            <transition name="fade">
+              <ul v-if="openGroup === group.label" class="pl-4 pr-3">
+                <li v-for="child in group.children" :key="child.path">
+                  <router-link
+                    :to="child.path"
+                    class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2 w-[calc(100%-0.5rem)]"
+                    :class="{
+                      'bg-gradient-to-r from-primaryLight to-primaryDark text-white':
+                        route.path === child.path,
+                    }"
+                  >
+                    <component :is="child.icon" class="w-5 h-5" />
+                    <span v-if="!collapsed">{{ child.label }}</span>
+                  </router-link>
+                </li>
+              </ul>
+            </transition>
           </li>
         </ul>
       </nav>
+
+      <div class="mt-auto border-t border-border p-3">
+        <!-- Profile -->
+        <router-link
+          to="/profile"
+          class="flex items-center justify-start gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-1 mb-2 transition-all duration-200"
+          :class="{ 'justify-center': collapsed }"
+        >
+          <IdentificationIcon class="w-6 h-6 shrink-0" />
+          <span v-if="!collapsed">Profile</span>
+        </router-link>
+
+        <!-- Logout -->
+        <button
+          @click="logout"
+          class="flex items-center justify-start gap-3 p-3 rounded-md hover:bg-danger hover:text-white mx-1 mb-2 w-[calc(100%-0.5rem)] transition-all duration-200"
+          :class="{ 'justify-center': collapsed }"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-6 h-6 shrink-0"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15.75 9V5.25a.75.75 0 00-.75-.75H5.25A.75.75 0 004.5 5.25v13.5a.75.75 0 00.75.75h9.75a.75.75 0 00.75-.75V15m3 0l3-3m0 0l-3-3m3 3H9"
+            />
+          </svg>
+          <span v-if="!collapsed">Logout</span>
+        </button>
+      </div>
     </aside>
 
     <!-- Main content area -->
@@ -67,7 +158,7 @@
             {{ authStore.currentUser?.name || 'Guest' }}
           </span>
 
-          <!-- Avatar jadi link ke profile -->
+          <!-- Avatar -->
           <router-link to="/profile" title="My Profile">
             <img
               :src="userAvatar"
@@ -79,9 +170,6 @@
       </header>
 
       <!-- Page content -->
-      <!-- Menggunakan lebar penuh untuk area konten utama tanpa membatasi max width.
-           Padding horizontal diatur secara responsif: px-4 pada layar kecil, sm:px-6 pada lebar ≥640px,
-           dan lg:px-8 pada lebar ≥1024px. -->
       <main class="flex-1 overflow-y-auto w-full px-4 sm:px-6 lg:px-8 py-6">
         <slot />
       </main>
@@ -102,59 +190,111 @@ import {
   CreditCardIcon,
   ChartBarIcon,
   UserGroupIcon,
+  FolderIcon,
 } from '@heroicons/vue/24/outline';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 const collapsed = ref(false);
 const route = useRoute();
 const authStore = useAuthStore();
+const openGroup = ref(null);
 
-const navByRole = {
-  'Super Admin': [
-    { path: '/dashboard', label: 'Dashboard', icon: HomeIcon },
-    {
-      path: '/kaji-ulang',
-      label: 'Kaji Ulang',
-      icon: ClipboardDocumentListIcon,
-    },
-    { path: '/validasi', label: 'Validasi', icon: CheckCircleIcon },
-    {
-      path: '/kartu-kendali',
-      label: 'Kartu Kendali',
-      icon: IdentificationIcon,
-    },
-    { path: '/surat-perintah', label: 'Surat Perintah', icon: BriefcaseIcon },
-    { path: '/layanan', label: 'Layanan & Tarif', icon: Cog6ToothIcon },
-    { path: '/keuangan', label: 'Keuangan', icon: CreditCardIcon },
-    { path: '/laporan', label: 'Laporan', icon: ChartBarIcon },
-    { path: '/users', label: 'Users', icon: UserGroupIcon },
-    { path: '/profile', label: 'Profile', icon: IdentificationIcon },
-  ],
-  'Admin Penerima': [
-    { path: '/dashboard', label: 'Dashboard', icon: HomeIcon },
-    {
-      path: '/kaji-ulang',
-      label: 'Kaji Ulang',
-      icon: ClipboardDocumentListIcon,
-    },
-    { path: '/keuangan', label: 'Keuangan', icon: CreditCardIcon },
-  ],
-};
+/**
+ * Toggle group so that only one stays open at a time
+ */
+function toggleGroup(label) {
+  if (openGroup.value === label) {
+    openGroup.value = null; // close if same clicked
+  } else {
+    openGroup.value = label; // open new one, close others
+  }
+}
 
-const navItems = computed(() => {
-  const role = authStore.currentUser?.role;
-  return navByRole[role] || [];
-});
+const groupedMenu = [
+  {
+    label: 'Pengujian',
+    icon: FolderIcon,
+    children: [
+      {
+        label: 'Permintaan',
+        path: '/permintaan',
+        icon: ClipboardDocumentListIcon,
+      },
+      { label: 'Kaji Ulang', path: '/kaji-ulang', icon: CheckCircleIcon },
+    ],
+  },
+  {
+    label: 'Layanan & Tarif',
+    icon: Cog6ToothIcon,
+    children: [
+      { label: 'Daftar Layanan', path: '/layanan', icon: Cog6ToothIcon },
+    ],
+  },
+  {
+    label: 'Cetak',
+    icon: BriefcaseIcon,
+    children: [
+      { label: 'Validasi', path: '/validasi', icon: CheckCircleIcon },
+      {
+        label: 'Kartu Kendali',
+        path: '/kartu-kendali',
+        icon: IdentificationIcon,
+      },
+      { label: 'Surat Perintah', path: '/surat-perintah', icon: BriefcaseIcon },
+    ],
+  },
+  {
+    label: 'Laporan',
+    icon: ChartBarIcon,
+    children: [
+      { label: 'Keuangan', path: '/laporan-keuangan', icon: CreditCardIcon },
+      {
+        label: 'Pengujian',
+        path: '/laporan-pengujian',
+        icon: ClipboardDocumentListIcon,
+      },
+    ],
+  },
+  {
+    label: 'User Management',
+    icon: UserGroupIcon,
+    children: [
+      { label: 'Users', path: '/users', icon: UserGroupIcon },
+      { label: 'Roles', path: '/roles', icon: Cog6ToothIcon },
+      { label: 'Permissions', path: '/permissions', icon: Cog6ToothIcon },
+    ],
+  },
+];
 
 const pageTitle = computed(() => {
-  const item = navItems.value.find((i) => i.path === route.path);
-  return item ? item.label : route.path.replace('/', '') || 'Dashboard';
+  const activeChild = groupedMenu
+    .flatMap((g) => g.children)
+    .find((i) => i.path === route.path);
+  return activeChild
+    ? activeChild.label
+    : route.path.replace('/', '') || 'Dashboard';
 });
+
+function logout() {
+  const authStore = useAuthStore();
+  authStore.logout(); // kalau di store kamu ada method logout
+  window.location.href = '/login';
+}
 </script>
 
 <style scoped>
-/* Hide scrollbars for the sidebar on smaller screens */
 aside::-webkit-scrollbar {
   display: none;
+}
+
+/* Animasi dropdown */
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.25s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
 }
 </style>

@@ -14,7 +14,7 @@ const LaporanPage = () => import('../pages/LaporanPage.vue');
 const UsersPage = () => import('../pages/UsersPage.vue');
 const KajiUlangPrint = () => import('../pages/print/KajiUlangPrint.vue');
 const PrintPage = () => import('../pages/print/PrintPage.vue');
-const ProfilePage = () => import('../pages/ProfilePage.vue')
+const ProfilePage = () => import('../pages/ProfilePage.vue');
 const routes = [
   { path: '/', redirect: '/dashboard' },
 
@@ -27,7 +27,7 @@ const routes = [
   { path: '/kartu-kendali', component: KartuKendaliPage },
   { path: '/surat-perintah', component: SuratPerintahPage },
   { path: '/layanan', component: LayananPage },
-  { path: '/keuangan', component: KeuanganPage },
+  { path: '/laporan-keuangan', component: KeuanganPage },
   { path: '/laporan', component: LaporanPage },
   { path: '/users', component: UsersPage },
 
