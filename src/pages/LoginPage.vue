@@ -12,9 +12,9 @@
 
       <form @submit.prevent="handleLogin" class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
+          <label class="block text-sm font-medium text-gray-700 mb-1"
+            >Email</label
+          >
           <input
             v-model="email"
             type="email"
@@ -25,9 +25,9 @@
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Password
-          </label>
+          <label class="block text-sm font-medium text-gray-700 mb-1"
+            >Password</label
+          >
           <div class="relative">
             <input
               :type="showPassword ? 'text' : 'password'"
@@ -114,13 +114,11 @@ import backgroundImage from '@/assets/bg-login.jpg';
 
 const router = useRouter();
 const authStore = useAuthStore();
-
 const email = ref('');
 const password = ref('');
 const errorMessage = ref('');
 const showPassword = ref(false);
 
-// gunakan authStore.login(email,password). store menyediakan fallback dev jika backend tidak ada
 async function handleLogin() {
   errorMessage.value = '';
   const res = await authStore.login({
@@ -128,17 +126,9 @@ async function handleLogin() {
     password: password.value,
   });
   if (res.ok) {
-    router.push('/dashboard');
+    router.push('/Dashboard');
   } else {
-    errorMessage.value = res.message || 'Username atau password salah!';
+    errorMessage.value = res.message || 'Email atau password salah.';
   }
 }
 </script>
-
-<style scoped>
-/* efek blur dan kontras di background */
-.bg-overlay {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-}
-</style>
