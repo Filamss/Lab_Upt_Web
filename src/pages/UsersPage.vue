@@ -57,7 +57,7 @@
     </div>
 
     <!-- === Users table === -->
-    <DataTable
+    <EasyDataTable
       :columns="columns"
       :rows="rows"
       :searchable="true"
@@ -96,14 +96,13 @@
           </button>
         </div>
       </template>
-    </DataTable>
+    </EasyDataTable>
   </div>
 </template>
 
 <script setup>
 import { reactive, computed } from 'vue';
 import { useUserStore } from '@/stores/useUserStore';
-import DataTable from '@/components/DataTable.vue';
 import { PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline'
 
 const userStore = useUserStore();

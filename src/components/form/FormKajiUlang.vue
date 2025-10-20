@@ -11,21 +11,30 @@
     <!-- === FORM INPUT === -->
     <div class="bg-white rounded-xl shadow-md p-4 mb-6">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <FormRow label="No Order">
+        <!-- 🔍 Pencarian ID Order / Permintaan -->
+        <FormRow label="Cari ID Order / Permintaan">
           <input
             type="text"
-            v-model="form.orderNo"
-            class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100"
-            readonly
-          />
-        </FormRow>
-        <FormRow label="No Sampel">
-          <input
-            type="text"
-            v-model="form.sampleNo"
+            v-model="searchId"
+            placeholder="Ketik minimal 8 karakter ULID..."
             class="border border-gray-300 rounded-md px-3 py-2 w-full"
+            @input="handleSearch"
           />
+          <ul
+            v-if="searchResults.length"
+            class="border border-gray-200 mt-1 rounded-md bg-white max-h-40 overflow-y-auto"
+          >
+            <li
+              v-for="item in searchResults"
+              :key="item.idOrder"
+              class="px-3 py-1 hover:bg-gray-100 cursor-pointer text-sm"
+              @click="selectPermintaan(item)"
+            >
+              {{ item.idOrder }} — {{ item.customerName }}
+            </li>
+          </ul>
         </FormRow>
+
         <FormRow label="Tanggal">
           <input
             type="date"
@@ -33,6 +42,7 @@
             class="border border-gray-300 rounded-md px-3 py-2 w-full"
           />
         </FormRow>
+
         <FormRow label="Jenis Pengujian">
           <select
             v-model="form.testType"
@@ -44,6 +54,7 @@
             </option>
           </select>
         </FormRow>
+
         <FormRow label="Nama Customer">
           <input
             type="text"
@@ -51,18 +62,20 @@
             class="border border-gray-300 rounded-md px-3 py-2 w-full"
           />
         </FormRow>
+
         <FormRow label="No Handphone/WhatsApp">
           <input
             type="text"
-            v-model="form.customerNo"
+            v-model="form.customerPhone"
             class="border border-gray-300 rounded-md px-3 py-2 w-full"
           />
         </FormRow>
+
         <div class="sm:col-span-2">
           <FormRow label="Alamat">
             <input
               type="text"
-              v-model="form.address"
+              v-model="form.customerAddress"
               class="border border-gray-300 rounded-md px-3 py-2 w-full"
             />
           </FormRow>
@@ -88,15 +101,15 @@
             class="odd:bg-white even:bg-gray-50"
           >
             <td class="px-3 py-2 border-b text-center">{{ index + 1 }}</td>
-            <td class="px-3 py-2 border-b">{{ row.perihal }}</td>
+            <td class="px-3 py-2 border-b">{{ row.topic }}</td>
             <td class="px-3 py-2 border-b">
               <select
-                v-model="row.hasil"
+                v-model="row.result"
                 class="border border-gray-300 rounded-md px-2 py-1 w-full"
               >
                 <option value="">-</option>
                 <option
-                  v-for="opt in getRowOptions(row.perihal)"
+                  v-for="opt in getRowOptions(row.topic)"
                   :key="opt"
                   :value="opt"
                 >
@@ -116,28 +129,27 @@
           rows="3"
           class="border border-gray-300 rounded-md px-3 py-2 w-full"
         />
-        <p class="mt-1 text-xs italic">*) Coret yang tidak perlu</p>
       </div>
     </div>
 
-    <!-- === SIGNATURE NAMES (simple text inputs) === -->
+    <!-- === SIGNATURE === -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
       <div class="bg-white rounded-xl shadow-md p-4">
-        <h4 class="font-medium mb-2">Customer (nama yang tercetak)</h4>
+        <h4 class="font-medium mb-2">Nama Customer</h4>
         <input
           type="text"
           v-model="signatures.customer"
-          placeholder="Nama customer (opsional)"
-          class="border border-gray-300 rounded-md px-3 py-2 w-full"
+          readonly
+          class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50"
         />
       </div>
       <div class="bg-white rounded-xl shadow-md p-4">
-        <h4 class="font-medium mb-2">Administrasi (nama petugas)</h4>
+        <h4 class="font-medium mb-2">Nama Petugas / Administrasi</h4>
         <input
           type="text"
           v-model="signatures.admin"
-          placeholder="Nama administrasi"
-          class="border border-gray-300 rounded-md px-3 py-2 w-full"
+          readonly
+          class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50"
         />
       </div>
     </div>
@@ -166,18 +178,15 @@
         Tolak
       </button>
     </div>
-
-    <!-- AREA CETAK (TERSEMBUNYI) -->
-    <div ref="printArea" style="display: none">
-      <KajiUlangPrint :data="printData" />
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue';
-import FormRow from '@/components/FormRow.vue';
-import KajiUlangPrint from '@/pages/print/KajiUlangPrint.vue';
+import { ref, nextTick } from 'vue'
+import { usePermintaanStore } from '@/stores/usePermintaanStore'
+import { useAuthStore } from '@/stores/useAuthStore'
+import FormRow from '@/components/FormRow.vue'
+import KajiUlangPrint from '@/components/print/KajiUlangPrint.vue'
 
 const props = defineProps({
   form: { type: Object, required: true },
@@ -186,75 +195,102 @@ const props = defineProps({
   tests: { type: [Array, Object], required: true },
   selectedCustomerAddress: { type: String, required: true },
   getRowOptions: { type: Function, required: true },
-});
+})
+const emit = defineEmits([
+  'save-draft',
+  'lolos-kaji-ulang',
+  'tolak',
+  'close',
+  'select-permintaan',
+])
 
-const emit = defineEmits(['save-draft', 'lolos-kaji-ulang', 'tolak', 'close']);
+const permintaanStore = usePermintaanStore()
+const authStore = useAuthStore()
+const searchId = ref('')
+const searchResults = ref([])
 
-const printArea = ref(null);
-const printData = ref({});
-const signatures = ref({ customer: props.form.customerName || '', admin: '' });
+// === CARI PERMINTAAN ===
+function handleSearch() {
+  const query = searchId.value.trim()
+  if (query.length < 8) {
+    searchResults.value = []
+    return
+  }
+  searchResults.value = permintaanStore.searchPermintaanById(query)
+}
 
-// === CETAK LANGSUNG TANPA POPUP ===
+// === KETIKA PERMINTAAN DIPILIH ===
+function selectPermintaan(item) {
+  searchId.value = item.idOrder
+  searchResults.value = []
+
+  // Isi otomatis semua field form
+  props.form.idOrder = item.idOrder
+  props.form.customerName = item.customerName
+  props.form.customerPhone = item.customerPhone
+  props.form.customerAddress = item.customerAddress
+  props.form.testType = item.workType || ''
+
+  // Auto isi tanda tangan
+  signatures.value.customer = item.customerName
+  signatures.value.admin = authStore.currentUser?.name || 'Petugas'
+}
+
+// === CETAK ===
+const printArea = ref(null)
+const printData = ref({})
+const signatures = ref({
+  customer: props.form.customerName || '',
+  admin: authStore.currentUser?.name || '',
+})
+
 async function printNow() {
   printData.value = {
     orderNo: props.form.orderNo,
     sampleNo: props.form.sampleNo,
     date: props.form.date,
     customerName: props.form.customerName,
-    address: props.form.address,
+    customerAddress: props.form.customerAddress,
     testType: props.form.testType,
     note: props.form.note,
     kajiUlangRows: props.kajiUlangRows,
     signatures: [
-      {
-        label: 'Customer',
-        name: signatures.value.customer || props.form.customerName || '',
-      },
-      { label: 'Administrasi', name: signatures.value.admin || '' },
+      { label: 'Customer', name: signatures.value.customer },
+      { label: 'Petugas', name: signatures.value.admin },
     ],
-  };
+  }
 
-  await nextTick();
-
-  // Save data to sessionStorage so the print page can pick it up
+  await nextTick()
   try {
-    const key = `print:kaji-ulang:${printData.value.orderNo || 'anon'}`;
-    sessionStorage.setItem(key, JSON.stringify(printData.value));
-
-    // Open generic print route in a new tab which will auto-print
-    // Also write to window.__PRINT_DATA__ on the opener so the new tab can
-    // read the object directly as a fallback (works same-origin).
-    try {
-      window.__PRINT_DATA__ = printData.value;
-    } catch (e) {
-      /* ignore */
-    }
+    const key = `print:kaji-ulang:${printData.value.orderNo || 'anon'}`
+    sessionStorage.setItem(key, JSON.stringify(printData.value))
+    window.__PRINT_DATA__ = printData.value
     const url = `${location.origin}/print/kaji-ulang/${encodeURIComponent(
       printData.value.orderNo || ''
-    )}`;
-    window.open(url, '_blank', 'noopener');
+    )}`
+    window.open(url, '_blank', 'noopener')
   } catch (e) {
-    // Fallback: if sessionStorage or open fails, still try to call print on current page
-    const printEl = printArea.value;
-    if (!printEl) return;
-    const original = document.body.innerHTML;
-    document.body.innerHTML = printEl.innerHTML;
-    window.print();
-    document.body.innerHTML = original;
-    window.location.reload();
+    const printEl = printArea.value
+    if (!printEl) return
+    const original = document.body.innerHTML
+    document.body.innerHTML = printEl.innerHTML
+    window.print()
+    document.body.innerHTML = original
+    window.location.reload()
   }
 }
 
+// === AKSI ===
 function handleSaveDraft() {
-  emit('save-draft');
+  emit('save-draft')
 }
 function handleLolos() {
-  emit('lolos-kaji-ulang');
+  emit('lolos-kaji-ulang')
 }
 function handleTolak() {
-  emit('tolak');
+  emit('tolak')
 }
 function handleClose() {
-  emit('close');
+  emit('close')
 }
 </script>

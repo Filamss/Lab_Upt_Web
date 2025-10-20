@@ -11,7 +11,7 @@
       </button>
     </div>
     <!-- Finance table -->
-    <DataTable
+    <EasyDataTable
       :columns="columns"
       :rows="rows"
       :searchable="true"
@@ -26,7 +26,7 @@
 import { computed } from 'vue';
 import { useOrderStore } from '@/stores/useOrderStore';
 import { useCustomerStore } from '@/stores/useCustomerStore';
-import DataTable from '@/components/DataTable.vue';
+import DataTable from '@/components/DataTable.vue'; 
 
 const orderStore = useOrderStore();
 const customerStore = useCustomerStore();

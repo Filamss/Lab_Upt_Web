@@ -5,6 +5,7 @@ import router from './router';
 import './assets/styles.css';
 import { useAuthStore } from '@/stores/useAuthStore';
 
+
 // Create Vue application instance
 const app = createApp(App);
 

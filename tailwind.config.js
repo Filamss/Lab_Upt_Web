@@ -1,8 +1,3 @@
-/**
- * Tailwind CSS configuration for the UPT Laboratorium dashboard.
- *
- * Includes custom colors, typography, and animations.
- */
 export default {
   darkMode: 'class',
   content: [

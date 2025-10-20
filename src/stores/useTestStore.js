@@ -1,65 +1,189 @@
-// src/stores/useTestStore.js
-import { defineStore } from 'pinia';
+import { defineStore } from 'pinia'
+import api from '@/services/apiServices'
+import { nanoid } from 'nanoid' // buat id dummy unik
 
-/**
- * Store untuk layanan & tarif:
- * - tests: daftar jenis pengujian (nama, tarif, metode, mesin)
- * - machines: daftar mesin uji
- * - methods: daftar metode uji
- */
 export const useTestStore = defineStore('test', {
   state: () => ({
-    tests: [
-      { id: 1, name: 'Kadar Air', price: 50000, method: 'Gravimetri', equipment: 'Oven' },
-      { id: 2, name: 'pH',       price: 30000, method: 'Potensiometri', equipment: 'pH Meter' },
-      { id: 3, name: 'Protein',  price: 70000, method: 'Kjeldahl',      equipment: 'Kjeltec' },
-    ],
-    machines: ['Universal Testing Machine', 'Oven', 'pH Meter'],   // ← pindahan dari page
-    methods:  ['SNI 1974:2011', 'ASTM C39/C39M', 'ISO 527-1'],     // ← pindahan dari page
+    tests: [],
+    machines: [],
+    methods: [],
+    loading: false,
+    error: null,
   }),
 
   getters: {
-    // Contoh: cari test by id
-    getTestById: (state) => (id) => state.tests.find(t => t.id === id),
+    getTestById: (state) => (id) => state.tests.find((t) => t.id === id),
   },
 
   actions: {
-    // ===== Tests =====
-    addTest(payload) {
-      // payload: { name, price, method, equipment }
-      if (!payload?.name || !payload?.method || !payload?.equipment) return;
-      const nextId = this.tests.length ? Math.max(...this.tests.map(t => t.id)) + 1 : 1;
-      this.tests.push({
-        id: nextId,
-        name: payload.name,
-        price: Number(payload.price) || 0,
-        method: payload.method,
-        equipment: payload.equipment,
-      });
-    },
-    removeTest(id) {
-      const idx = this.tests.findIndex(t => t.id === id);
-      if (idx !== -1) this.tests.splice(idx, 1);
+    // === Ambil semua data dari backend (fallback dummy jika gagal) ===
+    async fetchAll() {
+      try {
+        this.loading = true
+        const [testsRes, machinesRes, methodsRes] = await Promise.all([
+          api.get('/api/v1/tests'),
+          api.get('/api/v1/machines'),
+          api.get('/api/v1/methods'),
+        ])
+
+        this.tests = testsRes.data.data || []
+        this.machines = machinesRes.data.data || []
+        this.methods = methodsRes.data.data || []
+        this.error = null
+      } catch (err) {
+        console.warn('⚠️ Backend belum tersedia, pakai dummy data sementara.')
+        this.error = 'Dummy mode aktif (API belum terhubung).'
+
+        // === Dummy data lokal ===
+        this.tests = [
+          {
+            id: nanoid(),
+            category: 'Pengujian',
+            code: 'UTK',
+            name: 'Uji Tarik',
+            unit: 'Sample',
+            price: 150000,
+            method: 'ASTM E8',
+            equipment: 'Universal Testing Machine',
+          },
+          {
+            id: nanoid(),
+            category: 'Machining',
+            code: 'CNC',
+            name: 'Pemotongan CNC',
+            unit: 'Jam',
+            price: 200000,
+            method: 'Internal SOP 2022',
+            equipment: 'CNC Lathe Machine',
+          },
+        ]
+
+        this.machines = [
+          'Universal Testing Machine',
+          'Oven',
+          'pH Meter',
+          'CNC Lathe Machine',
+        ]
+
+        this.methods = ['ASTM E8', 'SNI 1974:2011', 'Internal SOP 2022']
+      } finally {
+        this.loading = false
+      }
     },
 
-    // ===== Machines =====
-    addMachine(name) {
-      const v = (name || '').trim();
-      if (!v) return;
-      this.machines.push(v);
-    },
-    removeMachine(index) {
-      this.machines.splice(index, 1);
+    // === Tambah pengujian baru ===
+    async addTest(payload) {
+      try {
+        this.loading = true
+        const res = await api.post('/api/v1/tests', payload)
+        const newTest = res.data.data
+        this.tests.push(newTest)
+        return { ok: true, data: newTest }
+      } catch (err) {
+        // fallback lokal (dummy)
+        console.warn('⚠️ API tidak aktif, tambah ke dummy store saja.')
+        const dummy = { id: nanoid(), ...payload }
+        this.tests.push(dummy)
+        return { ok: true, data: dummy, dummy: true }
+      } finally {
+        this.loading = false
+      }
     },
 
-    // ===== Methods =====
-    addMethod(name) {
-      const v = (name || '').trim();
-      if (!v) return;
-      this.methods.push(v);
+    // === Edit / Update pengujian ===
+    async updateTest(payload) {
+      try {
+        this.loading = true
+        const { id, ...data } = payload
+        // update ke API
+        const res = await api.put(`/api/v1/tests/${id}`, data)
+        const updated = res.data.data
+
+        // update di state lokal
+        const idx = this.tests.findIndex((t) => t.id === id)
+        if (idx !== -1) this.tests[idx] = updated
+
+        return { ok: true, data: updated }
+      } catch (err) {
+        console.warn('⚠️ API tidak aktif, update di dummy store saja.')
+        const idx = this.tests.findIndex((t) => t.id === payload.id)
+        if (idx !== -1) this.tests[idx] = { ...this.tests[idx], ...payload }
+        return { ok: true, dummy: true }
+      } finally {
+        this.loading = false
+      }
     },
-    removeMethod(index) {
-      this.methods.splice(index, 1);
+
+    // === Hapus pengujian ===
+    async removeTest(id) {
+      try {
+        this.loading = true
+        await api.delete(`/api/v1/tests/${id}`)
+        this.tests = this.tests.filter((t) => t.id !== id)
+        return { ok: true }
+      } catch (err) {
+        console.warn('⚠️ API tidak aktif, hapus dari dummy store saja.')
+        this.tests = this.tests.filter((t) => t.id !== id)
+        return { ok: true, dummy: true }
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // === Mesin Uji ===
+    async addMachine(name) {
+      if (!name?.trim()) return
+      try {
+        const res = await api.post('/api/v1/machines', { name })
+        this.machines.push(res.data.data)
+      } catch {
+        console.warn('⚠️ API tidak aktif, tambah mesin ke dummy store.')
+        this.machines.push(name)
+      }
+    },
+    async removeMachine(indexOrId) {
+      try {
+        const id =
+          typeof indexOrId === 'number'
+            ? this.machines[indexOrId].id
+            : indexOrId
+        await api.delete(`/api/v1/machines/${id}`)
+        this.machines = this.machines.filter((m) => m.id !== id)
+      } catch {
+        console.warn('⚠️ API tidak aktif, hapus mesin dari dummy store.')
+        if (typeof indexOrId === 'number')
+          this.machines.splice(indexOrId, 1)
+        else
+          this.machines = this.machines.filter((m) => m.id !== indexOrId)
+      }
+    },
+
+    // === Metode Uji ===
+    async addMethod(name) {
+      if (!name?.trim()) return
+      try {
+        const res = await api.post('/api/v1/methods', { name })
+        this.methods.push(res.data.data)
+      } catch {
+        console.warn('⚠️ API tidak aktif, tambah metode ke dummy store.')
+        this.methods.push(name)
+      }
+    },
+    async removeMethod(indexOrId) {
+      try {
+        const id =
+          typeof indexOrId === 'number'
+            ? this.methods[indexOrId].id
+            : indexOrId
+        await api.delete(`/api/v1/methods/${id}`)
+        this.methods = this.methods.filter((m) => m.id !== id)
+      } catch {
+        console.warn('⚠️ API tidak aktif, hapus metode dari dummy store.')
+        if (typeof indexOrId === 'number')
+          this.methods.splice(indexOrId, 1)
+        else
+          this.methods = this.methods.filter((m) => m.id !== indexOrId)
+      }
     },
   },
-});
+})

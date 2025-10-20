@@ -1,35 +1,35 @@
 <template>
   <div>
-    <!-- Transisi animasi antar halaman -->
-    <transition name="fade" mode="out-in">
-      <!-- Tampilkan AppShell hanya bila route tidak berlabel 'auth' atau 'print' pada salah satu matched record -->
-      <AppShell v-if="!isAuthLayout">
-        <router-view />
-      </AppShell>
+    <router-view v-slot="{ Component }">
+      <transition name="fade" mode="out-in">
+        <!-- Layout tanpa shell -->
+        <component v-if="isAuthLayout" :is="Component" />
 
-      <!-- Halaman login / print tanpa AppShell -->
-      <router-view v-else />
-    </transition>
+        <!-- Layout dengan AppShell -->
+        <AppShell v-else>
+          <component :is="Component" />
+        </AppShell>
+      </transition>
+    </router-view>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
-import AppShell from '@/components/AppShell.vue';
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import AppShell from '@/components/AppShell.vue'
 
-const route = useRoute();
+const route = useRoute()
 
-// Periksa semua matched route record. Ini defensif terhadap nested routes
+// Deteksi layout auth / print
 const isAuthLayout = computed(() =>
   route.matched.some(
     (r) => r.meta && (r.meta.layout === 'auth' || r.meta.layout === 'print')
   )
-);
+)
 </script>
 
 <style>
-/* === Fade-in transition === */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.4s ease;

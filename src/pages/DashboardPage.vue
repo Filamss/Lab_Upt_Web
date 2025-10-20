@@ -1,13 +1,8 @@
 <template>
   <div>
-    <!-- KPI cards -->
+    <!-- KPI Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <!-- KPI cards use English status keys to match the Pinia store -->
-      <StatCard
-        label="Order Baru"
-        :value="countByStatus('new')"
-        type="new"
-      />
+      <StatCard label="Order Baru" :value="countByStatus('new')" type="new" />
       <StatCard
         label="Menunggu Validasi"
         :value="countByStatus('pending_validation')"
@@ -25,15 +20,19 @@
       />
     </div>
 
-    <!-- Placeholder for weekly orders chart -->
-    <div class="bg-white rounded-xl shadow-md p-4 h-64 mb-6 flex items-center justify-center text-gray-400">
+    <!-- Chart Placeholder -->
+    <div
+      class="bg-white rounded-xl shadow-md p-4 h-64 mb-6 flex items-center justify-center text-gray-400"
+    >
       Chart mingguan (placeholder)
     </div>
 
     <!-- Filters -->
     <div class="flex flex-col sm:flex-row gap-4 mb-4">
       <div class="flex-1">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Cari Customer</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1"
+          >Cari Customer</label
+        >
         <input
           v-model="filters.search"
           type="text"
@@ -42,7 +41,9 @@
         />
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1"
+          >Status</label
+        >
         <select
           v-model="filters.status"
           class="border border-gray-300 rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"
@@ -56,135 +57,172 @@
       </div>
     </div>
 
-    <!-- Orders table -->
-    <DataTable
-      :columns="tableColumns"
-      :rows="filteredOrders"
-      :searchable="false"
-      :sortable="true"
-      :paginated="true"
-      :pageSize="5"
-    >
-      <template #cell-status="{ row }">
-        <Badge :status="row.status" />
-      </template>
-      <template #cell-customerName="{ row }">
-        {{ row.customerName }}
-      </template>
-      <!-- Show remaining payment in Rupiah format -->
-      <template #cell-remaining="{ row }">
-        Rp {{ Number(row.remaining).toLocaleString('id-ID') }}
-      </template>
-      <template #cell-action="{ row }">
-        <router-link
-          :to="{ path: '/kaji-ulang', query: { orderId: row.id } }"
-          class="text-blue-600 hover:underline text-sm"
-        >
-          Detail
-        </router-link>
-      </template>
-    </DataTable>
+    <!-- Orders Table -->
+    <div class="bg-white border border-gray-200 rounded-xl shadow-md p-4 mb-8">
+      <h3 class="text-lg font-semibold mb-3 text-primaryDark">Daftar Order</h3>
 
-    <!-- Recent activity table -->
-    <div class="mt-8">
-      <h3 class="text-lg font-semibold mb-2">Aktivitas Terbaru</h3>
-      <DataTable
-        :columns="activityColumns"
-        :rows="recentActivities"
-        :searchable="false"
-        :sortable="false"
-        :paginated="false"
+      <div v-if="isLoading" class="text-center text-gray-500 py-6">
+        Memuat data...
+      </div>
+
+      <vue3-datatable
+        v-else
+        :headers="orderHeaders"
+        :items="filteredOrders"
+        :rows-per-page="5"
+        theme-color="#0284C7"
+        table-class="rounded-md overflow-hidden"
+        header-text-direction="left"
+        no-data-text="Belum ada data order."
+      >
+        <template #item-status="{ status }">
+          <Badge :status="status" />
+        </template>
+
+        <template #item-remaining="{ remaining }">
+          Rp {{ Number(remaining || 0).toLocaleString('id-ID') }}
+        </template>
+
+        <template #item-action="{ item }">
+          <router-link
+            v-if="item?.id"
+            :to="{ path: '/kaji-ulang', query: { orderId: item.id } }"
+            class="text-blue-600 hover:underline text-sm"
+          >
+            Detail
+          </router-link>
+        </template>
+      </vue3-datatable>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="bg-white border border-gray-200 rounded-xl shadow-md p-4">
+      <h3 class="text-lg font-semibold mb-3 text-primaryDark">
+        Aktivitas Terbaru
+      </h3>
+
+      <div v-if="isLoading" class="text-center text-gray-500 py-6">
+        Memuat aktivitas...
+      </div>
+
+      <vue3-datatable
+        v-else
+        :headers="activityHeaders"
+        :items="recentActivities"
+        :rows-per-page="5"
+        theme-color="#0284C7"
+        table-class="rounded-md overflow-hidden"
+        header-text-direction="left"
+        no-data-text="Belum ada aktivitas."
       />
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue';
+import { reactive, computed, ref, onMounted } from 'vue';
 import { useOrderStore } from '@/stores/useOrderStore';
 import { useCustomerStore } from '@/stores/useCustomerStore';
 import { useActivityStore } from '@/stores/useActivityStore';
 import { useUserStore } from '@/stores/useUserStore';
 import StatCard from '@/components/StatCard.vue';
-import DataTable from '@/components/DataTable.vue';
 import Badge from '@/components/Badge.vue';
 
+// === Store setup ===
 const orderStore = useOrderStore();
 const customerStore = useCustomerStore();
 const activityStore = useActivityStore();
 const userStore = useUserStore();
+const isLoading = ref(true);
 
-// Create a lookup map from customerId to customer name.  Use the
-// English field `name` rather than the previous `nama`.
+// === Fetch data on mount ===
+onMounted(async () => {
+  try {
+    await Promise.all([
+      orderStore.fetchAll?.(),
+      customerStore.fetchAll?.(),
+      activityStore.fetchAll?.(),
+      userStore.fetchAll?.(),
+    ]);
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+// === Lookup customer name ===
 const customerMap = computed(() => {
   const map = {};
-  customerStore.customers.forEach((c) => {
+  (customerStore.customers || []).forEach((c) => {
     map[c.id] = c.name;
   });
   return map;
 });
 
-// Define table columns.  Use English keys defined in the order store
-const tableColumns = [
-  { key: 'orderNo', label: 'No Order' },
-  { key: 'customerName', label: 'Customer' },
-  { key: 'commodity', label: 'Komoditi' },
-  { key: 'status', label: 'Status' },
-  { key: 'date', label: 'Tgl Masuk' },
-  { key: 'remaining', label: 'Sisa Bayar' },
-  { key: 'action', label: 'Aksi' },
+// === Headers ===
+const orderHeaders = [
+  { text: 'No Order', value: 'orderNo' },
+  { text: 'Customer', value: 'customerName' },
+  { text: 'Komoditi', value: 'commodity' },
+  { text: 'Status', value: 'status' },
+  { text: 'Tgl Masuk', value: 'date' },
+  { text: 'Sisa Bayar', value: 'remaining' },
+  { text: 'Aksi', value: 'action' },
 ];
 
-// Filters
+const activityHeaders = [
+  { text: 'Tanggal', value: 'date' },
+  { text: 'Pengguna', value: 'userName' },
+  { text: 'Aksi', value: 'action' },
+  { text: 'Order', value: 'orderNo' },
+];
+
+// === Filters ===
 const filters = reactive({
   search: '',
   status: '',
 });
 
-// Compute order counts by status for KPI cards
+// === KPI ===
 function countByStatus(status) {
-  return orderStore.orders.filter((o) => o.status === status).length;
+  return (orderStore.orders || []).filter((o) => o.status === status).length;
 }
 
-// Flatten orders with customer names for table consumption
-const flattenedOrders = computed(() => {
-  return orderStore.orders.map((o) => ({
+// === Flatten Orders ===
+const flattenedOrders = computed(() =>
+  (orderStore.orders || []).map((o) => ({
     ...o,
     customerName: customerMap.value[o.customerId] ?? '',
-  }));
-});
+  }))
+);
 
-// Apply filters to orders
-const filteredOrders = computed(() => {
-  return flattenedOrders.value.filter((o) => {
+// === Filtered Orders ===
+const filteredOrders = computed(() =>
+  flattenedOrders.value.filter((o) => {
     const matchSearch = filters.search
-      ? o.customerName.toLowerCase().includes(filters.search.toLowerCase())
+      ? o.customerName?.toLowerCase().includes(filters.search.toLowerCase())
       : true;
     const matchStatus = filters.status ? o.status === filters.status : true;
     return matchSearch && matchStatus;
-  });
-});
+  })
+);
 
-// Activity table configuration.  Show date, user, action and order
-const activityColumns = [
-  { key: 'date', label: 'Tanggal' },
-  { key: 'userName', label: 'Pengguna' },
-  { key: 'action', label: 'Aksi' },
-  { key: 'orderNo', label: 'Order' },
-];
-
-// Map activities to displayable rows.  We reverse to show newest first and
-// limit to 5 entries.  Convert ISO timestamp to local date/time.
-const recentActivities = computed(() => {
-  return activityStore.activities.slice(0, 5).map((a) => {
-    const user = userStore.users.find((u) => u.id === a.userId);
-    const order = orderStore.orders.find((o) => o.id === a.orderId);
+// === Recent Activities ===
+const recentActivities = computed(() =>
+  (activityStore.activities || []).slice(0, 5).map((a) => {
+    const user = userStore.users?.find((u) => u.id === a.userId) ?? null;
+    const order = orderStore.orders?.find((o) => o.id === a.orderId) ?? null;
     return {
-      date: new Date(a.timestamp).toLocaleString('id-ID'),
-      userName: user?.name || '',
-      action: a.action,
-      orderNo: order?.orderNo || '',
+      date: a.timestamp ? new Date(a.timestamp).toLocaleString('id-ID') : '-',
+      userName: user?.name || '—',
+      action: a.action || '—',
+      orderNo: order?.orderNo || '—',
     };
-  });
-});
+  })
+);
 </script>
+
+<style scoped>
+.text-primaryDark {
+  color: #075985;
+}
+</style>

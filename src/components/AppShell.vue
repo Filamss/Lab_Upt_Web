@@ -1,53 +1,33 @@
 <template>
-  <div class="min-h-screen flex bg-muted">
+  <div class="flex h-screen overflow-hidden bg-muted">
     <!-- Sidebar -->
     <aside
       :class="[
-        'bg-surface text-gray-800 transition-all duration-300 ease-in-out flex flex-col',
+        'fixed md:static inset-y-0 left-0 z-50 flex flex-col bg-surface text-gray-800 transition-all duration-300 ease-in-out h-full shadow-lg md:shadow-none',
         collapsed ? 'w-16' : 'w-64',
+        showMobileSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
       ]"
     >
       <!-- Header -->
-      <div
-        class="flex items-center justify-between h-16 px-4 border-b border-border"
-      >
-        <span class="font-bold text-lg text-primaryDark" v-if="!collapsed"
-          >SIAPEL</span
-        >
-        <button
-          class="focus:outline-none"
-          @click="collapsed = !collapsed"
-          title="Toggle sidebar"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-6 h-6"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M3.75 5.25h16.5M3.75 12h16.5M3.75 18.75h16.5"
-            />
+      <div class="flex items-center justify-between h-16 px-4 border-b border-border">
+        <span v-if="!collapsed" class="font-bold text-lg text-primaryDark">SIAPEL</span>
+        <button class="focus:outline-none" @click="toggleCollapse" title="Toggle sidebar">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5M3.75 12h16.5M3.75 18.75h16.5" />
           </svg>
         </button>
       </div>
 
       <!-- Navigation -->
-      <nav class="mt-4 flex-1 overflow-y-auto relative">
+      <nav class="mt-4 flex-1 overflow-y-auto px-1">
         <ul>
-          <!-- Dashboard -->
-          <li class="relative group">
+          <li>
             <router-link
-              to="/Dashboard"
+              to="/dashboard"
               :title="'Dashboard'"
-              class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2"
+              class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2 transition"
               :class="{
-                'bg-gradient-to-r from-primaryLight to-primaryDark text-white':
-                  route.path === '/Dashboard',
+                'bg-gradient-to-r from-primaryLight to-primaryDark text-white': route.path === '/dashboard',
                 'justify-center': collapsed,
               }"
             >
@@ -56,18 +36,12 @@
             </router-link>
           </li>
 
-          <!-- Dropdown Groups -->
-          <li
-            v-for="group in groupedMenu"
-            :key="group.label"
-            class="relative group mb-2"
-          >
+          <!-- Grouped Menu -->
+          <li v-for="group in groupedMenu" :key="group.label" class="mb-2">
             <button
-              class="flex items-center justify-between w-[calc(100%-1rem)] px-3 py-3 rounded-md mx-2 mb-1 hover:bg-primaryLight hover:text-white"
-              :title="collapsed ? group.label : ''"
+              class="flex items-center justify-between w-[calc(100%-1rem)] px-3 py-3 rounded-md mx-2 hover:bg-primaryLight hover:text-white transition-all duration-200 "
               :class="{
-                'bg-gradient-to-r from-primaryLight to-primaryDark text-white':
-                  openGroup === group.label,
+                'bg-gradient-to-r from-primaryLight to-primaryDark text-white': openGroup === group.label,
                 'justify-center': collapsed,
               }"
               @click="toggleGroup(group.label)"
@@ -79,36 +53,26 @@
               <svg
                 v-if="!collapsed"
                 xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4 transform transition-transform duration-200"
                 fill="none"
                 viewBox="0 0 24 24"
-                stroke-width="1.5"
                 stroke="currentColor"
-                class="w-4 h-4 transform transition-transform duration-200"
+                stroke-width="1.5"
                 :class="{ 'rotate-90': openGroup === group.label }"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M8.25 4.5l7.5 7.5-7.5 7.5"
-                />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
             </button>
 
-            <!-- Submenu -->
             <transition name="fade">
-              <ul v-if="openGroup === group.label" class="pl-4 pr-3">
-                <li
-                  v-for="child in group.children"
-                  :key="child.path"
-                  class="relative group"
-                >
+              <ul v-if="openGroup === group.label" class="pl-4 pr-3 mt-1">
+                <li v-for="child in group.children" :key="child.path">
                   <router-link
                     :to="child.path"
                     :title="collapsed ? child.label : ''"
-                    class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2 transition-all duration-200 w-[calc(100%-0.5rem)]"
+                    class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2 transition-all duration-200"
                     :class="{
-                      'bg-gradient-to-r from-primaryLight to-primaryDark text-white':
-                        route.path === child.path,
+                      'bg-gradient-to-r from-primaryLight to-primaryDark text-white': route.path === child.path,
                       'justify-center': collapsed,
                     }"
                   >
@@ -122,74 +86,61 @@
         </ul>
       </nav>
 
-      <!-- Footer (Profile & Logout) -->
-      <div class="border-t border-border p-3 mt-auto">
-        <div class="relative group">
-          <router-link
-            to="/profile"
-            :title="collapsed ? 'Profile' : ''"
-            class="flex items-center justify-start gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-1 mb-2 w-full transition-all duration-200"
-            :class="{ 'justify-center': collapsed }"
-          >
-            <IdentificationIcon class="w-6 h-6 shrink-0" />
-            <span v-if="!collapsed">Profile</span>
-          </router-link>
-        </div>
+      <!-- Footer -->
+      <div class="border-t border-border p-3">
+        <router-link
+          to="/profile"
+          class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-1 mb-2 transition-all duration-200"
+          :class="{ 'justify-center': collapsed }"
+        >
+          <IdentificationIcon class="w-6 h-6 shrink-0" />
+          <span v-if="!collapsed">Profile</span>
+        </router-link>
 
-        <div class="relative group">
-          <button
-            @click="logout"
-            :title="collapsed ? 'Logout' : ''"
-            class="flex items-center justify-start gap-3 p-3 rounded-md hover:bg-danger hover:text-white mx-1 mb-2 w-full transition-all duration-200"
-            :class="{ 'justify-center': collapsed }"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-6 h-6 shrink-0"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M15.75 9V5.25a.75.75 0 00-.75-.75H5.25A.75.75 0 004.5 5.25v13.5a.75.75 0 00.75.75h9.75a.75.75 0 00.75-.75V15m3 0l3-3m0 0l-3-3m3 3H9"
-              />
-            </svg>
-            <span v-if="!collapsed">Logout</span>
-          </button>
-        </div>
+        <button
+          @click="logout"
+          class="flex items-center gap-3 p-3 rounded-md hover:bg-danger hover:text-white mx-1 mb-2 w-full transition-all duration-200"
+          :class="{ 'justify-center': collapsed }"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25a.75.75 0 00-.75-.75H5.25A.75.75 0 004.5 5.25v13.5a.75.75 0 00.75.75h9.75a.75.75 0 00.75-.75V15m3 0l3-3m0 0l-3-3m3 3H9" />
+          </svg>
+          <span v-if="!collapsed">Logout</span>
+        </button>
       </div>
     </aside>
 
-    <!-- Main content area -->
-    <div class="flex-1 flex flex-col">
-      <!-- Top navbar -->
-      <header
-        class="bg-gradient-to-r from-primaryLight to-primaryDark text-white border-b border-border h-16 flex justify-between items-center px-4"
-      >
-        <h1 class="text-xl font-semibold text-surface">
-          {{ pageTitle }}
-        </h1>
-        <div class="flex items-center gap-4 px-6">
-          <span class="hidden sm:block text-gray-100">
-            {{ authStore.currentUser?.name || 'Guest' }}
-          </span>
+    <!-- Overlay for mobile -->
+    <div
+      v-if="showMobileSidebar"
+      class="fixed inset-0 bg-black/40 md:hidden z-40"
+      @click="showMobileSidebar = false"
+    ></div>
 
-          <!-- Avatar -->
-          <router-link to="/profile" title="My Profile">
-            <img
-              :src="userAvatar"
-              alt="Profile"
-              class="w-8 h-8 rounded-full ring-2 ring-white cursor-pointer hover:opacity-80 transition"
-            />
+    <!-- Main content -->
+    <div class="flex-1 flex flex-col">
+      <!-- Top Navbar -->
+      <header class="bg-gradient-to-r from-primaryLight to-primaryDark text-white h-16 flex justify-between items-center px-4">
+        <div class="flex items-center gap-3">
+          <!-- Hamburger only visible on mobile -->
+          <button class="md:hidden focus:outline-none" @click="showMobileSidebar = true">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5M3.75 12h16.5M3.75 18.75h16.5" />
+            </svg>
+          </button>
+          <h1 class="text-lg sm:text-xl font-semibold text-surface">{{ pageTitle }}</h1>
+        </div>
+
+        <div class="flex items-center gap-4 px-2 sm:px-6">
+          <span class="hidden sm:block text-gray-100">{{ currentUserName }}</span>
+          <router-link to="/profile">
+            <img :src="avatarUrl" alt="Profile" class="w-8 h-8 rounded-full ring-2 ring-white cursor-pointer hover:opacity-80 transition" />
           </router-link>
         </div>
       </header>
 
-      <!-- Page content -->
-      <main class="flex-1 overflow-y-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+      <!-- Page Content -->
+      <main class="flex-1 overflow-y-auto w-full p-4 sm:p-6 lg:p-8">
         <slot />
       </main>
     </div>
@@ -197,8 +148,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import {
   HomeIcon,
   ClipboardDocumentListIcon,
@@ -210,23 +161,22 @@ import {
   ChartBarIcon,
   UserGroupIcon,
   FolderIcon,
-} from '@heroicons/vue/24/outline';
-import { useAuthStore } from '@/stores/useAuthStore';
+} from '@heroicons/vue/24/outline'
+import { useAuthStore } from '@/stores/useAuthStore'
 
-const collapsed = ref(false);
-const route = useRoute();
-const authStore = useAuthStore();
-const openGroup = ref(null);
+const collapsed = ref(false)
+const showMobileSidebar = ref(false)
+const openGroup = ref(null)
+const route = useRoute()
+const authStore = useAuthStore()
 
-/**
- * Toggle group so that only one stays open at a time
- */
 function toggleGroup(label) {
-  if (openGroup.value === label) {
-    openGroup.value = null; // close if same clicked
-  } else {
-    openGroup.value = label; // open new one, close others
-  }
+  openGroup.value = openGroup.value === label ? null : label
+}
+
+function toggleCollapse() {
+  if (window.innerWidth >= 768) collapsed.value = !collapsed.value
+  else showMobileSidebar.value = !showMobileSidebar.value
 }
 
 const groupedMenu = [
@@ -234,45 +184,28 @@ const groupedMenu = [
     label: 'Pengujian',
     icon: FolderIcon,
     children: [
-      {
-        label: 'Permintaan',
-        path: '/permintaan',
-        icon: ClipboardDocumentListIcon,
-      },
+      { label: 'Permintaan', path: '/permintaan', icon: ClipboardDocumentListIcon },
       { label: 'Kaji Ulang', path: '/kaji-ulang', icon: CheckCircleIcon },
     ],
   },
   {
     label: 'Layanan & Tarif',
     icon: Cog6ToothIcon,
-    children: [
-      { label: 'Daftar Layanan', path: '/layanan', icon: Cog6ToothIcon },
-    ],
+    children: [{ label: 'Daftar Layanan', path: '/layanan', icon: Cog6ToothIcon }],
   },
   {
     label: 'Cetak',
     icon: BriefcaseIcon,
     children: [
       { label: 'Validasi', path: '/validasi', icon: CheckCircleIcon },
-      {
-        label: 'Kartu Kendali',
-        path: '/kartu-kendali',
-        icon: IdentificationIcon,
-      },
+      { label: 'Kartu Kendali', path: '/kartu-kendali', icon: IdentificationIcon },
       { label: 'Surat Perintah', path: '/surat-perintah', icon: BriefcaseIcon },
     ],
   },
   {
     label: 'Laporan',
     icon: ChartBarIcon,
-    children: [
-      { label: 'Keuangan', path: '/laporan-keuangan', icon: CreditCardIcon },
-      {
-        label: 'Pengujian',
-        path: '/laporan-pengujian',
-        icon: ClipboardDocumentListIcon,
-      },
-    ],
+    children: [{ label: 'Keuangan', path: '/laporan-keuangan', icon: CreditCardIcon }],
   },
   {
     label: 'User Management',
@@ -283,21 +216,19 @@ const groupedMenu = [
       { label: 'Permissions', path: '/permissions', icon: Cog6ToothIcon },
     ],
   },
-];
+]
 
 const pageTitle = computed(() => {
-  const activeChild = groupedMenu
-    .flatMap((g) => g.children)
-    .find((i) => i.path === route.path);
-  return activeChild
-    ? activeChild.label
-    : route.path.replace('/', '') || 'Dashboard';
-});
+  const activeChild = groupedMenu.flatMap((g) => g.children).find((i) => i.path === route.path)
+  return activeChild ? activeChild.label : (route.path.replace('/', '') || 'Dashboard')
+})
+
+const currentUserName = computed(() => authStore.currentUser?.name || 'Guest')
+const avatarUrl = computed(() => authStore.currentUser?.avatarUrl || '/img/avatar-default.png')
 
 function logout() {
-  const authStore = useAuthStore();
-  authStore.logout(); // kalau di store kamu ada method logout
-  window.location.href = '/login';
+  authStore.logout()
+  window.location.href = '/login'
 }
 </script>
 
@@ -306,7 +237,6 @@ aside::-webkit-scrollbar {
   display: none;
 }
 
-/* Animasi dropdown */
 .fade-enter-active,
 .fade-leave-active {
   transition: all 0.25s ease;

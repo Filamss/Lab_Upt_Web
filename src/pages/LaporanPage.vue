@@ -29,7 +29,7 @@
       </button>
     </div>
     <!-- Report table -->
-    <DataTable
+    <EasyDataTable
       :columns="columns"
       :rows="filteredRows"
       :searchable="true"

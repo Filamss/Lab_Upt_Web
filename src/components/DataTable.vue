@@ -1,67 +1,162 @@
 <template>
-  <div>
-    <!-- Search box -->
-    <div v-if="searchable" class="mb-4">
-      <input
-        type="text"
-        v-model="searchTerm"
-        :placeholder="'Cari...'"
-        class="border border-gray-300 rounded-md px-3 py-2 w-full sm:w-64 focus:ring-2 focus:ring-blue-500"
-      />
+  <div class="bg-white border border-gray-200 rounded-xl shadow-md">
+    <!-- 🔍 Search & Filter -->
+    <div
+      v-if="searchable || filterable"
+      class="flex flex-wrap gap-3 items-center p-3 border-b bg-gray-50"
+    >
+      <div v-if="searchable" class="flex-1 min-w-[200px]">
+        <input
+          v-model="search"
+          type="text"
+          placeholder="Cari data..."
+          class="border border-gray-300 rounded-md px-3 py-2 w-full text-sm"
+        />
+      </div>
+
+      <div v-if="filterable">
+        <select
+          v-model="statusFilter"
+          class="border border-gray-300 rounded-md px-3 py-2 text-sm"
+        >
+          <option v-for="(opt, i) in statusOptions" :key="i" :value="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+      </div>
     </div>
-    <!-- Table -->
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-gray-200">
-        <thead class="bg-muted">
+
+    <!-- 🧾 Table (RESPONSIVE GLOBAL) -->
+    <div class="w-full scroll-container no-scrollbar ">
+      <table
+        class="min-w-max md:min-w-full w-full table-auto table-compact md:text-sm text-left text-gray-700"
+      >
+        <thead
+          class="bg-gray-100 text-surfaceDark uppercase text-[10px] md:text-xs text-center font-semibold"
+        >
           <tr>
+            <!-- Checkbox pilih semua -->
             <th
-              v-for="(col, idx) in columns"
-              :key="idx"
-              scope="col"
-              class="px-3 py-2 border-b border-gray-200 text-left font-medium text-gray-700 cursor-pointer"
-              @click="sortable && sortBy(col.key)"
+              v-if="selectable"
+              class="px-2 md:px-3 py-2 sticky top-0 bg-gray-100 z-10"
             >
-              <span>{{ col.label }}</span>
-              <span v-if="sortable && sortKey === col.key">
-                {{ sortAsc ? '▲' : '▼' }}
-              </span>
+              <input
+                type="checkbox"
+                v-model="selectAll"
+                @change="toggleSelectAll"
+              />
+            </th>
+
+            <th
+              v-for="(col, i) in columns"
+              :key="i"
+              :class="[
+                'px-2 md:px-4 py-2 whitespace-normal md:whitespace-nowrap cursor-pointer select-none sticky top-0 bg-gray-100 z-10 break-words',
+                col.className || '',
+              ]"
+              @click="toggleSort(col.field)"
+            >
+              <div class="flex items-center gap-1 justify-center">
+                {{ col.title }}
+                <span v-if="sortKey === col.field">
+                  <svg
+                    v-if="sortAsc"
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-3 w-3 inline text-gray-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M5 15l7-7 7 7"
+                    />
+                  </svg>
+                  <svg
+                    v-else
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-3 w-3 inline text-gray-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </span>
+              </div>
             </th>
           </tr>
         </thead>
+
         <tbody>
-          <tr v-for="(row, rIndex) in paginatedRows" :key="rIndex" class="even:bg-white odd:bg-gray-50">
+          <tr
+            v-for="(row, index) in paginatedData"
+            :key="index"
+            class="border-b hover:bg-gray-50 transition"
+          >
+            <td v-if="selectable" class="px-2 md:px-3 py-2 text-center">
+              <input type="checkbox" :value="row" v-model="selectedRows" />
+            </td>
+
             <td
-              v-for="col in columns"
-              :key="col.key"
-              class="px-3 py-2 border-b border-gray-200"
+              v-for="(col, i) in columns"
+              :key="i"
+              :class="[
+                'px-2 md:px-4 py-2 align-top text-center whitespace-normal break-words',
+                col.className || '',
+              ]"
             >
-              <!-- If a scoped slot for this column key exists, use it -->
-              <slot :name="`cell-${col.key}`" :row="row">{{ row[col.key] }}</slot>
+              <slot :name="col.field" :value="row[col.field]" :row="row">
+                {{ row[col.field] ?? '-' }}
+              </slot>
+            </td>
+          </tr>
+
+          <tr v-if="!paginatedData.length">
+            <td
+              :colspan="columns.length + (selectable ? 1 : 0)"
+              class="text-center text-gray-400 py-4"
+            >
+              Tidak ada data
             </td>
           </tr>
         </tbody>
       </table>
     </div>
-    <!-- Pagination controls -->
-    <div v-if="paginated && totalPages > 1" class="mt-4 flex justify-between items-center">
-      <div class="text-sm text-gray-600">
-        Menampilkan {{ startItem }}–{{ endItem }} dari {{ filteredRows.length }} data
+
+    <!-- 📄 Pagination -->
+    <div
+      class="flex justify-between items-center p-3 border-t bg-gray-50 text-xs text-gray-600"
+    >
+      <div>
+        Menampilkan {{ startIndex + 1 }}–{{ endIndex }} dari
+        {{ filteredData.length }}
+        <span v-if="selectable && selectedRows.length">
+          • {{ selectedRows.length }} dipilih</span
+        >
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1">
         <button
-          :disabled="currentPage === 1"
-          @click="currentPage--"
-          class="bg-white border border-gray-300 px-2 py-1 text-sm rounded disabled:opacity-50"
+          @click="prevPage"
+          :disabled="page === 1"
+          class="px-2 py-1 rounded-md border text-gray-600 disabled:opacity-40 hover:bg-gray-100"
         >
-          Sebelumnya
+          ‹
         </button>
-        <span class="text-sm">{{ currentPage }}/{{ totalPages }}</span>
+        <span> {{ page }} / {{ totalPages }}</span>
         <button
-          :disabled="currentPage === totalPages"
-          @click="currentPage++"
-          class="bg-white border border-gray-300 px-2 py-1 text-sm rounded disabled:opacity-50"
+          @click="nextPage"
+          :disabled="page === totalPages"
+          class="px-2 py-1 rounded-md border text-gray-600 disabled:opacity-40 hover:bg-gray-100"
         >
-          Berikutnya
+          ›
         </button>
       </div>
     </div>
@@ -71,81 +166,111 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 
+const emit = defineEmits(['update:selected']);
+
 const props = defineProps({
-  columns: { type: Array, required: true },
+  columns: { type: Array, required: true }, // [{ field, title, className? }]
   rows: { type: Array, required: true },
-  searchable: { type: Boolean, default: false },
-  sortable: { type: Boolean, default: false },
-  paginated: { type: Boolean, default: false },
   pageSize: { type: Number, default: 10 },
+  searchable: { type: Boolean, default: true },
+  filterable: { type: Boolean, default: true },
+  selectable: { type: Boolean, default: false },
+  statusOptions: {
+    type: Array,
+    default: () => [
+      { value: '', label: 'Semua Status' },
+      { value: 'new', label: 'Baru' },
+      { value: 'approved', label: 'Disetujui' },
+      { value: 'pending_validation', label: 'Menunggu Validasi' },
+      { value: 'completed', label: 'Selesai' },
+    ],
+  },
 });
 
-const searchTerm = ref('');
+const search = ref('');
+const statusFilter = ref('');
 const sortKey = ref(null);
 const sortAsc = ref(true);
-const currentPage = ref(1);
+const page = ref(1);
+const selectedRows = ref([]);
+const selectAll = ref(false);
 
-function sortBy(key) {
-  if (sortKey.value === key) {
-    sortAsc.value = !sortAsc.value;
-  } else {
-    sortKey.value = key;
-    sortAsc.value = true;
-  }
+watch(selectedRows, () => emit('update:selected', selectedRows.value));
+
+function toggleSelectAll() {
+  if (selectAll.value) selectedRows.value = [...paginatedData.value];
+  else selectedRows.value = [];
 }
 
-const filteredRows = computed(() => {
-  let data = props.rows;
-  if (props.searchable && searchTerm.value) {
-    const term = searchTerm.value.toLowerCase();
+const filteredData = computed(() => {
+  let data = props.rows || [];
+  if (search.value) {
+    const keyword = search.value.toLowerCase();
     data = data.filter((row) =>
-      Object.values(row)
+      Object.values(row ?? {})
         .join(' ')
         .toLowerCase()
-        .includes(term)
+        .includes(keyword)
     );
   }
-  if (props.sortable && sortKey.value) {
-    data = [...data].sort((a, b) => {
-      const valA = a[sortKey.value];
-      const valB = b[sortKey.value];
-      if (valA === valB) return 0;
-      if (sortAsc.value) {
-        return valA > valB ? 1 : -1;
-      }
-      return valA < valB ? 1 : -1;
-    });
+  if (statusFilter.value) {
+    data = data.filter((row) => row?.status === statusFilter.value);
   }
   return data;
 });
 
-const totalPages = computed(() => {
-  return props.paginated ? Math.ceil(filteredRows.value.length / props.pageSize) : 1;
-});
-
-const paginatedRows = computed(() => {
-  if (!props.paginated) return filteredRows.value;
-  const start = (currentPage.value - 1) * props.pageSize;
-  const end = start + props.pageSize;
-  return filteredRows.value.slice(start, end);
-});
-
-const startItem = computed(() => {
-  if (!props.paginated) return 1;
-  return (currentPage.value - 1) * props.pageSize + 1;
-});
-const endItem = computed(() => {
-  if (!props.paginated) return filteredRows.value.length;
-  return Math.min(startItem.value + props.pageSize - 1, filteredRows.value.length);
-});
-
-// Watch rows length to reset current page if necessary
-watch(
-  () => filteredRows.value.length,
-  () => {
-    if (currentPage.value > totalPages.value) {
-      currentPage.value = totalPages.value;
-    }
+function toggleSort(field) {
+  if (sortKey.value === field) sortAsc.value = !sortAsc.value;
+  else {
+    sortKey.value = field;
+    sortAsc.value = true;
   }
+  page.value = 1;
+}
+
+const sortedData = computed(() => {
+  if (!sortKey.value) return filteredData.value;
+  return [...filteredData.value].sort((a, b) => {
+    const aVal = a?.[sortKey.value];
+    const bVal = b?.[sortKey.value];
+    if (aVal == null || bVal == null) return 0;
+    if (typeof aVal === 'number' && typeof bVal === 'number') {
+      return sortAsc.value ? aVal - bVal : bVal - aVal;
+    }
+    return sortAsc.value
+      ? String(aVal).localeCompare(String(bVal))
+      : String(bVal).localeCompare(String(aVal));
+  });
+});
+
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(sortedData.value.length / props.pageSize))
+);
+const startIndex = computed(() => (page.value - 1) * props.pageSize);
+const endIndex = computed(() =>
+  Math.min(startIndex.value + props.pageSize, sortedData.value.length)
+);
+const paginatedData = computed(() =>
+  sortedData.value.slice(startIndex.value, endIndex.value)
+);
+
+function nextPage() {
+  if (page.value < totalPages.value) page.value++;
+}
+function prevPage() {
+  if (page.value > 1) page.value--;
+}
+
+watch(
+  () => props.rows,
+  () => (page.value = 1)
 );
 </script>
+
+<style scoped>
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+</style>

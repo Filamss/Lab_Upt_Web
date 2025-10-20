@@ -3,6 +3,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 
 // Lazy-load pages
 const DashboardPage = () => import('../pages/DashboardPage.vue');
+const PermintaanPage = () => import('../pages/PermintaanPage.vue');
 const KajiUlangPage = () => import('../pages/KajiUlangPage.vue');
 const ValidasiPage = () => import('../pages/ValidasiPage.vue');
 const KartuKendaliPage = () => import('../pages/KartuKendaliPage.vue');
@@ -12,16 +13,16 @@ const LoginPage = () => import('../pages/LoginPage.vue');
 const KeuanganPage = () => import('../pages/KeuanganPage.vue');
 const LaporanPage = () => import('../pages/LaporanPage.vue');
 const UsersPage = () => import('../pages/UsersPage.vue');
-const KajiUlangPrint = () => import('../pages/print/KajiUlangPrint.vue');
-const PrintPage = () => import('../pages/print/PrintPage.vue');
+const KajiUlangPrint = () => import('../components/print/KajiUlangPrint.vue');
+const PrintPage = () => import('../components/print/PrintPage.vue');
 const ProfilePage = () => import('../pages/ProfilePage.vue');
 const routes = [
   { path: '/', redirect: '/dashboard' },
 
-  // 👇 halaman login tanpa layout (fullscreen)
   { path: '/login', component: LoginPage, meta: { layout: 'auth' } },
   { path: '/dashboard', component: DashboardPage },
   { path: '/profile', component: ProfilePage },
+  { path: '/permintaan', component: PermintaanPage },
   { path: '/kaji-ulang', component: KajiUlangPage },
   { path: '/validasi', component: ValidasiPage },
   { path: '/kartu-kendali', component: KartuKendaliPage },
@@ -31,13 +32,11 @@ const routes = [
   { path: '/laporan', component: LaporanPage },
   { path: '/users', component: UsersPage },
 
-  // 👇 halaman print juga tanpa layout
   {
     path: '/kaji-ulang/print',
     component: KajiUlangPrint,
     meta: { layout: 'print' },
   },
-  // Generic print route: /print/:type/:id?
   {
     path: '/print/:type/:id?',
     component: PrintPage,
