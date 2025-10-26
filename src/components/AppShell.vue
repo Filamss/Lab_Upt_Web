@@ -1,10 +1,10 @@
 <template>
-  <div class="flex h-screen overflow-hidden bg-muted">
+  <div class="flex min-h-screen bg-muted items-stretch">
     <!-- Sidebar -->
     <aside
       :class="[
-        'fixed md:static inset-y-0 left-0 z-50 flex flex-col bg-surface text-gray-800 transition-all duration-300 ease-in-out h-full shadow-lg md:shadow-none',
-        collapsed ? 'w-16' : 'w-64',
+        'fixed md:static inset-y-0 left-0 z-50 flex flex-col bg-surface text-gray-800 transition-all duration-300 ease-in-out md:self-stretch shadow-lg md:shadow-none max-h-screen md:max-h-none',
+        collapsed ? 'w-16 md:w-16' : 'w-72 md:w-64',
         showMobileSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
       ]"
     >
@@ -118,7 +118,7 @@
     ></div>
 
     <!-- Main content -->
-    <div class="flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col min-h-screen md:min-h-0">
       <!-- Top Navbar -->
       <header class="bg-gradient-to-r from-primaryLight to-primaryDark text-white h-16 flex justify-between items-center px-4">
         <div class="flex items-center gap-3">
@@ -140,7 +140,7 @@
       </header>
 
       <!-- Page Content -->
-      <main class="flex-1 overflow-y-auto w-full p-4 sm:p-6 lg:p-8">
+      <main class="flex-1 w-full p-4 sm:p-6 lg:p-8 overflow-x-hidden md:overflow-y-auto md:max-h-[calc(100vh-4rem)]">
         <slot />
       </main>
     </div>

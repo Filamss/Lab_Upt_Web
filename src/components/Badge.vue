@@ -29,6 +29,16 @@ const statusMap = {
     text: 'text-yellow-800',
     label: 'Menunggu Validasi',
   },
+  pending_payment: {
+    bg: 'bg-amber-100',
+    text: 'text-amber-700',
+    label: 'Menunggu Pembayaran',
+  },
+  payment_received: {
+    bg: 'bg-emerald-100',
+    text: 'text-emerald-700',
+    label: 'Pembayaran Berhasil',
+  },
   in_testing: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Dalam Uji' },
   completed: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Selesai' },
 }
