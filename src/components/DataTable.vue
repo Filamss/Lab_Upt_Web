@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full space-y-4 bg-muted">
+  <div class="w-full space-y-4 ">
     <div
       v-if="searchable || filterable"
       class="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:p-4"
@@ -55,7 +55,7 @@
         :class="getBodyWrapperClasses()"
         :style="getBodyWrapperStyle()"
       >
-        <table class="w-full min-w-full border-separate border-spacing-0 text-left lg:min-w-[720px]">
+        <table class="dt-table w-full min-w-full border-separate border-spacing-0 text-left lg:min-w-[720px]">
           <thead :class="getTheadClasses()">
             <tr>
               <th
@@ -648,7 +648,7 @@ function isColumnSortable(column) {
 }
 
 function getCellClasses(column) {
-  const baseClasses = [];
+  const baseClasses = ['dt-cell', 'whitespace-normal', 'break-words'];
   if (isStackMode.value) {
     baseClasses.push('w-full px-3 py-2 border-b border-gray-100 md:w-auto md:table-cell md:border-0 md:align-middle md:px-4 md:py-3');
     if (!column?.className?.includes('hidden')) {
@@ -689,7 +689,7 @@ function getRowClasses() {
 
 function getSelectionCellClasses() {
   const classes = [
-    'px-3 py-2 text-left md:sticky md:left-0 md:z-10 md:bg-white md:px-4 md:py-3 md:text-center',
+    'px-2 py-2 text-left md:px-3 md:py-3 md:text-center w-12 max-w-[48px] min-w-[32px]',
   ];
   if (isStackMode.value) {
     classes.unshift('flex items-center justify-between gap-3');
@@ -712,7 +712,7 @@ function getTheadClasses() {
 }
 
 function getHeaderCellClasses(column) {
-  const classes = ['px-3 py-2 font-semibold text-left md:px-4 md:py-3'];
+  const classes = ['dt-header-cell', 'px-3 py-2 font-semibold text-left md:px-4 md:py-3'];
   if (isStackMode.value) {
     classes.unshift('hidden');
     classes.push('md:table-cell');
@@ -726,7 +726,10 @@ function getHeaderCellClasses(column) {
 }
 
 function getSelectionHeaderClasses() {
-  const classes = ['bg-gray-50 px-3 py-2 text-center md:sticky md:left-0 md:z-20 md:px-4 md:py-3'];
+  const classes = [
+    'dt-header-cell',
+    'bg-gray-100 px-2 py-2 text-center md:px-3 md:py-3 w-12 max-w-[48px] min-w-[32px]',
+  ];
   if (isStackMode.value) {
     classes.unshift('hidden');
     classes.push('md:table-cell');
@@ -771,5 +774,23 @@ function getBodyWrapperStyle() {
     max-height: none;
     overflow-y: visible;
   }
+}
+
+.dt-table {
+  table-layout: fixed;
+}
+
+.dt-cell,
+.dt-header-cell {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+td.sticky-col {
+  @apply bg-white;
+}
+
+th.sticky-col {
+  @apply bg-gray-50;
 }
 </style>

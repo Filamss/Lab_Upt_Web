@@ -242,7 +242,9 @@ import {
 import DataTable from '@/components/DataTable.vue';
 import FormPermission from '@/components/form/FormPermission.vue';
 import { usePermissionStore } from '@/stores/usePermissionStore';
+import { useConfirmDialog } from '@/stores/useConfirmDialog';
 
+const openConfirm = useConfirmDialog();
 const permissionStore = usePermissionStore();
 
 const columns = [
@@ -353,15 +355,22 @@ async function handleSubmit(payload) {
   }
   closeForm();
   lastRefreshedAt.value = new Date();
+  
 }
 
 async function handleDelete(permission) {
   if (!permission?.id) return;
-  const ok = window.confirm(`Hapus permission ${permission.name}?`);
+  const ok = await openConfirm({
+    title: 'Hapus permission?',
+    message: `Permission ${permission.name} akan dihapus dari sistem.`,
+    confirmLabel: 'Hapus',
+    variant: 'danger',
+  });
   if (!ok) return;
   await permissionStore.removePermission(permission.id);
   lastRefreshedAt.value = new Date();
 }
+
 </script>
 
 <style scoped>

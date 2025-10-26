@@ -3,7 +3,7 @@
     <h2 class="text-xl font-semibold mb-6">Layanan & Tarif</h2>
 
     <!-- === DAFTAR PENGUJIAN === -->
-    <div class="bg-white border border-gray-200 rounded-xl shadow-md p-5 mb-8">
+    <div class="bg-white rounded-xl shadow-md p-5 mb-8">
       <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
         <h3 class="text-lg font-semibold text-surfaceDark">Daftar Pengujian</h3>
         <button
@@ -20,14 +20,14 @@
         :rows="filteredTests"
         :pageSize="10"
         :filterable="false"
-        class="rounded-md border border-gray-200 shadow-sm"
+        class="rounded-md "
       >
         <template #price="{ value }">
           Rp {{ value.toLocaleString('id-ID') }}
         </template>
 
         <template #actions="{ row }">
-          <div class="flex justify-center gap-2">
+          <div class="flex justify-left gap-2">
             <button
               class="p-1.5 rounded-md hover:bg-blue-50 text-primary hover:text-primaryDark transition"
               @click="editTest(row)"
@@ -57,7 +57,7 @@
     />
 
     <!-- === MESIN UJI === -->
-    <div class="bg-white border border-gray-200 rounded-xl shadow-md p-5 mb-8">
+    <div class="bg-white rounded-xl shadow-md p-5 mb-8">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-semibold text-surfaceDark">Mesin Uji</h3>
         <div class="flex flex-wrap gap-2">
@@ -79,10 +79,10 @@
         :columns="machineColumns"
         :rows="machineItems"
         :filterable="false"
-        class="rounded-md border border-gray-200 shadow-sm"
+        class="rounded-md"
       >
         <template #actions="{ row, index }">
-          <div class="text-center">
+          <div class="justify-left">
             <button
               class="p-1.5 rounded-md hover:bg-red-50 text-danger hover:text-red-700 transition"
               @click="removeMachine(index)"
@@ -95,7 +95,7 @@
     </div>
 
     <!-- === METODE UJI === -->
-    <div class="bg-white border border-gray-200 rounded-xl shadow-md p-5">
+    <div class="bg-white  rounded-xl shadow-md p-5">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-semibold text-surfaceDark">Metode Uji</h3>
         <div class="flex flex-wrap gap-2">
@@ -117,10 +117,10 @@
         :columns="methodColumns"
         :rows="methodItems"
         :filterable="false"
-        class="rounded-md border border-gray-200 shadow-sm"
+        class="rounded-md"
       >
         <template #actions="{ row, index }">
-          <div class="text-center">
+          <div class="justify-left">
             <button
               class="p-1.5 rounded-md hover:bg-red-50 text-danger hover:text-red-700 transition"
               @click="removeMethod(index)"
@@ -165,15 +165,35 @@ const testColumns = [
 ];
 
 const machineColumns = [
-  { field: 'index', title: 'No' },
+  {
+    field: 'index',
+    title: 'No',
+    className: 'w-20 text-left',
+  },
   { field: 'MachineName', title: 'Nama Mesin' },
-  { field: 'actions', title: 'Aksi', slotName: 'actions', sortable: false },
+  {
+    field: 'actions',
+    title: 'Aksi',
+    className: 'w-20 text-left',
+    slotName: 'actions',
+    sortable: false,
+  },
 ];
 
 const methodColumns = [
-  { field: 'index', title: 'No' },
+  {
+    field: 'index',
+    title: 'No',
+    className: 'w-20 text-left',
+  },
   { field: 'MethodName', title: 'Nama Metode' },
-  { field: 'actions', title: 'Aksi', slotName: 'actions', sortable: false },
+  {
+    field: 'actions',
+    title: 'Aksi',
+    className: 'w-20 text-left',
+    slotName: 'actions',
+    sortable: false,
+  },
 ];
 
 // === Computed Items ===

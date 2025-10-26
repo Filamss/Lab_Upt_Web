@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="space-y-6">
     <header class="flex flex-col gap-2">
       <p class="text-sm uppercase tracking-wide text-gray-500">Monitoring</p>
@@ -135,6 +135,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ArrowPathIcon, ClockIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { useActivityStore } from '@/stores/useActivityStore'
+import { useConfirmDialog } from '@/stores/useConfirmDialog'
 
 const filters = [
   { value: 'all', label: 'Semua' },
@@ -167,6 +168,7 @@ const typeConfig = {
 }
 
 const activityStore = useActivityStore()
+const openConfirm = useConfirmDialog()
 const activeFilter = ref('all')
 
 onMounted(() => {
@@ -203,9 +205,14 @@ function refreshEvents() {
   activityStore.hydrate()
 }
 
-function clearHistory() {
+async function clearHistory() {
   if (!hasEvents.value) return
-  const ok = window.confirm('Hapus seluruh riwayat aktivitas?')
+  const ok = await openConfirm({
+    title: 'Hapus riwayat?',
+    message: 'Semua aktivitas yang tersimpan akan dihapus permanen.',
+    confirmLabel: 'Hapus',
+    variant: 'danger',
+  })
   if (ok) activityStore.clear()
 }
 
@@ -247,3 +254,4 @@ function formatTime(value) {
   return new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(date)
 }
 </script>
+

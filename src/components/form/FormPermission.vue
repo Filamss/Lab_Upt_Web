@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <form class="space-y-4" @submit.prevent="handleSubmit">
     <div v-if="form.id" class="flex flex-col gap-1.5">
       <label class="text-sm font-medium text-gray-700">ID Permission</label>
@@ -71,6 +71,7 @@
 
 <script setup>
 import { computed, reactive, watch } from 'vue';
+import { useConfirmDialog } from '@/stores/useConfirmDialog';
 
 const props = defineProps({
   modelValue: { type: Object, default: () => null },
@@ -79,6 +80,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['submit', 'cancel']);
+const openConfirm = useConfirmDialog();
 
 const form = reactive({
   id: '',
@@ -104,8 +106,14 @@ watch(
 
 const canSubmit = computed(() => Boolean(form.name));
 
-function handleSubmit() {
+async function handleSubmit() {
   if (!canSubmit.value) return;
+  const confirmed = await openConfirm({
+    title: props.isEdit ? 'Simpan perubahan permission?' : 'Tambah permission baru?',
+    message: 'Pastikan nama permission sudah sesuai standar penamaan.',
+    confirmLabel: props.isEdit ? 'Simpan' : 'Tambah',
+  });
+  if (!confirmed) return;
   const payload = {
     name: form.name.trim(),
     description: form.description?.trim() || undefined,
@@ -113,3 +121,4 @@ function handleSubmit() {
   emit('submit', payload);
 }
 </script>
+

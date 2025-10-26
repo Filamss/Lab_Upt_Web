@@ -119,11 +119,13 @@ import { useTestStore } from '@/stores/useTestStore'
 import FormKajiUlang from '@/components/form/FormKajiUlang.vue'
 import FormPayment from '@/components/form/FormPayment.vue'
 import { PencilIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { useConfirmDialog } from '@/stores/useConfirmDialog'
 
 const route = useRoute()
 const orderStore = useOrderStore()
 const customerStore = useCustomerStore()
 const testStore = useTestStore()
+const openConfirm = useConfirmDialog()
 
 const showForm = ref(false)
 const showPaymentModal = ref(false)
@@ -196,11 +198,16 @@ function editReview(item) {
   showForm.value = true
 }
 
-function deleteReview(item) {
-  if (confirm('Hapus data kaji ulang ini?')) {
-    const idx = orderStore.orders.findIndex((o) => o.id === item.id)
-    if (idx !== -1) orderStore.orders.splice(idx, 1)
-  }
+async function deleteReview(item) {
+  const ok = await openConfirm({
+    title: 'Hapus data kaji ulang?',
+    message: `Data kaji ulang untuk order ${item.orderNo} akan dihapus.`,
+    confirmLabel: 'Hapus',
+    variant: 'danger',
+  })
+  if (!ok) return
+  const idx = orderStore.orders.findIndex((o) => o.id === item.id)
+  if (idx !== -1) orderStore.orders.splice(idx, 1)
 }
 
 function getRowOptions(topic) {

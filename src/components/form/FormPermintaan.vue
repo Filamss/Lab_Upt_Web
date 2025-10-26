@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="p-6 md:p-8 max-h-[85vh] overflow-y-auto">
     <h3 class="text-lg font-semibold mb-4">
       {{ isEdit ? 'Edit Permintaan' : 'Tambah Permintaan' }}
@@ -63,7 +63,9 @@
             :key="`test-${index}`"
             class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm space-y-3"
           >
-            <div class="grid gap-3 md:grid-cols-[5fr_3fr_2fr_2fr_2fr_auto] md:items-end">
+            <div
+              class="grid gap-3 md:grid-cols-[5fr_3fr_2fr_2fr_2fr_auto] md:items-end"
+            >
               <div class="flex flex-col gap-1">
                 <label class="block text-xs font-semibold text-gray-600">
                   Cari Pengujian
@@ -142,14 +144,21 @@
                 </button>
               </div>
             </div>
-            <div class="flex flex-col gap-2 border-t border-dashed pt-3 text-xs">
+            <div
+              class="flex flex-col gap-2 border-t border-dashed pt-3 text-xs"
+            >
               <span class="text-gray-500">
-                Pilih pengujian yang sesuai dari daftar pencarian untuk mengisi data secara otomatis.
+                Pilih pengujian yang sesuai dari daftar pencarian untuk mengisi
+                data secara otomatis.
               </span>
-              <div class="flex flex-wrap items-center justify-between text-gray-600">
+              <div
+                class="flex flex-wrap items-center justify-between text-gray-600"
+              >
                 <span>
                   Subtotal:
-                  <span class="font-semibold text-primaryDark">Rp {{ formatCurrency(itemSubtotal(item)) }}</span>
+                  <span class="font-semibold text-primaryDark"
+                    >Rp {{ formatCurrency(itemSubtotal(item)) }}</span
+                  >
                 </span>
                 <span v-if="!item.testId" class="text-danger">
                   Pengujian belum dipilih.
@@ -199,7 +208,9 @@
       </div>
 
       <!-- Tombol -->
-      <div class="md:col-span-2 mt-6 flex flex-col gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end sm:items-center sm:gap-3">
+      <div
+        class="md:col-span-2 mt-6 flex flex-col gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end sm:items-center sm:gap-3"
+      >
         <button
           type="button"
           class="w-full sm:w-auto px-4 py-2 rounded-md border border-gray-300 text-sm text-gray-600 hover:bg-gray-100 transition"
@@ -231,6 +242,7 @@
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue';
 import { useTestStore } from '@/stores/useTestStore';
+import { useConfirmDialog } from '@/stores/useConfirmDialog';
 
 const props = defineProps({
   modelValue: Object,
@@ -238,6 +250,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['submit', 'cancel']);
+const openConfirm = useConfirmDialog();
 
 const testStore = useTestStore();
 
@@ -298,7 +311,10 @@ watch(
           selectedLabel: item.testName || resolveTestName(item.testId) || '',
           quantity: item.quantity ?? 1,
           objectName: item.objectName || '',
-          price: item.price !== undefined && item.price !== null ? String(item.price) : '',
+          price:
+            item.price !== undefined && item.price !== null
+              ? String(item.price)
+              : '',
           unit: item.unit || resolveTestUnit(item.testId) || '',
           manualPrice: Boolean(item.manualPrice),
         })),
@@ -364,7 +380,7 @@ function handleTestSelection(index) {
   if (!item) return;
   const label = (item.selectedLabel || '').trim();
   const option = testOptions.value.find(
-    (opt) => opt.label.toLowerCase() === label.toLowerCase(),
+    (opt) => opt.label.toLowerCase() === label.toLowerCase()
   );
   if (!option) {
     item.testId = '';
@@ -390,7 +406,11 @@ function handleTestBlur(index) {
 function applyOptionToItem(item, option) {
   item.testId = option.value;
   item.selectedLabel = option.label;
-  if (!item.manualPrice && option.price !== undefined && option.price !== null) {
+  if (
+    !item.manualPrice &&
+    option.price !== undefined &&
+    option.price !== null
+  ) {
     item.price = String(option.price);
   }
   item.unit = option.unit || resolveTestUnit(option.value) || '';
@@ -406,7 +426,7 @@ watch(
       else if (!item.unit) item.unit = resolveTestUnit(item.testId) || '';
     });
   },
-  { deep: true },
+  { deep: true }
 );
 
 watch(
@@ -419,7 +439,7 @@ watch(
       }
     });
   },
-  { deep: true },
+  { deep: true }
 );
 
 const normalizedTestItems = computed(() =>
@@ -437,21 +457,28 @@ const normalizedTestItems = computed(() =>
         quantity,
         unit: item.unit || resolveTestUnit(item.testId) || '',
       };
-    }),
+    })
 );
 
 const canSave = computed(() => {
-  const hasCustomer = Boolean(form.value.customerName && form.value.customerName.trim());
+  const hasCustomer = Boolean(
+    form.value.customerName && form.value.customerName.trim()
+  );
   const hasEntryDate = Boolean(form.value.entryDate);
   return hasCustomer && hasEntryDate && normalizedTestItems.value.length > 0;
 });
 
 const canSaveAndPay = computed(() => {
-  return canSave.value && normalizedTestItems.value.every((item) => item.price > 0);
+  return (
+    canSave.value && normalizedTestItems.value.every((item) => item.price > 0)
+  );
 });
 
 function itemSubtotal(item) {
-  return Math.max(0, Number(item.price) || 0) * Math.max(1, Number(item.quantity) || 1);
+  return (
+    Math.max(0, Number(item.price) || 0) *
+    Math.max(1, Number(item.quantity) || 1)
+  );
 }
 
 function formatCurrency(value) {
@@ -490,9 +517,23 @@ function buildPayload() {
   };
 }
 
-function submitWith(action = 'save') {
+async function submitWith(action = 'save') {
   if (action === 'save-pay' && !canSaveAndPay.value) return;
   if (action !== 'save-pay' && !canSave.value) return;
+  const confirmed = await openConfirm({
+    title:
+      action === 'save-pay'
+        ? 'Simpan & lanjutkan pembayaran?'
+        : props.isEdit
+        ? 'Simpan perubahan permintaan?'
+        : 'Simpan permintaan baru?',
+    message:
+      action === 'save-pay'
+        ? 'Data permintaan akan disimpan dan Anda akan diarahkan ke form pembayaran.'
+        : 'Pastikan informasi permintaan sudah lengkap sebelum melanjutkan.',
+    confirmLabel: action === 'save-pay' ? 'Simpan & Bayar' : 'Simpan',
+  });
+  if (!confirmed) return;
   const payload = buildPayload();
   if (action === 'save-pay') {
     payload.status = 'pending_payment';
@@ -503,6 +544,7 @@ function submitWith(action = 'save') {
 }
 
 function handleSubmit() {
-  submitWith(props.isEdit ? 'save' : 'save');
+  submitWith('save');
 }
 </script>
+

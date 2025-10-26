@@ -53,7 +53,7 @@
       </article>
     </section>
 
-    <section class="rounded-xl border border-gray-200 bg-white shadow-sm">
+    <section class="rounded-xl border border-gray-200 bg-white shadow-sm px-3 sm:px-4">
       <div class="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div class="relative w-full sm:w-72">
@@ -75,7 +75,7 @@
         <ArrowPathIcon class="h-5 w-5 animate-spin text-primary" />
         Memuat data role...
       </div>
-      <div v-else>
+      <div v-else class="overflow-x-auto">
         <DataTable
           :columns="columns"
           :rows="rows"
@@ -214,9 +214,11 @@ import DataTable from '@/components/DataTable.vue';
 import FormRole from '@/components/form/FormRole.vue';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { usePermissionStore } from '@/stores/usePermissionStore';
+import { useConfirmDialog } from '@/stores/useConfirmDialog';
 
 const roleStore = useRoleStore();
 const permissionStore = usePermissionStore();
+const openConfirm = useConfirmDialog();
 
 const columns = [
   { field: 'name', title: 'Nama Role' },
@@ -325,7 +327,12 @@ async function handleSubmit(payload) {
 
 async function handleDelete(role) {
   if (!role?.id) return;
-  const ok = window.confirm(`Hapus role ${role.name}?`);
+  const ok = await openConfirm({
+    title: 'Hapus role?',
+    message: `Role ${role.name} beserta pengaturan izinnya akan dihapus.`,
+    confirmLabel: 'Hapus',
+    variant: 'danger',
+  });
   if (!ok) return;
   await roleStore.removeRole(role.id);
 }

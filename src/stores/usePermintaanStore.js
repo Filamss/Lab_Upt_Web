@@ -108,7 +108,7 @@ export const usePermintaanStore = defineStore('request', {
         this.error = 'Dummy mode aktif (API belum terhubung).';
         this.requestList = [
           normalizeRequestEntry({
-            idOrder: 'ORD-20251001-123',
+            idOrder: '01K8FT3Y7Y0MWC4TD37GPCDX7C',
             entryDate: '2025-10-01',
             customerName: 'CV. Sinar Baja Elektrik',
             phoneNumber: '081234567890',
@@ -123,7 +123,7 @@ export const usePermintaanStore = defineStore('request', {
             createdAt: '2025-10-01T09:00:00Z',
           }),
           normalizeRequestEntry({
-            idOrder: 'ORD-20251005-321',
+            idOrder: '01K8FT5BATGKRGK6PJY4ST0S9M',
             entryDate: '2025-10-05',
             customerName: 'PT. Baja Mulya',
             phoneNumber: '081298765432',
@@ -137,7 +137,7 @@ export const usePermintaanStore = defineStore('request', {
             createdAt: '2025-10-05T13:20:00Z',
           }),
           normalizeRequestEntry({
-            idOrder: 'ORD-20251008-555',
+            idOrder: '01K8FT5N8B67N9SYYC8VJHBW3A',
             entryDate: '2025-10-08',
             customerName: 'UD. Karya Logam',
             phoneNumber: '082233445566',

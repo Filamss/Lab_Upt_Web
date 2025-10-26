@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <form class="space-y-5" @submit.prevent="handleSubmit">
     <div class="flex flex-col gap-1.5">
       <label class="text-sm font-medium text-gray-700">Nama Role</label>
@@ -130,6 +130,7 @@
 
 <script setup>
 import { computed, reactive, watch } from 'vue';
+import { useConfirmDialog } from '@/stores/useConfirmDialog';
 
 const props = defineProps({
   modelValue: { type: Object, default: () => null },
@@ -139,6 +140,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['submit', 'cancel']);
+const openConfirm = useConfirmDialog();
 
 const form = reactive({
   name: '',
@@ -212,8 +214,14 @@ function isGroupFullyChecked(permissionIds) {
   return permissionIds.every((id) => form.permissions.includes(id));
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   if (!form.name) return;
+  const confirmed = await openConfirm({
+    title: props.isEdit ? 'Simpan perubahan role?' : 'Tambah role baru?',
+    message: 'Pastikan daftar permission sudah sesuai sebelum melanjutkan.',
+    confirmLabel: props.isEdit ? 'Simpan' : 'Tambah',
+  });
+  if (!confirmed) return;
   emit('submit', {
     name: form.name.trim(),
     description: form.description?.trim() || undefined,
@@ -221,3 +229,4 @@ function handleSubmit() {
   });
 }
 </script>
+

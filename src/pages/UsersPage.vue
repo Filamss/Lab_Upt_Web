@@ -64,7 +64,7 @@
       </article>
     </section>
 
-    <section class="rounded-xl border border-gray-200 bg-white shadow-sm">
+    <section class="rounded-xl border border-gray-200 bg-white shadow-sm px-3 sm:px-4">
       <div class="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div class="relative w-full sm:w-72">
@@ -105,7 +105,7 @@
         <ArrowPathIcon class="h-5 w-5 animate-spin text-primary" />
         Memuat data pengguna...
       </div>
-      <div v-else>
+      <div v-else class="overflow-x-auto">
         <DataTable
           :columns="columns"
           :rows="rows"
@@ -265,9 +265,11 @@ import DataTable from '@/components/DataTable.vue';
 import FormUser from '@/components/form/FormUser.vue';
 import { useUserStore } from '@/stores/useUserStore';
 import { useRoleStore } from '@/stores/useRoleStore';
+import { useConfirmDialog } from '@/stores/useConfirmDialog';
 
 const userStore = useUserStore();
 const roleStore = useRoleStore();
+const openConfirm = useConfirmDialog();
 
 const columns = [
   { field: 'name', title: 'Nama', isSortable: false },
@@ -418,7 +420,12 @@ async function handleSubmit(payload) {
 
 async function handleDelete(user) {
   if (!user?.id) return;
-  const ok = window.confirm(`Hapus pengguna ${user.name}?`);
+  const ok = await openConfirm({
+    title: 'Hapus pengguna?',
+    message: `Pengguna ${user.name} akan dihapus permanen.`,
+    confirmLabel: 'Hapus',
+    variant: 'danger',
+  });
   if (!ok) return;
   await userStore.removeUser(user.id);
   lastRefreshedAt.value = new Date();

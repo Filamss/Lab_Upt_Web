@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
     @click.self="handleClose"
@@ -182,6 +182,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import FileUpload from '@/components/FileUpload.vue';
+import { useConfirmDialog } from '@/stores/useConfirmDialog';
 
 const props = defineProps({
   tests: { type: Array, default: () => [] },
@@ -192,6 +193,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'payment-saved']);
+const openConfirm = useConfirmDialog();
 
 const testRows = ref([]);
 const transferFiles = ref([]);
@@ -290,8 +292,14 @@ function formatDate(value) {
   }).format(date);
 }
 
-function savePayment() {
+async function savePayment() {
   normalizeAmount();
+  const confirmed = await openConfirm({
+    title: 'Konfirmasi pembayaran?',
+    message: 'Status permintaan akan diperbarui menjadi pembayaran berhasil.',
+    confirmLabel: 'Simpan Pembayaran',
+  });
+  if (!confirmed) return;
   const detail = {
     orderId: props.orderId,
     status: 'payment_received',
@@ -315,3 +323,4 @@ function handleClose() {
   emit('close');
 }
 </script>
+

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="p-6 md:p-8 max-h-[85vh] overflow-y-auto">
   <form class="space-y-5" @submit.prevent="handleSubmit">
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -144,6 +144,7 @@
 
 <script setup>
 import { computed, reactive, watch } from 'vue';
+import { useConfirmDialog } from '@/stores/useConfirmDialog';
 
 const props = defineProps({
   modelValue: { type: Object, default: () => null },
@@ -153,6 +154,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['submit', 'cancel']);
+const openConfirm = useConfirmDialog();
 
 const form = reactive({
   name: '',
@@ -192,8 +194,14 @@ const canSubmit = computed(() => {
   return true;
 });
 
-function handleSubmit() {
+async function handleSubmit() {
   if (!canSubmit.value) return;
+  const confirmed = await openConfirm({
+    title: props.isEdit ? 'Simpan perubahan pengguna?' : 'Tambah pengguna baru?',
+    message: 'Pastikan seluruh informasi pengguna sudah benar sebelum melanjutkan.',
+    confirmLabel: props.isEdit ? 'Simpan' : 'Tambah',
+  });
+  if (!confirmed) return;
   const name = form.name.trim();
   const email = form.email.trim();
   const password = form.password || undefined;
@@ -213,3 +221,4 @@ function handleSubmit() {
   });
 }
 </script>
+

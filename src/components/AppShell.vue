@@ -3,8 +3,8 @@
     <!-- Sidebar -->
     <aside
       :class="[
-        'fixed md:static inset-y-0 left-0 z-50 flex flex-col bg-surface text-gray-800 transition-all duration-300 ease-in-out md:self-stretch shadow-lg md:shadow-none max-h-screen md:max-h-none',
-        collapsed ? 'w-16 md:w-16' : 'w-72 md:w-64',
+        'fixed md:static inset-y-0 left-0 z-50 flex h-screen md:min-h-screen flex-col bg-surface text-gray-800 transition-all duration-300 ease-in-out md:self-stretch shadow-lg md:shadow-none',
+        collapsed ? 'w-14 md:w-14' : 'w-60 md:w-56',
         showMobileSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
       ]"
     >
@@ -25,7 +25,7 @@
             <router-link
               to="/dashboard"
               :title="'Dashboard'"
-              class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2 transition"
+              class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2 transition text-left"
               :class="{
                 'bg-gradient-to-r from-primaryLight to-primaryDark text-white': route.path === '/dashboard',
                 'justify-center': collapsed,
@@ -39,7 +39,7 @@
           <!-- Grouped Menu -->
           <li v-for="group in groupedMenu" :key="group.label" class="mb-2">
             <button
-              class="flex items-center justify-between w-[calc(100%-1rem)] px-3 py-3 rounded-md mx-2 hover:bg-primaryLight hover:text-white transition-all duration-200 "
+              class="flex items-center justify-between w-[calc(100%-1rem)] px-3 py-3 rounded-md mx-2 hover:bg-primaryLight hover:text-white transition-all duration-200 text-left"
               :class="{
                 'bg-gradient-to-r from-primaryLight to-primaryDark text-white': openGroup === group.label,
                 'justify-center': collapsed,
@@ -70,7 +70,7 @@
                   <router-link
                     :to="child.path"
                     :title="collapsed ? child.label : ''"
-                    class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2 transition-all duration-200"
+                    class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2 transition-all duration-200 text-left"
                     :class="{
                       'bg-gradient-to-r from-primaryLight to-primaryDark text-white': route.path === child.path,
                       'justify-center': collapsed,
@@ -90,7 +90,7 @@
       <div class="border-t border-border p-3">
         <router-link
           to="/profile"
-          class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-1 mb-2 transition-all duration-200"
+          class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-1 mb-2 transition-all duration-200 text-left"
           :class="{ 'justify-center': collapsed }"
         >
           <IdentificationIcon class="w-6 h-6 shrink-0" />
@@ -99,7 +99,7 @@
 
         <button
           @click="logout"
-          class="flex items-center gap-3 p-3 rounded-md hover:bg-danger hover:text-white mx-1 mb-2 w-full transition-all duration-200"
+          class="flex items-center gap-3 p-3 rounded-md hover:bg-danger hover:text-white mx-1 mb-2 w-full transition-all duration-200 text-left"
           :class="{ 'justify-center': collapsed }"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -144,6 +144,17 @@
         <slot />
       </main>
     </div>
+
+    <ConfirmDialog
+      :open="confirmState.open"
+      :title="confirmState.title"
+      :message="confirmState.message"
+      :confirm-label="confirmState.confirmLabel"
+      :cancel-label="confirmState.cancelLabel"
+      :variant="confirmState.variant"
+      @confirm="resolveConfirmDialog"
+      @cancel="cancelConfirmDialog"
+    />
   </div>
 </template>
 
@@ -164,12 +175,20 @@ import {
   ClockIcon,
 } from '@heroicons/vue/24/outline'
 import { useAuthStore } from '@/stores/useAuthStore'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import { provideConfirmDialog } from '@/stores/useConfirmDialog'
 
 const collapsed = ref(false)
 const showMobileSidebar = ref(false)
 const openGroup = ref(null)
 const route = useRoute()
 const authStore = useAuthStore()
+const {
+  state: confirmState,
+  confirm: resolveConfirmDialog,
+  cancel: cancelConfirmDialog,
+  open: openConfirmDialog,
+} = provideConfirmDialog()
 
 function toggleGroup(label) {
   openGroup.value = openGroup.value === label ? null : label
@@ -214,12 +233,12 @@ const groupedMenu = [
     children: [{ label: 'Riwayat Aktivitas', path: '/riwayat', icon: ClockIcon }],
   },
   {
-    label: 'User Management',
+    label: 'Manajemen Pengguna',
     icon: UserGroupIcon,
     children: [
-      { label: 'Users', path: '/users', icon: UserGroupIcon },
-      { label: 'Roles', path: '/roles', icon: Cog6ToothIcon },
-      { label: 'Permissions', path: '/permissions', icon: Cog6ToothIcon },
+      { label: 'Pengguna', path: '/users', icon: UserGroupIcon },
+      { label: 'Role', path: '/roles', icon: Cog6ToothIcon },
+      { label: 'Permission', path: '/permissions', icon: Cog6ToothIcon },
     ],
   },
 ]
@@ -232,7 +251,14 @@ const pageTitle = computed(() => {
 const currentUserName = computed(() => authStore.currentUser?.name || 'Guest')
 const avatarUrl = computed(() => authStore.currentUser?.avatarUrl || '/img/avatar-default.png')
 
-function logout() {
+async function logout() {
+  const ok = await openConfirmDialog({
+    title: 'Keluar dari aplikasi?',
+    message: 'Sesi Anda akan ditutup dan perlu login kembali.',
+    confirmLabel: 'Logout',
+    variant: 'danger',
+  })
+  if (!ok) return
   authStore.logout()
   window.location.href = '/login'
 }

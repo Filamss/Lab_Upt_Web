@@ -27,18 +27,24 @@
         </button>
       </div>
 
-      <DataTable
-        :columns="columns"
-        :rows="store.requestList"
-        :page-size="8"
-        searchable
-        filterable
-        selectable
-        mobile-mode="table"
-        scroll-body-on-mobile
-        body-scroll-height="55vh"
-        @update:selected="selectedRows = $event"
-      >
+      <div class="overflow-x-auto">
+        <DataTable
+          :columns="columns"
+          :rows="store.requestList"
+          :page-size="10"
+          searchable
+          filterable
+          selectable
+          mobile-mode="table"
+          scroll-body-on-mobile
+          body-scroll-height="55vh"
+          @update:selected="selectedRows = $event"
+        >
+        <template #idOrder="{ value }">
+          <span class="block text-sm text-gray-700 break-all">
+            {{ value || '-' }}
+          </span>
+        </template>
         <template #testItems="{ value, row }">
           <div class="text-left">
             <template v-if="value?.length">
@@ -58,7 +64,9 @@
         </template>
 
         <template #status="{ value }">
-          <Badge :status="value" />
+          <div class="max-w-[140px] w-full">
+            <Badge :status="value" />
+          </div>
         </template>
         
         <template #actions="{ row }">
@@ -78,6 +86,7 @@
           </div>
         </template>
       </DataTable>
+      </div>
     </div>
 
     <!-- Modal -->
@@ -128,6 +137,7 @@ import FormPermintaan from '@/components/form/FormPermintaan.vue';
 import FormPayment from '@/components/form/FormPayment.vue';
 import Badge from '@/components/Badge.vue';
 import DataTable from '../components/DataTable.vue';
+import { useConfirmDialog } from '@/stores/useConfirmDialog';
 
 const store = usePermintaanStore();
 const testStore = useTestStore();
@@ -139,6 +149,7 @@ const isEdit = ref(false);
 const selectedRequest = ref(null);
 const selectedRows = ref([]);
 const paymentContext = ref(null);
+const openConfirm = useConfirmDialog();
 
 onMounted(() => {
   store.fetchAll();
@@ -150,9 +161,18 @@ onMounted(() => {
 // === DataTable columns ===
 const columns = [
   // Kolom utama tetap tampak
-  { field: 'idOrder', title: 'ID Order', className: 'sticky left-0 z-20' },
+  {
+    field: 'idOrder',
+    title: 'ID Order',
+    className: 'max-w-[180px] min-w-[140px] pr-4',
+    slotName: 'idOrder',
+  },
   { field: 'entryDate', title: 'Tanggal Masuk' },
-  { field: 'status', title: 'Status' },
+  {
+    field: 'status',
+    title: 'Status',
+    className: 'min-w-[110px] max-w-[140px] text-left',
+  },
 
   // Tampil mulai SM
   {
@@ -161,20 +181,12 @@ const columns = [
     className: 'hidden sm:table-cell',
   },
 
-  // Tampil mulai MD
-  {
-    field: 'jobCategory',
-    title: 'Kategori',
-    className: 'hidden md:table-cell',
-  },
   {
     field: 'phoneNumber',
     title: 'No. Telepon',
     className: 'hidden md:table-cell',
   },
 
-  // Tampil mulai LG (panjang)
-  { field: 'address', title: 'Alamat', className: 'hidden lg:table-cell' },
   {
     field: 'testItems',
     title: 'Jenis Pengujian',
@@ -300,19 +312,29 @@ function closeModal() {
 }
 
 async function deleteRequest(item) {
-  if (confirm(`Hapus permintaan ${item.idOrder}?`)) {
-    await store.deleteRequest(item.idOrder);
-  }
+  const ok = await openConfirm({
+    title: 'Hapus permintaan?',
+    message: `Permintaan ${item.idOrder} akan dihapus permanen.`,
+    confirmLabel: 'Hapus',
+    variant: 'danger',
+  });
+  if (!ok) return;
+  await store.deleteRequest(item.idOrder);
 }
 
 async function deleteSelected() {
   if (!selectedRows.value.length) return;
-  if (confirm(`Hapus ${selectedRows.value.length} permintaan terpilih?`)) {
-    for (const row of selectedRows.value) {
-      await store.deleteRequest(row.idOrder);
-    }
-    selectedRows.value = [];
+  const ok = await openConfirm({
+    title: 'Hapus permintaan terpilih?',
+    message: `${selectedRows.value.length} permintaan akan dihapus permanen.`,
+    confirmLabel: 'Hapus Semua',
+    variant: 'danger',
+  });
+  if (!ok) return;
+  for (const row of selectedRows.value) {
+    await store.deleteRequest(row.idOrder);
   }
+  selectedRows.value = [];
 }
 
 function resolveTestName(detail) {
