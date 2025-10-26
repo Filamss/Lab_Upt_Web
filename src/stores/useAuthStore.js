@@ -1,6 +1,7 @@
 // src/stores/useAuthStore.js
 import { defineStore } from 'pinia'
 import api from '@/services/apiServices'
+import { useActivityStore } from '@/stores/useActivityStore'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -23,6 +24,15 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('token', token)
         localStorage.setItem('currentUser', JSON.stringify(user))
         this.loading = false
+
+        const activityStore = useActivityStore()
+        activityStore.addEvent({
+          type: 'login',
+          title: 'Login berhasil',
+          description: `${user?.name || 'Pengguna'} berhasil masuk ke sistem`,
+          status: 'success',
+          metadata: { email },
+        })
 
         return { ok: true, user }
       } catch (err) {
@@ -48,6 +58,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async logout() {
+      const lastUser = this.currentUser
       try {
         await api.delete('/api/v1/users/logout')
       } catch {}
@@ -55,6 +66,17 @@ export const useAuthStore = defineStore('auth', {
       this.token = null
       localStorage.removeItem('token')
       localStorage.removeItem('currentUser')
+
+      if (lastUser) {
+        const activityStore = useActivityStore()
+        activityStore.addEvent({
+          type: 'login',
+          title: 'Logout',
+          description: `${lastUser.name || 'Pengguna'} keluar dari sistem`,
+          status: 'info',
+          metadata: { email: lastUser.email },
+        })
+      }
     },
   },
 })

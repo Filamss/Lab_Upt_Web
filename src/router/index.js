@@ -18,6 +18,7 @@ const PermissionsPage = () => import('../pages/PermissionsPage.vue');
 const KajiUlangPrint = () => import('../components/print/KajiUlangPrint.vue');
 const PrintPage = () => import('../components/print/PrintPage.vue');
 const ProfilePage = () => import('../pages/ProfilePage.vue');
+const RiwayatPage = () => import('../pages/RiwayatPage.vue');
 const routes = [
   { path: '/', redirect: '/dashboard' },
 
@@ -32,6 +33,7 @@ const routes = [
   { path: '/layanan', component: LayananPage },
   { path: '/laporan-keuangan', component: KeuanganPage },
   { path: '/laporan', component: LaporanPage },
+  { path: '/riwayat', component: RiwayatPage },
   { path: '/users', component: UsersPage },
   { path: '/roles', component: RolesPage },
   { path: '/permissions', component: PermissionsPage },

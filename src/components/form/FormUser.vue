@@ -179,7 +179,7 @@ watch(
     form.name = value.name || '';
     form.email = value.email || '';
     form.password = '';
-    form.phone = value.phone || '';
+    form.phone = value.phone || value.phone_number || '';
     form.roles = Array.isArray(value.roles) ? value.roles.map((role) => role.id) : [];
     form.isActive = value.isActive ?? true;
   },
@@ -194,13 +194,22 @@ const canSubmit = computed(() => {
 
 function handleSubmit() {
   if (!canSubmit.value) return;
+  const name = form.name.trim();
+  const email = form.email.trim();
+  const password = form.password || undefined;
+  const phoneNumber = form.phone?.trim() || undefined;
+  const roleIds = Array.isArray(form.roles) ? [...form.roles] : [];
+
   emit('submit', {
-    name: form.name.trim(),
-    email: form.email.trim(),
-    password: form.password || undefined,
-    phone: form.phone || undefined,
-    roles: form.roles,
+    name,
+    email,
+    password,
+    phone: phoneNumber,
+    phone_number: phoneNumber,
+    roles: roleIds,
+    role_ids: roleIds,
     isActive: form.isActive,
+    is_active: form.isActive,
   });
 }
 </script>

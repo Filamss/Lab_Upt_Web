@@ -22,37 +22,6 @@ function normalizePermission(entry = {}) {
   };
 }
 
-const fallbackPermissions = [
-  {
-    id: '01K7PM0Y5S9TZW7FV7X06X7R5G',
-    name: 'Kelola Pengguna',
-    description: 'Menambah, mengubah, dan menonaktifkan pengguna.',
-    created_at: '2025-08-01T10:00:00+07:00',
-    updated_at: '2025-10-12T08:00:00+07:00',
-  },
-  {
-    id: '01K7PM0Y5X386E29KP81J7TC6N',
-    name: 'Kelola Role',
-    description: 'Mengatur role beserta permission-nya.',
-    created_at: '2025-08-02T10:00:00+07:00',
-    updated_at: '2025-10-10T15:20:00+07:00',
-  },
-  {
-    id: '01K7PM0Y61H6AJK6YF6E1G5Y1X',
-    name: 'Approve Permintaan',
-    description: 'Memberi persetujuan permintaan pengujian.',
-    created_at: '2025-08-05T10:00:00+07:00',
-    updated_at: '2025-10-16T09:40:00+07:00',
-  },
-  {
-    id: '01K7PM0Y66D3K9VVCY9GZC1W2R',
-    name: 'Lihat Laporan',
-    description: 'Melihat laporan keuangan dan aktivitas.',
-    created_at: '2025-08-10T10:00:00+07:00',
-    updated_at: '2025-10-19T11:05:00+07:00',
-  },
-];
-
 export const usePermissionStore = defineStore('permission', {
   state: () => ({
     permissions: [],
@@ -91,43 +60,22 @@ export const usePermissionStore = defineStore('permission', {
           ? payload.items.map((item) => normalizePermission(item))
           : [];
 
-        if (!items.length && !this.permissions.length) {
-          this.permissions = fallbackPermissions.map((item) => normalizePermission(item));
-          this.pagination = {
-            currentPage: 1,
-            perPage: fallbackPermissions.length,
-            lastPage: 1,
-            totalItems: fallbackPermissions.length,
-            hasNextPage: false,
-            hasPrevPage: false,
-          };
-          this.error =
-            'Dummy mode aktif: API /api/v1/permissions belum tersedia, menampilkan data contoh.';
-        } else {
-          this.permissions = items;
-          this.pagination = {
-            currentPage: payload.current_page ?? page,
-            perPage: payload.per_page ?? perPage,
-            lastPage: payload.last_page ?? payload.total_pages ?? page,
-            totalItems: payload.total_items ?? items.length,
-            hasNextPage: payload.has_next_page ?? false,
-            hasPrevPage: payload.has_prev_page ?? false,
-          };
-          this.error = null;
-        }
-      } catch (err) {
-        console.warn('[PermissionStore] Gagal memuat data dari API, menggunakan dummy', err);
-        this.permissions = fallbackPermissions.map((item) => normalizePermission(item));
+        this.permissions = items;
         this.pagination = {
-          currentPage: 1,
-          perPage: fallbackPermissions.length,
-          lastPage: 1,
-          totalItems: fallbackPermissions.length,
-          hasNextPage: false,
-          hasPrevPage: false,
+          currentPage: payload.current_page ?? page,
+          perPage: payload.per_page ?? perPage,
+          lastPage: payload.last_page ?? payload.total_pages ?? page,
+          totalItems: payload.total_items ?? items.length,
+          hasNextPage: payload.has_next_page ?? false,
+          hasPrevPage: payload.has_prev_page ?? false,
         };
+        this.error = null;
+      } catch (err) {
+        console.error('[PermissionStore] Gagal memuat data dari API', err);
         this.error =
-          'Dummy mode aktif: API /api/v1/permissions belum tersedia, menampilkan data contoh.';
+          err.response?.data?.message ||
+          err.message ||
+          'Gagal memuat data permission dari API.';
       } finally {
         this.loading = false;
       }
@@ -160,16 +108,12 @@ export const usePermissionStore = defineStore('permission', {
         await this.fetchPermissions({ page: this.pagination.currentPage });
         return { ok: true, data: created };
       } catch (err) {
-        console.warn('[PermissionStore] API create permission gagal, simpan dummy', err);
-        const created = normalizePermission({
-          ...payload,
-          created_at: new Date().toISOString(),
-        });
-        this.permissions = [created, ...this.permissions];
-        this.pagination.totalItems += 1;
+        console.error('[PermissionStore] API create permission gagal', err);
         this.error =
-          'Dummy mode aktif: perubahan hanya tersimpan lokal karena API belum tersedia.';
-        return { ok: true, data: created, dummy: true };
+          err.response?.data?.message ||
+          err.message ||
+          'Gagal menambahkan permission.';
+        throw err;
       } finally {
         this.saving = false;
       }
@@ -185,18 +129,12 @@ export const usePermissionStore = defineStore('permission', {
         await this.fetchPermissions({ page: this.pagination.currentPage });
         return { ok: true, data: updated };
       } catch (err) {
-        console.warn('[PermissionStore] API update permission gagal, simpan dummy', err);
-        const idx = this.permissions.findIndex((item) => item.id === id);
-        if (idx !== -1) {
-          this.permissions[idx] = normalizePermission({
-            ...this.permissions[idx],
-            ...payload,
-            updated_at: new Date().toISOString(),
-          });
-        }
+        console.error('[PermissionStore] API update permission gagal', err);
         this.error =
-          'Dummy mode aktif: perubahan hanya tersimpan lokal karena API belum tersedia.';
-        return { ok: true, dummy: true };
+          err.response?.data?.message ||
+          err.message ||
+          'Gagal memperbarui permission.';
+        throw err;
       } finally {
         this.saving = false;
       }
@@ -210,12 +148,12 @@ export const usePermissionStore = defineStore('permission', {
         await this.fetchPermissions({ page: this.pagination.currentPage });
         return { ok: true };
       } catch (err) {
-        console.warn('[PermissionStore] API delete permission gagal, hapus dummy', err);
-        this.permissions = this.permissions.filter((item) => item.id !== id);
-        this.pagination.totalItems = Math.max(0, this.pagination.totalItems - 1);
+        console.error('[PermissionStore] API delete permission gagal', err);
         this.error =
-          'Dummy mode aktif: perubahan hanya tersimpan lokal karena API belum tersedia.';
-        return { ok: true, dummy: true };
+          err.response?.data?.message ||
+          err.message ||
+          'Gagal menghapus permission.';
+        throw err;
       } finally {
         this.saving = false;
       }

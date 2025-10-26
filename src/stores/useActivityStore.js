@@ -1,25 +1,98 @@
 import { defineStore } from 'pinia';
 
-/**
- * Store used to record user activities (audit log).  Each activity
- * includes the acting user's id, a description of the action, the
- * related order id, and a timestamp.  Activities are displayed on
- * the dashboard in the recent activity widget.
- */
+const STORAGE_KEY = 'uptlab.activityHistory';
+const MAX_EVENTS = 200;
+
+function safeParse(json, fallback = []) {
+  try {
+    return JSON.parse(json) ?? fallback;
+  } catch (err) {
+    console.warn('[ActivityStore] gagal parsing riwayat', err);
+    return fallback;
+  }
+}
+
+function createId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `act-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function normalizeEvent(entry = {}) {
+  return {
+    id: entry.id || createId(),
+    type: entry.type || 'system',
+    title: entry.title || 'Aktivitas',
+    description: entry.description || '-',
+    status: entry.status || 'info',
+    referenceId: entry.referenceId || null,
+    metadata: entry.metadata || {},
+    createdAt: entry.createdAt || new Date().toISOString(),
+  };
+}
+
 export const useActivityStore = defineStore('activity', {
   state: () => ({
-    activities: [
-      { id: 1, userId: 2, action: 'Created order ORD-001', orderId: 1, timestamp: new Date().toISOString() },
-      { id: 2, userId: 3, action: 'Validated order ORD-001', orderId: 1, timestamp: new Date().toISOString() },
-    ],
+    events:
+      typeof window !== 'undefined'
+        ? safeParse(window.localStorage?.getItem(STORAGE_KEY) || '[]')
+        : [],
+    loading: false,
   }),
+
+  getters: {
+    stats(state) {
+      return state.events.reduce(
+        (acc, event) => {
+          acc.total += 1;
+          if (event.type === 'login') acc.login += 1;
+          else if (event.type === 'request') acc.request += 1;
+          else if (event.type === 'payment') acc.payment += 1;
+          else acc.system += 1;
+          return acc;
+        },
+        { total: 0, login: 0, request: 0, payment: 0, system: 0 }
+      );
+    },
+  },
+
   actions: {
-    /**
-     * Add a new activity entry to the log.
-     */
-    logActivity(activity) {
-      const nextId = this.activities.length ? Math.max(...this.activities.map((a) => a.id)) + 1 : 1;
-      this.activities.unshift({ id: nextId, timestamp: new Date().toISOString(), ...activity });
+    hydrate() {
+      if (typeof window === 'undefined') return;
+      this.events = safeParse(window.localStorage?.getItem(STORAGE_KEY) || '[]');
+    },
+
+    persist() {
+      if (typeof window === 'undefined') return;
+      window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(this.events));
+    },
+
+    addEvent(payload = {}) {
+      const event = normalizeEvent(payload);
+      this.events = [event, ...this.events]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, MAX_EVENTS);
+      this.persist();
+      return event;
+    },
+
+    importEvents(list = []) {
+      const normalized = list.map((item) => normalizeEvent(item));
+      const combined = [...normalized, ...this.events];
+      const uniqueMap = new Map();
+      combined.forEach((item) => {
+        uniqueMap.set(item.id, item);
+      });
+      this.events = Array.from(uniqueMap.values())
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, MAX_EVENTS);
+      this.persist();
+    },
+
+    clear() {
+      this.events = [];
+      this.persist();
     },
   },
 });

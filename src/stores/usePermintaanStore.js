@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import api from '@/services/apiServices';
+import { useActivityStore } from '@/stores/useActivityStore';
 
 function normalizeRequestEntry(entry = {}) {
   const rawItems = Array.isArray(entry.testItems) ? entry.testItems : [];
@@ -44,6 +45,42 @@ function normalizeRequestEntry(entry = {}) {
     testCategory: aggregated || entry.testCategory || entry.purpose || '',
     purpose: entry.purpose || aggregated,
   };
+}
+
+const statusLabels = {
+  draft: 'Draft',
+  submitted: 'Diajukan',
+  pending_payment: 'Menunggu Pembayaran',
+  payment_pending: 'Menunggu Pembayaran',
+  payment_received: 'Pembayaran Diterima',
+  approved: 'Disetujui',
+  rejected: 'Ditolak',
+  cancelled: 'Dibatalkan',
+};
+
+function deriveTypeByStatus(status = '') {
+  if (!status) return 'request';
+  if (status.includes('payment')) return 'payment';
+  return 'request';
+}
+
+function logRequestEvent({ request, status, title, description, statusLevel = 'info' }) {
+  const activityStore = useActivityStore();
+  if (!activityStore) return;
+  const eventType = status ? deriveTypeByStatus(status) : 'request';
+  activityStore.addEvent({
+    type: eventType,
+    title: title || `Permintaan ${request?.idOrder || ''}`.trim(),
+    description:
+      description ||
+      `${request?.customerName || 'Pemohon'} – ${statusLabels[status] || status || 'Aktivitas'}`,
+    status: statusLevel,
+    referenceId: request?.idOrder || null,
+    metadata: {
+      status,
+      customer: request?.customerName || '',
+    },
+  });
 }
 
 /**
@@ -126,6 +163,13 @@ export const usePermintaanStore = defineStore('request', {
         const res = await api.post('/api/v1/requests', data);
         const newData = normalizeRequestEntry(res.data.data);
         this.requestList.push(newData);
+        logRequestEvent({
+          request: newData,
+          status: newData.status,
+          title: 'Permintaan baru dibuat',
+          description: `${newData.customerName || 'Pemohon'} membuat permintaan ${newData.idOrder || ''}`,
+          statusLevel: 'success',
+        });
         return { ok: true, data: newData };
       } catch (err) {
         console.warn('[PermintaanStore] API tidak aktif, simpan ke dummy store.');
@@ -136,6 +180,13 @@ export const usePermintaanStore = defineStore('request', {
           createdAt: new Date().toISOString(),
         });
         this.requestList.push(newData);
+        logRequestEvent({
+          request: newData,
+          status: newData.status,
+          title: 'Permintaan dicatat lokal',
+          description: `${newData.customerName || 'Pemohon'} membuat permintaan (offline) ${newData.idOrder || ''}`,
+          statusLevel: 'warning',
+        });
         return { ok: true, data: newData, dummy: true };
       } finally {
         this.loading = false;
@@ -149,15 +200,32 @@ export const usePermintaanStore = defineStore('request', {
         const updated = normalizeRequestEntry(res.data.data);
         const idx = this.requestList.findIndex((r) => r.idOrder === idOrder);
         if (idx !== -1) this.requestList[idx] = updated;
+        if (payload?.status) {
+          logRequestEvent({
+            request: updated,
+            status: payload.status,
+            title: 'Status permintaan diperbarui',
+            statusLevel: 'success',
+          });
+        }
         return { ok: true, data: updated };
       } catch (err) {
         console.warn('[PermintaanStore] API tidak aktif, update dummy store.');
         const idx = this.requestList.findIndex((r) => r.idOrder === idOrder);
         if (idx !== -1) {
-          this.requestList[idx] = normalizeRequestEntry({
+          const updated = normalizeRequestEntry({
             ...this.requestList[idx],
             ...payload,
           });
+          this.requestList[idx] = updated;
+          if (payload?.status) {
+            logRequestEvent({
+              request: updated,
+              status: payload.status,
+              title: 'Status permintaan diperbarui (offline)',
+              statusLevel: 'warning',
+            });
+          }
         }
         return { ok: true, dummy: true };
       }
@@ -179,7 +247,15 @@ export const usePermintaanStore = defineStore('request', {
     /** Tandai permintaan disetujui */
     approveRequest(idOrder) {
       const item = this.requestList.find((r) => r.idOrder === idOrder);
-      if (item) item.status = 'approved';
+      if (item) {
+        item.status = 'approved';
+        logRequestEvent({
+          request: item,
+          status: 'approved',
+          title: 'Permintaan disetujui',
+          statusLevel: 'success',
+        });
+      }
     },
 
     /** Generate ID Order otomatis */

@@ -47,43 +47,36 @@ function normalizeRole(entry = {}) {
   };
 }
 
-const fallbackRoles = [
-  {
-    id: '01K7KJ8RYMGS1FWJRZD000TCW0',
-    name: 'super admin',
-    description: 'Akses penuh ke semua modul dan konfigurasi sistem.',
-    permissions: [
-      { id: 'manage_users', name: 'Manage Users', category: 'user' },
-      { id: 'manage_roles', name: 'Manage Roles', category: 'user' },
-      { id: 'view_reports', name: 'View Reports', category: 'report' },
-    ],
-    user_count: 2,
-    created_at: '2025-10-15T16:12:25.813+07:00',
-  },
-  {
-    id: '01K7KJ8RYN8QJMYKA1WQQQYZA6',
-    name: 'head',
-    description: 'Kepala laboratorium, mengatur penugasan dan persetujuan.',
-    permissions: [
-      { id: 'approve_request', name: 'Approve Request', category: 'order' },
-      { id: 'view_reports', name: 'View Reports', category: 'report' },
-      { id: 'update_schedule', name: 'Update Schedule', category: 'operation' },
-    ],
-    user_count: 3,
-    created_at: '2025-10-15T16:12:25.813+07:00',
-  },
-  {
-    id: '01K7ROLELABSUPERVISOR',
-    name: 'lab supervisor',
-    description: 'Mengawasi progres pengujian dan memastikan kepatuhan.',
-    permissions: [
-      { id: 'update_testing_progress', name: 'Update Testing Progress', category: 'operation' },
-      { id: 'assign_technician', name: 'Assign Technician', category: 'operation' },
-    ],
-    user_count: 4,
-    created_at: '2025-09-20T09:00:00+07:00',
-  },
-];
+function buildRoleQuery({ page, perPage, search } = {}) {
+  const query = new URLSearchParams();
+  if (page) query.set('page', page);
+  if (perPage) query.set('per_page', perPage);
+  if (search) query.set('search', search);
+  ['permissions', 'users'].forEach((include) => query.append('include', include));
+  return query.toString();
+}
+
+function buildRoleFormData(payload = {}) {
+  const formData = new FormData();
+  if (payload.name) formData.append('name', payload.name);
+  if (payload.description) formData.append('description', payload.description);
+
+  const permissionIds = (
+    Array.isArray(payload.permission_ids)
+      ? payload.permission_ids
+      : Array.isArray(payload.permissions)
+      ? payload.permissions
+      : payload.permission_id
+      ? [payload.permission_id]
+      : []
+  )
+    .map((permission) => (typeof permission === 'object' ? permission.id : permission))
+    .filter(Boolean);
+
+  permissionIds.forEach((permissionId) => formData.append('permission_id', permissionId));
+
+  return formData;
+}
 
 export const useRoleStore = defineStore('role', {
   state: () => ({
@@ -122,56 +115,31 @@ export const useRoleStore = defineStore('role', {
       const search = params.search ?? this.search ?? '';
 
       try {
-        const response = await api.get('/api/v1/roles', {
-          params: {
-            page,
-            per_page: perPage,
-            search: search || undefined,
-          },
-        });
+        const query = buildRoleQuery({ page, perPage, search });
+        const endpoint = query ? `/api/v1/roles?${query}` : '/api/v1/roles';
+        const response = await api.get(endpoint);
 
         const payload = response.data?.data ?? {};
         const items = Array.isArray(payload.items)
           ? payload.items.map((item) => normalizeRole(item))
           : [];
 
-        if (!items.length && !this.roles.length) {
-          this.roles = fallbackRoles.map((item) => normalizeRole(item));
-          this.pagination = {
-            currentPage: 1,
-            perPage: fallbackRoles.length,
-            lastPage: 1,
-            totalItems: fallbackRoles.length,
-            hasNextPage: false,
-            hasPrevPage: false,
-          };
-          this.error =
-            'Dummy mode aktif: API /api/v1/roles belum tersedia, menampilkan data contoh.';
-        } else {
-          this.roles = items;
-          this.pagination = {
-            currentPage: payload.current_page ?? page,
-            perPage: payload.per_page ?? perPage,
-            lastPage: payload.last_page ?? payload.total_pages ?? page,
-            totalItems: payload.total_items ?? items.length,
-            hasNextPage: payload.has_next_page ?? false,
-            hasPrevPage: payload.has_prev_page ?? false,
-          };
-          this.error = null;
-        }
-      } catch (err) {
-        console.warn('[RoleStore] Gagal memuat data dari API, menggunakan dummy', err);
-        this.roles = fallbackRoles.map((item) => normalizeRole(item));
+        this.roles = items;
         this.pagination = {
-          currentPage: 1,
-          perPage: fallbackRoles.length,
-          lastPage: 1,
-          totalItems: fallbackRoles.length,
-          hasNextPage: false,
-          hasPrevPage: false,
+          currentPage: payload.current_page ?? page,
+          perPage: payload.per_page ?? perPage,
+          lastPage: payload.last_page ?? payload.total_pages ?? page,
+          totalItems: payload.total_items ?? items.length,
+          hasNextPage: payload.has_next_page ?? false,
+          hasPrevPage: payload.has_prev_page ?? false,
         };
+        this.error = null;
+      } catch (err) {
+        console.error('[RoleStore] Gagal memuat data dari API', err);
         this.error =
-          'Dummy mode aktif: API /api/v1/roles belum tersedia, menampilkan data contoh.';
+          err.response?.data?.message ||
+          err.message ||
+          'Gagal memuat data role dari API.';
       } finally {
         this.loading = false;
       }
@@ -193,26 +161,22 @@ export const useRoleStore = defineStore('role', {
     async createRole(payload) {
       this.saving = true;
       try {
-        const response = await api.post('/api/v1/roles', payload);
-        const created = normalizeRole(response.data?.data ?? response.data);
+        const body = buildRoleFormData(payload);
+        const response = await api.post('/api/v1/roles', body);
+        const apiData = response.data?.data ?? response.data;
+        const created = normalizeRole(apiData?.role ?? apiData);
         if (this.pagination.currentPage === 1) {
           this.roles = [created, ...this.roles.filter((role) => role.id !== created.id)];
         }
         await this.fetchRoles({ page: this.pagination.currentPage });
         return { ok: true, data: created };
       } catch (err) {
-        console.warn('[RoleStore] API create role gagal, simpan dummy', err);
-        const created = normalizeRole({
-          ...payload,
-          id: `temp-role-${Date.now()}`,
-          permissions: payload.permission_ids || payload.permissions || [],
-          created_at: new Date().toISOString(),
-        });
-        this.roles = [created, ...this.roles];
-        this.pagination.totalItems += 1;
+        console.error('[RoleStore] API create role gagal', err);
         this.error =
-          'Dummy mode aktif: perubahan hanya tersimpan lokal karena API belum tersedia.';
-        return { ok: true, data: created, dummy: true };
+          err.response?.data?.message ||
+          err.message ||
+          'Gagal menambahkan role.';
+        throw err;
       } finally {
         this.saving = false;
       }
@@ -221,28 +185,21 @@ export const useRoleStore = defineStore('role', {
     async updateRole(id, payload) {
       this.saving = true;
       try {
-        const response = await api.put(`/api/v1/roles/${id}`, payload);
-        const updated = normalizeRole(response.data?.data ?? response.data);
+        const body = buildRoleFormData(payload);
+        const response = await api.put(`/api/v1/roles/${id}`, body);
+        const apiData = response.data?.data ?? response.data;
+        const updated = normalizeRole(apiData?.role ?? apiData);
         const idx = this.roles.findIndex((role) => role.id === id);
         if (idx !== -1) this.roles[idx] = updated;
         await this.fetchRoles({ page: this.pagination.currentPage });
         return { ok: true, data: updated };
       } catch (err) {
-        console.warn('[RoleStore] API update role gagal, simpan dummy', err);
-        const idx = this.roles.findIndex((role) => role.id === id);
-        if (idx !== -1) {
-          const permissions =
-            payload.permission_ids || payload.permissions || this.roles[idx].permissions;
-          this.roles[idx] = normalizeRole({
-            ...this.roles[idx],
-            ...payload,
-            permissions,
-            updated_at: new Date().toISOString(),
-          });
-        }
+        console.error('[RoleStore] API update role gagal', err);
         this.error =
-          'Dummy mode aktif: perubahan hanya tersimpan lokal karena API belum tersedia.';
-        return { ok: true, dummy: true };
+          err.response?.data?.message ||
+          err.message ||
+          'Gagal memperbarui role.';
+        throw err;
       } finally {
         this.saving = false;
       }
@@ -256,12 +213,12 @@ export const useRoleStore = defineStore('role', {
         await this.fetchRoles({ page: this.pagination.currentPage });
         return { ok: true };
       } catch (err) {
-        console.warn('[RoleStore] API delete role gagal, hapus dummy', err);
-        this.roles = this.roles.filter((role) => role.id !== id);
-        this.pagination.totalItems = Math.max(0, this.pagination.totalItems - 1);
+        console.error('[RoleStore] API delete role gagal', err);
         this.error =
-          'Dummy mode aktif: perubahan hanya tersimpan lokal karena API belum tersedia.';
-        return { ok: true, dummy: true };
+          err.response?.data?.message ||
+          err.message ||
+          'Gagal menghapus role.';
+        throw err;
       } finally {
         this.saving = false;
       }
@@ -281,17 +238,12 @@ export const useRoleStore = defineStore('role', {
         }
         return { ok: true };
       } catch (err) {
-        console.warn('[RoleStore] API assign permissions gagal, update dummy', err);
-        const idx = this.roles.findIndex((role) => role.id === roleId);
-        if (idx !== -1) {
-          this.roles[idx].permissions = permissionIds.map((id) =>
-            normalizePermission({ id })
-          );
-          this.roles[idx].permissionCount = permissionIds.length;
-        }
+        console.error('[RoleStore] API assign permissions gagal', err);
         this.error =
-          'Dummy mode aktif: perubahan hanya tersimpan lokal karena API belum tersedia.';
-        return { ok: true, dummy: true };
+          err.response?.data?.message ||
+          err.message ||
+          'Gagal memperbarui permission role.';
+        throw err;
       }
     },
   },

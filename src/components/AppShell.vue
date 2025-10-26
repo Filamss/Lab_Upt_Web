@@ -161,6 +161,7 @@ import {
   ChartBarIcon,
   UserGroupIcon,
   FolderIcon,
+  ClockIcon,
 } from '@heroicons/vue/24/outline'
 import { useAuthStore } from '@/stores/useAuthStore'
 
@@ -206,6 +207,11 @@ const groupedMenu = [
     label: 'Laporan',
     icon: ChartBarIcon,
     children: [{ label: 'Keuangan', path: '/laporan-keuangan', icon: CreditCardIcon }],
+  },
+  {
+    label: 'Monitoring',
+    icon: ClockIcon,
+    children: [{ label: 'Riwayat Aktivitas', path: '/riwayat', icon: ClockIcon }],
   },
   {
     label: 'User Management',
