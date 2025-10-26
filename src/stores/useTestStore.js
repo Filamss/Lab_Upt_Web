@@ -38,9 +38,9 @@ export const useTestStore = defineStore('test', {
         this.tests = [
           {
             id: nanoid(),
-            category: 'Pengujian',
+            serviceCategory: 'Pengujian',
             code: 'UTK',
-            name: 'Uji Tarik',
+            testCategory: 'Uji Tarik',
             unit: 'Sample',
             price: 150000,
             method: 'ASTM E8',
@@ -48,9 +48,9 @@ export const useTestStore = defineStore('test', {
           },
           {
             id: nanoid(),
-            category: 'Machining',
+            serviceCategory: 'Machining',
             code: 'CNC',
-            name: 'Pemotongan CNC',
+            testCategory: 'Pemotongan CNC',
             unit: 'Jam',
             price: 200000,
             method: 'Internal SOP 2022',
@@ -131,14 +131,14 @@ export const useTestStore = defineStore('test', {
     },
 
     // === Mesin Uji ===
-    async addMachine(name) {
-      if (!name?.trim()) return
+    async addMachine(MachineName) {
+      if (!MachineName?.trim()) return
       try {
-        const res = await api.post('/api/v1/machines', { name })
+        const res = await api.post('/api/v1/machines', { MachineName })
         this.machines.push(res.data.data)
       } catch {
         console.warn('⚠️ API tidak aktif, tambah mesin ke dummy store.')
-        this.machines.push(name)
+        this.machines.push(MachineName)
       }
     },
     async removeMachine(indexOrId) {
@@ -159,14 +159,14 @@ export const useTestStore = defineStore('test', {
     },
 
     // === Metode Uji ===
-    async addMethod(name) {
-      if (!name?.trim()) return
+    async addMethod(MethodName) {
+      if (!MethodName?.trim()) return
       try {
-        const res = await api.post('/api/v1/methods', { name })
+        const res = await api.post('/api/v1/methods', { MethodName })
         this.methods.push(res.data.data)
       } catch {
         console.warn('⚠️ API tidak aktif, tambah metode ke dummy store.')
-        this.methods.push(name)
+        this.methods.push(MethodName)
       }
     },
     async removeMethod(indexOrId) {

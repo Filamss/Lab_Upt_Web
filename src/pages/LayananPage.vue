@@ -14,23 +14,12 @@
         </button>
       </div>
 
-      <!-- Filter Jenis -->
-      <div class="flex flex-wrap items-center gap-2 mb-3">
-        <label class="text-sm text-gray-600">Filter Jenis:</label>
-        <select
-          v-model="selectedCategory"
-          class="border border-gray-300 rounded-md px-2 py-1 text-sm"
-        >
-          <option value="">Semua</option>
-          <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
-        </select>
-      </div>
-
       <!-- ✅ DataTable Pengujian -->
       <DataTable
         :columns="testColumns"
         :rows="filteredTests"
         :pageSize="10"
+        :filterable="false"
         class="rounded-md border border-gray-200 shadow-sm"
       >
         <template #price="{ value }">
@@ -89,6 +78,7 @@
       <DataTable
         :columns="machineColumns"
         :rows="machineItems"
+        :filterable="false"
         class="rounded-md border border-gray-200 shadow-sm"
       >
         <template #actions="{ row, index }">
@@ -126,6 +116,7 @@
       <DataTable
         :columns="methodColumns"
         :rows="methodItems"
+        :filterable="false"
         class="rounded-md border border-gray-200 shadow-sm"
       >
         <template #actions="{ row, index }">
@@ -163,26 +154,26 @@ const editData = ref(null);
 
 // === Columns ===
 const testColumns = [
-  { field: 'category', title: 'Jenis', isSortable: true },
+  { field: 'serviceCategory', title: 'Jenis Layanan', isSortable: true },
   { field: 'code', title: 'Kode', isSortable: true },
-  { field: 'name', title: 'Nama Pengujian', isSortable: true },
+  { field: 'testCategory', title: 'Jenis Pengujian', isSortable: true },
   { field: 'unit', title: 'Satuan' },
   { field: 'price', title: 'Tarif', slotName: 'price', isSortable: true },
   { field: 'method', title: 'Metode Uji' },
   { field: 'equipment', title: 'Mesin Uji' },
-  { field: 'actions', title: 'Aksi', slotName: 'actions' },
+  { field: 'actions', title: 'Aksi', slotName: 'actions', sortable: false },
 ];
 
 const machineColumns = [
   { field: 'index', title: 'No' },
-  { field: 'name', title: 'Nama Mesin' },
-  { field: 'actions', title: 'Aksi', slotName: 'actions' },
+  { field: 'MachineName', title: 'Nama Mesin' },
+  { field: 'actions', title: 'Aksi', slotName: 'actions', sortable: false },
 ];
 
 const methodColumns = [
   { field: 'index', title: 'No' },
-  { field: 'name', title: 'Nama Metode' },
-  { field: 'actions', title: 'Aksi', slotName: 'actions' },
+  { field: 'MethodName', title: 'Nama Metode' },
+  { field: 'actions', title: 'Aksi', slotName: 'actions', sortable: false },
 ];
 
 // === Computed Items ===
@@ -193,10 +184,10 @@ const filteredTests = computed(() =>
 );
 
 const machineItems = computed(() =>
-  machines.value.map((m, i) => ({ index: i + 1, name: m }))
+  machines.value.map((m, i) => ({ index: i + 1, MachineName: m }))
 );
 const methodItems = computed(() =>
-  methods.value.map((m, i) => ({ index: i + 1, name: m }))
+  methods.value.map((m, i) => ({ index: i + 1, MethodName: m }))
 );
 
 // === Actions ===

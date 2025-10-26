@@ -13,6 +13,8 @@ const LoginPage = () => import('../pages/LoginPage.vue');
 const KeuanganPage = () => import('../pages/KeuanganPage.vue');
 const LaporanPage = () => import('../pages/LaporanPage.vue');
 const UsersPage = () => import('../pages/UsersPage.vue');
+const RolesPage = () => import('../pages/RolesPage.vue');
+const PermissionsPage = () => import('../pages/PermissionsPage.vue');
 const KajiUlangPrint = () => import('../components/print/KajiUlangPrint.vue');
 const PrintPage = () => import('../components/print/PrintPage.vue');
 const ProfilePage = () => import('../pages/ProfilePage.vue');
@@ -31,6 +33,8 @@ const routes = [
   { path: '/laporan-keuangan', component: KeuanganPage },
   { path: '/laporan', component: LaporanPage },
   { path: '/users', component: UsersPage },
+  { path: '/roles', component: RolesPage },
+  { path: '/permissions', component: PermissionsPage },
 
   {
     path: '/kaji-ulang/print',

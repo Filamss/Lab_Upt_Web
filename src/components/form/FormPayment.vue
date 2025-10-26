@@ -1,211 +1,314 @@
 <template>
-  <!-- Overlay for modal -->
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
     @click.self="handleClose"
   >
-    <div
-      class="bg-white rounded-xl shadow-xl p-6 max-w-6xl w-full overflow-y-auto"
-    >
-      <h3 class="text-lg font-semibold mb-4">Permintaan Uji & Pembayaran</h3>
-      <!-- Table of tests -->
-      <div class="overflow-x-auto">
-        <table class="min-w-full text-sm border border-gray-200">
-          <thead class="bg-muted">
-            <tr>
-              <th class="border-b px-2 py-2">No</th>
-              <th class="border-b px-2 py-2">Nama Pengujian</th>
-              <th class="border-b px-2 py-2">Nama Objek Uji</th>
-              <th class="border-b px-2 py-2">Biaya Satuan (Rp)</th>
-              <th class="border-b px-2 py-2">Jumlah Sampel</th>
-              <th class="border-b px-2 py-2">Subtotal</th>
-              <th class="border-b px-2 py-2 text-center">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(row, index) in testRows"
-              :key="index"
-              class="odd:bg-white even:bg-gray-50"
-            >
-              <td class="px-2 py-2 border-b text-center">{{ index + 1 }}</td>
-              <td class="px-2 py-2 border-b">
-                <select
-                  v-model="row.testId"
-                  class="border border-gray-300 rounded-md px-2 py-1 w-full"
-                >
-                  <option :value="null">Pilih</option>
-                  <option v-for="t in tests" :key="t.id" :value="t.id">
-                    {{ t.name }}
-                  </option>
-                </select>
-              </td>
-              <td class="px-2 py-2 border-b">
-                <input
-                  type="text"
-                  v-model="row.objectName"
-                  placeholder="Nama Objek Uji"
-                  class="border border-gray-300 rounded-md px-2 py-1 w-full"
-                />
-              </td>
-              <td class="px-2 py-2 border-b">
-                <input
-                  type="number"
-                  min="0"
-                  v-model.number="row.price"
-                  class="border border-gray-300 rounded-md px-2 py-1 w-full text-right"
-                />
-              </td>
-              <td class="px-2 py-2 border-b">
-                <input
-                  type="number"
-                  min="1"
-                  v-model.number="row.quantity"
-                  class="border border-gray-300 rounded-md px-2 py-1 w-full text-right"
-                />
-              </td>
-              <td class="px-2 py-2 border-b text-right">
-                Rp {{ formatCurrency(rowSubtotal(row)) }}
-              </td>
-              <td class="px-2 py-2 border-b text-center">
-                <button
-                  class="text-danger text-sm hover:underline"
-                  @click="removeRow(index)"
-                >
-                  Hapus
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <button
-        class="mt-2 bg-primary text-white px-3 py-1 rounded text-sm"
-        @click="addRow"
-      >
-        Tambah Baris
-      </button>
-
-      <!-- Payment summary -->
-      <div class="mt-6 space-y-2 text-sm">
-        <div class="flex justify-between">
-          <span>Total</span>
-          <span>Rp {{ formatCurrency(total) }}</span>
+    <div class="w-[95vw] max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-gray-500">Invoice Pembayaran</p>
+          <h3 class="text-lg font-semibold text-surfaceDark">
+            Permintaan {{ formattedOrderId }}
+          </h3>
         </div>
-        <div class="flex justify-between font-semibold">
-          <span>Grand Total</span>
-          <span>Rp {{ formatCurrency(grandTotal) }}</span>
-        </div>
-        <div class="flex justify-between items-center">
-          <span>Uang Muka</span>
-          <input
-            type="number"
-            min="0"
-            v-model.number="dp"
-            class="border border-gray-300 rounded-md px-2 py-1 w-32 text-right"
-          />
-        </div>
-        <div class="flex justify-between font-semibold">
-          <span>Kembalian</span>
-          <span>Rp {{ formatCurrency(change) }}</span>
-        </div>
-      </div>
-
-      <!-- File upload for transfer proof -->
-      <div class="mt-6">
-        <h4 class="font-medium mb-2">Bukti Transfer</h4>
-        <FileUpload v-model="transferFiles" />
-      </div>
-
-      <!-- Action buttons -->
-      <div class="mt-6 flex gap-4">
         <button
-          class="bg-primary text-white px-3 py-2 rounded"
-          @click="printSlip"
-        >
-          Cetak Slip Invoice
-        </button>
-        <button
-          class="bg-success text-white px-3 py-2 rounded"
-          @click="savePayment"
-        >
-          Simpan
-        </button>
-        <button
-          class="bg-danger text-white px-3 py-2 rounded"
+          class="text-gray-500 hover:text-gray-700 transition"
           @click="handleClose"
         >
-          Batal
+          <span class="sr-only">Tutup</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
+      </div>
+
+      <div class="px-6 py-6 space-y-6">
+        <div class="grid gap-6 md:grid-cols-[2fr_1fr]">
+          <section class="space-y-4">
+            <div class="rounded-xl border border-gray-200 overflow-hidden">
+              <table class="min-w-full text-sm">
+                <thead class="bg-muted text-gray-600 uppercase text-xs tracking-wide">
+                  <tr>
+                    <th class="px-3 py-2 text-center">No</th>
+                    <th class="px-3 py-2 text-left">Jenis Pengujian</th>
+                    <th class="px-3 py-2 text-left">Nama Objek Uji</th>
+                    <th class="px-3 py-2 text-right">Biaya Satuan</th>
+                    <th class="px-3 py-2 text-right">Jumlah</th>
+                    <th class="px-3 py-2 text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(row, index) in testRows"
+                    :key="`payment-row-${index}`"
+                    class="odd:bg-white even:bg-gray-50"
+                  >
+                    <td class="px-3 py-2 text-center">{{ index + 1 }}</td>
+                    <td class="px-3 py-2 font-medium text-gray-700">
+                      {{ row.testName || '-' }}
+                    </td>
+                    <td class="px-3 py-2 text-gray-600">
+                      {{ row.objectName || '-' }}
+                    </td>
+                    <td class="px-3 py-2 text-right text-gray-700">
+                      Rp {{ formatCurrency(row.price) }}
+                    </td>
+                    <td class="px-3 py-2 text-right text-gray-700">
+                      {{ row.quantity }}
+                    </td>
+                    <td class="px-3 py-2 text-right font-semibold text-surfaceDark">
+                      Rp {{ formatCurrency(rowSubtotal(row)) }}
+                    </td>
+                  </tr>
+                  <tr v-if="!testRows.length">
+                    <td colspan="6" class="px-3 py-4 text-center text-sm text-gray-500">
+                      Belum ada data pengujian untuk permintaan ini.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="flex flex-col items-end gap-1 text-sm text-gray-600">
+              <div class="flex items-center justify-end gap-4">
+                <span>Total Pengujian</span>
+                <span class="font-semibold text-surfaceDark">
+                  Rp {{ formatCurrency(grandTotal) }}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <aside class="space-y-4">
+            <div class="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-3 text-sm text-gray-600">
+              <div class="flex items-center justify-between">
+                <span class="text-gray-500">Customer</span>
+                <span class="font-semibold text-surfaceDark">
+                  {{ customerNameDisplay || '-' }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-gray-500">Tanggal Permintaan</span>
+                <span class="font-medium">{{ formattedEntryDate }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-gray-500">Batas Pembayaran</span>
+                <span class="font-semibold text-danger">
+                  {{ paymentDeadline.label }}
+                </span>
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-gray-200 p-4 space-y-3 text-sm text-gray-600">
+              <h4 class="text-sm font-semibold text-surfaceDark">Instruksi Pembayaran</h4>
+              <div
+                v-for="(account, idx) in bankAccounts"
+                :key="`bank-${idx}`"
+                class="rounded-lg border border-gray-100 bg-gray-50 p-3"
+              >
+                <p class="text-xs text-gray-500 uppercase tracking-wide">{{ account.bank }}</p>
+                <p class="text-base font-semibold text-surfaceDark">{{ account.number }}</p>
+                <p class="text-xs text-gray-500">a.n {{ account.name }}</p>
+              </div>
+              <div class="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3 text-xs text-primaryDark">
+                Scan QRIS pada aplikasi perbankan Anda untuk pembayaran cepat.
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-white border border-gray-200 p-4 space-y-3 text-sm text-gray-600">
+              <div class="flex items-center justify-between">
+                <span>Total Tagihan</span>
+                <span class="font-semibold text-surfaceDark">
+                  Rp {{ formatCurrency(grandTotal) }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Sisa Pembayaran</span>
+                <span class="font-semibold" :class="outstanding > 0 ? 'text-danger' : 'text-emerald-600'">
+                  Rp {{ formatCurrency(outstanding) }}
+                </span>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-[2fr_1fr]">
+          <div>
+            <h4 class="text-sm font-semibold text-surfaceDark mb-2">Upload Bukti Pembayaran</h4>
+            <p class="text-xs text-gray-500 mb-3">
+              Unggah bukti transfer dalam format PDF, PNG, atau JPG (maksimal 5MB).
+            </p>
+            <FileUpload v-model="transferFiles" />
+          </div>
+          <div class="rounded-xl border border-gray-200 p-4 text-xs text-gray-600 space-y-2">
+            <h4 class="text-sm font-semibold text-surfaceDark">Catatan</h4>
+            <p>
+              Setelah bukti pembayaran dikirim, tim admin akan melakukan verifikasi maksimal dalam 1x24 jam
+              sebelum permintaan diproses lebih lanjut.
+            </p>
+            <p>
+              Bila pembayaran melewati batas waktu, permintaan dapat dibatalkan secara otomatis oleh sistem.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end sm:items-center">
+          <button
+            class="w-full sm:w-auto rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
+            @click="downloadInvoice"
+          >
+            Unduh Invoice
+          </button>
+          <button
+            class="w-full sm:w-auto rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
+            @click="handleClose"
+          >
+            Tutup
+          </button>
+          <button
+            class="w-full sm:w-auto rounded-md bg-primary text-white px-4 py-2 text-sm font-semibold transition hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="!canConfirmPayment"
+            @click="savePayment"
+          >
+            Konfirmasi Pembayaran
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-// FormPayment: displays a pop‑up for entering payment details including test
-// items, costs, down payment, and uploading proof of transfer.  Emits
-// events when the user saves or closes the modal.
-import { ref, reactive, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import FileUpload from '@/components/FileUpload.vue';
 
 const props = defineProps({
-  // List or computed array of available tests; used in the test selection
-  tests: { type: [Array, Object], required: true },
-  // ID of the order being processed.  This can be used to update the order
-  // store when saving the payment.
-  orderId: { type: Number, required: true },
+  tests: { type: Array, default: () => [] },
+  orderId: { type: String, default: '' },
+  initialRows: { type: Array, default: () => [] },
+  customerName: { type: String, default: '' },
+  entryDate: { type: String, default: '' },
 });
 
 const emit = defineEmits(['close', 'payment-saved']);
 
-// Rows representing individual test entries.  Each row allows selection
-// of a test, entering an object name, unit price, and quantity.  The
-// subtotal is computed on the fly.
-const testRows = reactive([
-  { testId: null, objectName: '', price: 0, quantity: 1 },
-]);
+const testRows = ref([]);
+const transferFiles = ref([]);
+const amountPaid = ref(0);
 
-function addRow() {
-  testRows.push({ testId: null, objectName: '', price: 0, quantity: 1 });
+const bankAccounts = [
+  { bank: 'Bank Jateng', number: '1234 5678 90', name: 'UPT Lab Tegal' },
+  { bank: 'BRI', number: '0099 8877 6655', name: 'UPT Lab Tegal' },
+];
+
+const formattedOrderId = computed(() => props.orderId || '-');
+
+const formattedEntryDate = computed(() => formatDate(props.entryDate));
+
+const paymentDeadline = computed(() => {
+  const base = props.entryDate ? new Date(props.entryDate) : new Date();
+  const deadline = new Date(base.getTime());
+  deadline.setDate(deadline.getDate() + 2);
+  return {
+    label: formatDate(deadline.toISOString()),
+    iso: deadline.toISOString(),
+  };
+});
+
+watch(
+  () => props.initialRows,
+  (rows) => {
+    applyInitialRows(Array.isArray(rows) ? rows : []);
+  },
+  { immediate: true, deep: true },
+);
+
+function applyInitialRows(rows = []) {
+  const prepared = rows.map((row) => normalizeRow(row));
+  testRows.value = prepared;
+  transferFiles.value = [];
+  amountPaid.value = prepared.reduce((sum, row) => sum + rowSubtotal(row), 0);
 }
-function removeRow(index) {
-  testRows.splice(index, 1);
+
+function normalizeRow(row = {}) {
+  const test = findTest(row.testId);
+  const quantity = Math.max(1, Number(row.quantity) || 1);
+  const price = Math.max(0, Number(row.price ?? test?.price ?? 0));
+  const testName =
+    row.testName ||
+    test?.name ||
+    test?.testCategory ||
+    'Pengujian';
+  return {
+    testId: row.testId || test?.id || null,
+    testName,
+    objectName: row.objectName || row.testName || test?.testCategory || '',
+    price,
+    quantity,
+  };
+}
+
+function findTest(id) {
+  if (!id) return null;
+  return props.tests?.find((test) => test.id === id) || null;
 }
 
 function rowSubtotal(row) {
-  return (Number(row.price) || 0) * (Number(row.quantity) || 0);
+  return Math.max(0, Number(row.price) || 0) * Math.max(1, Number(row.quantity) || 1);
 }
 
-const total = computed(() => testRows.reduce((sum, row) => sum + rowSubtotal(row), 0));
-const grandTotal = computed(() => total.value);
+const grandTotal = computed(() =>
+  testRows.value.reduce((sum, row) => sum + rowSubtotal(row), 0),
+);
 
-const dp = ref(0);
-const change = computed(() => Math.max(dp.value - grandTotal.value, 0));
+const outstanding = computed(() =>
+  Math.max(0, grandTotal.value - Math.max(0, Number(amountPaid.value) || 0)),
+);
 
-const transferFiles = ref([]);
+const customerNameDisplay = computed(() => props.customerName);
+
+const canConfirmPayment = computed(() => {
+  return amountPaid.value > 0 && transferFiles.value.length > 0;
+});
+
+function normalizeAmount() {
+  amountPaid.value = Math.max(0, Number(amountPaid.value) || 0);
+}
 
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString('id-ID');
 }
 
+function formatDate(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
 function savePayment() {
-  // Emit details back to the parent.  Parent can update the order store.
-  emit('payment-saved', {
+  normalizeAmount();
+  const detail = {
     orderId: props.orderId,
-    total: total.value,
-    downPayment: dp.value,
-    remaining: grandTotal.value - dp.value,
-    testRows: JSON.parse(JSON.stringify(testRows)),
+    status: 'payment_received',
+    total: grandTotal.value,
+    amountPaid: amountPaid.value,
+    outstanding: outstanding.value,
+    paymentDeadline: paymentDeadline.value.iso,
+    paymentDate: new Date().toISOString(),
+    testRows: testRows.value.map((row) => ({ ...row })),
     transferFiles: transferFiles.value,
-  });
+  };
+  emit('payment-saved', detail);
   handleClose();
 }
 
-function printSlip() {
-  // Placeholder for printing invoice.  In a real application, this would
-  // generate and open a printable invoice.  For now, show a dummy alert.
-  alert('Cetak slip invoice (dummy)');
+function downloadInvoice() {
+  alert('Fitur unduh invoice akan tersedia setelah integrasi dokumen.');
 }
 
 function handleClose() {
