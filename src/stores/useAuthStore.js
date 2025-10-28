@@ -11,6 +11,27 @@ export const useAuthStore = defineStore('auth', {
   }),
 
   actions: {
+    async register({ name, email, password }) {
+      try {
+        this.loading = true
+        const res = await api.post('/api/v1/users/register', {
+          name,
+          email,
+          password,
+        })
+        const payload = res.data?.data ?? res.data
+        return { ok: true, data: payload }
+      } catch (err) {
+        const msg =
+          err.response?.data?.message ||
+          err.message ||
+          'Registrasi gagal. Periksa data Anda dan coba lagi.'
+        return { ok: false, message: msg }
+      } finally {
+        this.loading = false
+      }
+    },
+
     async login({ email, password }) {
       try {
         this.loading = true

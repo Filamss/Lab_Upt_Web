@@ -22,7 +22,8 @@ const RiwayatPage = () => import('../pages/RiwayatPage.vue');
 const routes = [
   { path: '/', redirect: '/dashboard' },
 
-  { path: '/login', component: LoginPage, meta: { layout: 'auth' } },
+  { path: '/login', component: LoginPage, meta: { layout: 'auth', authMode: 'login' } },
+  { path: '/register', component: LoginPage, meta: { layout: 'auth', authMode: 'register' } },
   { path: '/dashboard', component: DashboardPage },
   { path: '/profile', component: ProfilePage },
   { path: '/permintaan', component: PermintaanPage },
