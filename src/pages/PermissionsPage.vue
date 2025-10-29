@@ -85,7 +85,6 @@
               class="w-full rounded-md border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm text-gray-700 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/40"
             />
           </div>
-
         </div>
         <p v-if="permissionStore.error" class="text-xs text-red-500">
           {{ permissionStore.error }}
@@ -249,7 +248,7 @@ const permissionStore = usePermissionStore();
 
 const columns = [
   { field: 'name', title: 'Nama Permission' },
-  { field: 'id', title: 'ID (ULID)', slotName: 'id' },
+  { field: 'id', title: 'ID', slotName: 'id' },
   { field: 'timeline', title: 'Riwayat', slotName: 'timeline' },
   {
     field: 'actions',
@@ -355,7 +354,6 @@ async function handleSubmit(payload) {
   }
   closeForm();
   lastRefreshedAt.value = new Date();
-  
 }
 
 async function handleDelete(permission) {
@@ -370,7 +368,6 @@ async function handleDelete(permission) {
   await permissionStore.removePermission(permission.id);
   lastRefreshedAt.value = new Date();
 }
-
 </script>
 
 <style scoped>

@@ -274,6 +274,7 @@ const openConfirm = useConfirmDialog();
 const columns = [
   { field: 'name', title: 'Nama', isSortable: false },
   { field: 'email', title: 'Email', isSortable: false },
+  { field: 'employmentIdentityNumber', title: 'NIP', isSortable: false },
   { field: 'roles', title: 'Role', slotName: 'roles' },
   { field: 'status', title: 'Status', slotName: 'status', isSortable: false },
   { field: 'timeline', title: 'Riwayat', slotName: 'timeline' },

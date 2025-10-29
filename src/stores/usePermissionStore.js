@@ -42,30 +42,87 @@ export const usePermissionStore = defineStore('permission', {
   actions: {
     async fetchPermissions(params = {}) {
       this.loading = true;
-      const page = params.page ?? this.pagination.currentPage;
-      const perPage = params.perPage ?? this.pagination.perPage;
-      const search = params.search ?? this.search ?? '';
+      const page = params.page ?? this.pagination.currentPage ?? 1;
+      const basePerPage = params.perPage ?? this.pagination.perPage ?? 10;
+      const rawSearch = params.search ?? this.search ?? '';
+      const searchTerm =
+        typeof rawSearch === 'string' ? rawSearch.trim() : '';
+      const hasSearch = Boolean(searchTerm);
+      const knownTotal = this.pagination.totalItems || 0;
+      const effectivePerPage = hasSearch
+        ? Math.max(knownTotal, basePerPage, 10)
+        : basePerPage;
+      const requestParams = {
+        page: hasSearch ? 1 : Math.max(page, 1),
+        per_page: effectivePerPage,
+      };
 
       try {
         const response = await api.get('/api/v1/permissions', {
-          params: {
-            page,
-            per_page: perPage,
-            search: search || undefined,
-          },
+          params: requestParams,
         });
 
         const payload = response.data?.data ?? {};
-        const items = Array.isArray(payload.items)
+        let items = Array.isArray(payload.items)
           ? payload.items.map((item) => normalizePermission(item))
           : [];
+        let totalItems =
+          payload.total_items ?? payload.total ?? items.length;
+
+        if (
+          hasSearch &&
+          (payload.has_next_page ||
+            ((payload.last_page ?? payload.total_pages) ?? 1) >
+              requestParams.page)
+        ) {
+          const lastPage =
+            payload.last_page ?? payload.total_pages ?? requestParams.page;
+          for (let nextPage = requestParams.page + 1; nextPage <= lastPage; nextPage += 1) {
+            const nextResponse = await api.get('/api/v1/permissions', {
+              params: {
+                page: nextPage,
+                per_page: effectivePerPage,
+              },
+            });
+            const nextPayload = nextResponse.data?.data ?? {};
+            if (Array.isArray(nextPayload.items)) {
+              items = items.concat(
+                nextPayload.items.map((entry) => normalizePermission(entry))
+              );
+            }
+            const nextTotal =
+              nextPayload.total_items ?? nextPayload.total ?? null;
+            if (typeof nextTotal === 'number') {
+              totalItems = nextTotal;
+            }
+          }
+        }
+
+        if (hasSearch) {
+          // Backend pencarian masih berbasis ID, jadi filter nama dilakukan di sisi klien.
+          const keyword = searchTerm.toLowerCase();
+          const filtered = items.filter((permission) =>
+            permission.name?.toLowerCase().includes(keyword)
+          );
+          this.permissions = filtered;
+          this.pagination = {
+            currentPage: 1,
+            perPage: basePerPage,
+            lastPage: 1,
+            totalItems,
+            hasNextPage: false,
+            hasPrevPage: false,
+          };
+          this.error = null;
+          return;
+        }
 
         this.permissions = items;
         this.pagination = {
-          currentPage: payload.current_page ?? page,
-          perPage: payload.per_page ?? perPage,
-          lastPage: payload.last_page ?? payload.total_pages ?? page,
-          totalItems: payload.total_items ?? items.length,
+          currentPage: payload.current_page ?? requestParams.page,
+          perPage: payload.per_page ?? effectivePerPage,
+          lastPage: payload.last_page ?? payload.total_pages ?? requestParams.page,
+          totalItems,
           hasNextPage: payload.has_next_page ?? false,
           hasPrevPage: payload.has_prev_page ?? false,
         };

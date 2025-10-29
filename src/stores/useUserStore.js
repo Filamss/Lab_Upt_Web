@@ -53,25 +53,6 @@ function normalizeUser(entry = {}) {
   };
 }
 
-function buildUserQuery({
-  page,
-  perPage,
-  search,
-  roleId,
-  status,
-} = {}) {
-  const query = new URLSearchParams();
-  if (page) query.set('page', page);
-  if (perPage) query.set('per_page', perPage);
-  if (search) query.set('search', search);
-  if (roleId) query.set('role_id', roleId);
-  if (status) query.set('status', status);
-  ['roles', 'roles.permissions'].forEach((include) =>
-    query.append('include', include)
-  );
-  return query.toString();
-}
-
 function buildUserFormData(payload = {}) {
   const formData = new FormData();
   const appendIfFilled = (key, value, { allowEmptyString = false } = {}) => {
@@ -151,37 +132,121 @@ export const useUserStore = defineStore('user', {
   actions: {
     async fetchUsers(params = {}) {
       this.loading = true;
-      const page = params.page ?? this.pagination.currentPage;
-      const perPage = params.perPage ?? this.pagination.perPage;
-      const search = params.search ?? this.filters.search ?? '';
-      const roleId = params.roleId ?? this.filters.roleId ?? '';
-      const status = params.status ?? this.filters.status ?? '';
+      const page = params.page ?? this.pagination.currentPage ?? 1;
+      const basePerPage = params.perPage ?? this.pagination.perPage ?? 10;
+      const rawSearch = params.search ?? this.filters.search ?? '';
+      const searchTerm = typeof rawSearch === 'string' ? rawSearch.trim() : '';
+      const hasSearch = Boolean(searchTerm);
+      const rawRoleId = params.roleId ?? this.filters.roleId ?? '';
+      const roleFilter = typeof rawRoleId === 'string' ? rawRoleId.trim() : '';
+      const hasRoleFilter = Boolean(roleFilter);
+      const rawStatus = params.status ?? this.filters.status ?? '';
+      const statusFilter = typeof rawStatus === 'string' ? rawStatus.trim() : '';
+      const hasStatusFilter = Boolean(statusFilter);
+      const needsClientFilter = hasSearch || hasRoleFilter || hasStatusFilter;
+      const knownTotal = this.pagination.totalItems || 0;
+      const effectivePerPage = needsClientFilter
+        ? Math.max(knownTotal, basePerPage, 10)
+        : basePerPage;
+      const requestPage = needsClientFilter ? 1 : Math.max(page, 1);
+
+      const buildQuery = (pageNumber) => {
+        const query = new URLSearchParams();
+        query.set('page', pageNumber);
+        query.set('per_page', effectivePerPage);
+        if (!hasSearch && searchTerm) query.set('search', searchTerm);
+        if (!needsClientFilter && hasRoleFilter) query.set('role_id', roleFilter);
+        if (!needsClientFilter && hasStatusFilter) query.set('status', statusFilter);
+        ['roles', 'roles.permissions'].forEach((include) =>
+          query.append('include', include)
+        );
+        return query;
+      };
+
+      const fetchPage = async (pageNumber) => {
+        const query = buildQuery(pageNumber);
+        const endpoint = `/api/v1/users?${query.toString()}`;
+        const response = await api.get(endpoint);
+        return response.data?.data ?? {};
+      };
 
       try {
-        const query = buildUserQuery({
-          page,
-          perPage,
-          search,
-          roleId,
-          status,
-        });
-        const endpoint = query ? `/api/v1/users?${query}` : '/api/v1/users';
-        const response = await api.get(endpoint);
-
-        const payload = response.data?.data ?? {};
-        const items = Array.isArray(payload.items)
-          ? payload.items.map((item) => normalizeUser(item))
+        const firstPayload = await fetchPage(requestPage);
+        let items = Array.isArray(firstPayload.items)
+          ? firstPayload.items.map((item) => normalizeUser(item))
           : [];
+        let totalItems =
+          firstPayload.total_items ?? firstPayload.total ?? items.length;
+
+        if (needsClientFilter) {
+          const lastPage =
+            firstPayload.last_page ?? firstPayload.total_pages ?? requestPage;
+          for (let nextPage = requestPage + 1; nextPage <= lastPage; nextPage += 1) {
+            const nextPayload = await fetchPage(nextPage);
+            if (Array.isArray(nextPayload.items)) {
+              items = items.concat(
+                nextPayload.items.map((entry) => normalizeUser(entry))
+              );
+            }
+            const nextTotal = nextPayload.total_items ?? nextPayload.total ?? null;
+            if (typeof nextTotal === 'number') {
+              totalItems = nextTotal;
+            }
+          }
+
+          let filtered = items;
+          if (hasSearch) {
+            const keyword = searchTerm.toLowerCase();
+            filtered = filtered.filter((user) => {
+              const nameMatch = user.name?.toLowerCase().includes(keyword);
+              const emailMatch = user.email?.toLowerCase().includes(keyword);
+              return Boolean(nameMatch || emailMatch);
+            });
+          }
+          if (hasRoleFilter) {
+            filtered = filtered.filter((user) =>
+              Array.isArray(user.roles) &&
+              user.roles.some((role) => role.id === roleFilter)
+            );
+          }
+          if (hasStatusFilter) {
+            if (statusFilter === 'active' || statusFilter === 'inactive') {
+              filtered = filtered.filter((user) => {
+                const isActive = Boolean(user.isActive);
+                return statusFilter === 'active' ? isActive : !isActive;
+              });
+            }
+          }
+
+          this.users = filtered;
+          this.pagination = {
+            currentPage: 1,
+            perPage: basePerPage,
+            lastPage: filtered.length ? Math.max(1, Math.ceil(filtered.length / basePerPage)) : 1,
+            totalItems,
+            hasNextPage: false,
+            hasPrevPage: false,
+          };
+          this.filters.search = searchTerm;
+          this.filters.roleId = roleFilter;
+          this.filters.status = statusFilter;
+          this.error = null;
+          return;
+        }
 
         this.users = items;
         this.pagination = {
-          currentPage: payload.current_page ?? page,
-          perPage: payload.per_page ?? perPage,
-          lastPage: payload.last_page ?? payload.total_pages ?? payload.next_page ?? page,
-          totalItems: payload.total_items ?? payload.total ?? items.length,
-          hasNextPage: payload.has_next_page ?? Boolean(payload.next_page),
-          hasPrevPage: payload.has_prev_page ?? Boolean(payload.prev_page),
+          currentPage: firstPayload.current_page ?? requestPage,
+          perPage: firstPayload.per_page ?? effectivePerPage,
+          lastPage:
+            firstPayload.last_page ?? firstPayload.total_pages ?? firstPayload.next_page ?? requestPage,
+          totalItems,
+          hasNextPage: firstPayload.has_next_page ?? Boolean(firstPayload.next_page),
+          hasPrevPage: firstPayload.has_prev_page ?? Boolean(firstPayload.prev_page),
         };
+        this.filters.search = searchTerm;
+        this.filters.roleId = roleFilter;
+        this.filters.status = statusFilter;
         this.error = null;
       } catch (err) {
         console.error('[UserStore] Gagal memuat data dari API', err);

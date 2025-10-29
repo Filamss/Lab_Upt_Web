@@ -50,6 +50,15 @@
           placeholder="0812-3456-7890"
         />
       </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-gray-700">NIP</label>
+        <input
+          v-model="form.employmentIdentityNumber"
+          type="text"
+          class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+          placeholder="6404646066XXXXXX"
+        />
+      </div>
     </div>
 
     <div class="flex flex-col gap-3">
@@ -161,6 +170,7 @@ const form = reactive({
   email: '',
   password: '',
   phone: '',
+  employmentIdentityNumber: '',
   roles: [],
   isActive: true,
 });
@@ -173,6 +183,7 @@ watch(
       form.email = '';
       form.password = '';
       form.phone = '';
+      form.employmentIdentityNumber = '';
       form.roles = [];
       form.isActive = true;
       return;
@@ -182,6 +193,8 @@ watch(
     form.email = value.email || '';
     form.password = '';
     form.phone = value.phone || value.phone_number || '';
+    form.employmentIdentityNumber =
+      value.employmentIdentityNumber || value.employment_identity_number || '';
     form.roles = Array.isArray(value.roles) ? value.roles.map((role) => role.id) : [];
     form.isActive = value.isActive ?? true;
   },
@@ -206,6 +219,7 @@ async function handleSubmit() {
   const email = form.email.trim();
   const password = form.password || undefined;
   const phoneNumber = form.phone?.trim() || undefined;
+  const employmentIdentityNumber = form.employmentIdentityNumber?.trim() || undefined;
   const roleIds = Array.isArray(form.roles) ? [...form.roles] : [];
 
   emit('submit', {
@@ -214,6 +228,8 @@ async function handleSubmit() {
     password,
     phone: phoneNumber,
     phone_number: phoneNumber,
+    employment_identity_number: employmentIdentityNumber,
+    employmentIdentityNumber,
     roles: roleIds,
     role_ids: roleIds,
     isActive: form.isActive,

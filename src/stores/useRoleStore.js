@@ -47,15 +47,6 @@ function normalizeRole(entry = {}) {
   };
 }
 
-function buildRoleQuery({ page, perPage, search } = {}) {
-  const query = new URLSearchParams();
-  if (page) query.set('page', page);
-  if (perPage) query.set('per_page', perPage);
-  if (search) query.set('search', search);
-  ['permissions', 'users'].forEach((include) => query.append('include', include));
-  return query.toString();
-}
-
 function buildRoleFormData(payload = {}) {
   const formData = new FormData();
   if (payload.name) formData.append('name', payload.name);
@@ -110,29 +101,77 @@ export const useRoleStore = defineStore('role', {
   actions: {
     async fetchRoles(params = {}) {
       this.loading = true;
-      const page = params.page ?? this.pagination.currentPage;
-      const perPage = params.perPage ?? this.pagination.perPage;
-      const search = params.search ?? this.search ?? '';
+      const page = params.page ?? this.pagination.currentPage ?? 1;
+      const basePerPage = params.perPage ?? this.pagination.perPage ?? 10;
+      const rawSearch = params.search ?? this.search ?? '';
+      const searchTerm = typeof rawSearch === 'string' ? rawSearch.trim() : '';
+      const hasSearch = Boolean(searchTerm);
+      const knownTotal = this.pagination.totalItems || 0;
+      const effectivePerPage = hasSearch
+        ? Math.max(knownTotal, basePerPage, 10)
+        : basePerPage;
+      const requestPage = hasSearch ? 1 : Math.max(page, 1);
+
+      const fetchPage = async (pageNumber) => {
+        const query = new URLSearchParams();
+        query.set('page', pageNumber);
+        query.set('per_page', effectivePerPage);
+        if (!hasSearch && searchTerm) query.set('search', searchTerm);
+        ['permissions', 'users'].forEach((include) => query.append('include', include));
+        const endpoint = `/api/v1/roles?${query.toString()}`;
+        const response = await api.get(endpoint);
+        return response.data?.data ?? {};
+      };
 
       try {
-        const query = buildRoleQuery({ page, perPage, search });
-        const endpoint = query ? `/api/v1/roles?${query}` : '/api/v1/roles';
-        const response = await api.get(endpoint);
-
-        const payload = response.data?.data ?? {};
-        const items = Array.isArray(payload.items)
-          ? payload.items.map((item) => normalizeRole(item))
+        const firstPayload = await fetchPage(requestPage);
+        let items = Array.isArray(firstPayload.items)
+          ? firstPayload.items.map((item) => normalizeRole(item))
           : [];
+        let totalItems = firstPayload.total_items ?? firstPayload.total ?? items.length;
+
+        if (hasSearch) {
+          const lastPage = firstPayload.last_page ?? firstPayload.total_pages ?? requestPage;
+          for (let nextPage = requestPage + 1; nextPage <= lastPage; nextPage += 1) {
+            const nextPayload = await fetchPage(nextPage);
+            if (Array.isArray(nextPayload.items)) {
+              items = items.concat(
+                nextPayload.items.map((entry) => normalizeRole(entry))
+              );
+            }
+            const nextTotal = nextPayload.total_items ?? nextPayload.total ?? null;
+            if (typeof nextTotal === 'number') {
+              totalItems = nextTotal;
+            }
+          }
+          const keyword = searchTerm.toLowerCase();
+          const filtered = items.filter((role) =>
+            role.name?.toLowerCase().includes(keyword)
+          );
+          this.roles = filtered;
+          this.pagination = {
+            currentPage: 1,
+            perPage: basePerPage,
+            lastPage: 1,
+            totalItems,
+            hasNextPage: false,
+            hasPrevPage: false,
+          };
+          this.search = searchTerm;
+          this.error = null;
+          return;
+        }
 
         this.roles = items;
         this.pagination = {
-          currentPage: payload.current_page ?? page,
-          perPage: payload.per_page ?? perPage,
-          lastPage: payload.last_page ?? payload.total_pages ?? page,
-          totalItems: payload.total_items ?? items.length,
-          hasNextPage: payload.has_next_page ?? false,
-          hasPrevPage: payload.has_prev_page ?? false,
+          currentPage: firstPayload.current_page ?? requestPage,
+          perPage: firstPayload.per_page ?? effectivePerPage,
+          lastPage: firstPayload.last_page ?? firstPayload.total_pages ?? requestPage,
+          totalItems,
+          hasNextPage: firstPayload.has_next_page ?? false,
+          hasPrevPage: firstPayload.has_prev_page ?? false,
         };
+        this.search = searchTerm;
         this.error = null;
       } catch (err) {
         console.error('[RoleStore] Gagal memuat data dari API', err);

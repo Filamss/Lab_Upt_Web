@@ -132,6 +132,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { usePermintaanStore } from '@/stores/usePermintaanStore';
 import { useTestStore } from '@/stores/useTestStore';
+import { useOrderStore } from '@/stores/useOrderStore';
 import { PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import FormPermintaan from '@/components/form/FormPermintaan.vue';
 import FormPayment from '@/components/form/FormPayment.vue';
@@ -141,6 +142,7 @@ import { useConfirmDialog } from '@/stores/useConfirmDialog';
 
 const store = usePermintaanStore();
 const testStore = useTestStore();
+const orderStore = useOrderStore();
 const search = ref('');
 const statusFilter = ref('');
 const showModal = ref(false);
@@ -359,6 +361,11 @@ async function handlePaymentSaved(detail) {
   await store.updateRequest(detail.orderId, {
     status: detail.status || 'payment_received',
     paymentInfo: detail,
+  });
+  const updatedRequest =
+    store.requestList.find((req) => req.idOrder === detail.orderId) || null;
+  orderStore.upsertFromRequest(updatedRequest || { idOrder: detail.orderId }, {
+    paymentDetail: detail,
   });
   closePaymentModal();
 }
