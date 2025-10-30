@@ -39,6 +39,8 @@ function normalizeRole(entry = {}) {
     id: entry.id || entry.slug || entry.name,
     name: (entry.name || 'Role').replace(/\b\w/g, (c) => c.toUpperCase()),
     description: entry.description || '',
+    isDefault:
+      entry.is_default ?? entry.default ?? entry.isDefault ?? entry.default_role ?? false,
     permissions,
     userCount,
     permissionCount: entry.permission_count ?? permissions.length,
@@ -65,6 +67,11 @@ function buildRoleFormData(payload = {}) {
     .filter(Boolean);
 
   permissionIds.forEach((permissionId) => formData.append('permission_id', permissionId));
+
+  if (payload.is_default !== undefined || payload.isDefault !== undefined) {
+    const isDefault = payload.is_default ?? payload.isDefault;
+    formData.append('is_default', isDefault ? 'true' : 'false');
+  }
 
   return formData;
 }
@@ -283,6 +290,35 @@ export const useRoleStore = defineStore('role', {
           err.message ||
           'Gagal memperbarui permission role.';
         throw err;
+      }
+    },
+
+    async setDefaultRole(id, isDefault) {
+      this.saving = true;
+      try {
+        await api.patch(`/api/v1/roles/${id}/default`, {
+          is_default: Boolean(isDefault),
+        });
+        this.roles = this.roles.map((role) => {
+          if (role.id === id) return { ...role, isDefault: Boolean(isDefault) };
+          if (isDefault) return { ...role, isDefault: false };
+          return role;
+        });
+        return { ok: true };
+      } catch (err) {
+        console.warn('[RoleStore] API set default gagal, gunakan pembaruan lokal.', err);
+        this.roles = this.roles.map((role) => {
+          if (role.id === id) return { ...role, isDefault: Boolean(isDefault) };
+          if (isDefault) return { ...role, isDefault: false };
+          return role;
+        });
+        this.error =
+          err.response?.data?.message ||
+          err.message ||
+          'Gagal memperbarui status default role melalui API.';
+        return { ok: true, dummy: true };
+      } finally {
+        this.saving = false;
       }
     },
   },

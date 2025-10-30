@@ -1,8 +1,12 @@
 <template>
   <div class="space-y-5">
-    <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <header
+      class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    >
       <div>
-        <h2 class="text-xl font-semibold text-surfaceDark sm:text-2xl">Manajemen Role</h2>
+        <h2 class="text-xl font-semibold text-surfaceDark sm:text-2xl">
+          Manajemen Role
+        </h2>
         <p class="text-sm text-gray-500">
           Kelompokkan akses pengguna dengan role dan permission yang fleksibel.
         </p>
@@ -13,7 +17,10 @@
           @click="refreshRoles"
         >
           <ArrowPathIcon
-            :class="['h-5 w-5', roleStore.loading ? 'animate-spin text-primary' : 'text-gray-500']"
+            :class="[
+              'h-5 w-5',
+              roleStore.loading ? 'animate-spin text-primary' : 'text-gray-500',
+            ]"
           />
           Muat Ulang
         </button>
@@ -36,11 +43,15 @@
         <p class="text-xs text-gray-400">Jumlah role terdaftar di sistem.</p>
       </article>
       <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <p class="text-xs font-medium uppercase text-gray-500">Permission Terdaftar</p>
+        <p class="text-xs font-medium uppercase text-gray-500">
+          Permission Terdaftar
+        </p>
         <p class="mt-2 text-2xl font-semibold text-primaryDark">
           {{ permissionOptions.length }}
         </p>
-        <p class="text-xs text-gray-400">Gunakan permission untuk membatasi akses.</p>
+        <p class="text-xs text-gray-400">
+          Gunakan permission untuk membatasi akses.
+        </p>
       </article>
       <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <p class="text-xs font-medium uppercase text-gray-500">Role Populer</p>
@@ -53,11 +64,17 @@
       </article>
     </section>
 
-    <section class="rounded-xl border border-gray-200 bg-white shadow-sm px-3 sm:px-4">
-      <div class="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
+    <section
+      class="rounded-xl border border-gray-200 bg-white shadow-sm px-3 sm:px-4"
+    >
+      <div
+        class="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 sm:flex-row sm:items-end sm:justify-between"
+      >
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div class="relative w-full sm:w-72">
-            <MagnifyingGlassIcon class="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <MagnifyingGlassIcon
+              class="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+            />
             <input
               v-model="searchTerm"
               type="search"
@@ -66,12 +83,20 @@
             />
           </div>
         </div>
-        <p v-if="roleStore.error" class="text-xs text-red-500">
-          {{ roleStore.error }}
-        </p>
+        <div class="flex flex-col items-start text-xs sm:items-end">
+          <p v-if="roleStore.error" class="text-red-500">
+            {{ roleStore.error }}
+          </p>
+          <p v-else-if="defaultWarning" class="text-amber-600">
+            {{ defaultWarning }}
+          </p>
+        </div>
       </div>
 
-      <div v-if="roleStore.loading" class="flex items-center justify-center gap-3 py-10 text-sm text-gray-500">
+      <div
+        v-if="roleStore.loading"
+        class="flex items-center justify-center gap-3 py-10 text-sm text-gray-500"
+      >
         <ArrowPathIcon class="h-5 w-5 animate-spin text-primary" />
         Memuat data role...
       </div>
@@ -100,8 +125,30 @@
               >
                 +{{ row.permissionCount - maxPermissionChip }} lagi
               </span>
-              <span v-if="!row.permissionCount" class="text-xs text-gray-400">Belum ada permission</span>
+              <span v-if="!row.permissionCount" class="text-xs text-gray-400"
+                >Belum ada permission</span
+              >
             </div>
+          </template>
+          <template #defaultStatus="{ row }">
+            <button
+              type="button"
+              class="inline-flex items-center justify-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition"
+              :class="[
+                row.isDefault
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300',
+              ]"
+              :aria-pressed="row.isDefault"
+              :disabled="roleStore.saving"
+              @click="toggleDefault(row)"
+            >
+              <span
+                class="h-2 w-2 rounded-full"
+                :class="row.isDefault ? 'bg-emerald-500' : 'bg-gray-300'"
+              ></span>
+              <span>{{ row.isDefault ? 'Aktif' : 'Tidak aktif' }}</span>
+            </button>
           </template>
 
           <template #timeline="{ row }">
@@ -122,31 +169,39 @@
           </template>
 
           <template #actions="{ row }">
-            <div class="flex gap-2">
+            <div class="flex gap-3">
               <button
-                class="rounded-md p-1.5 text-primary transition hover:bg-primary/10"
+                class="rounded-md inline-flex items-center gap-1 p-1.5 text-primary transition hover:bg-primary/10"
                 title="Edit role"
                 @click="openEditForm(row)"
               >
-                <PencilSquareIcon class="h-5 w-5" />
+                <PencilSquareIcon class="h-4 w-4" />
+                Edit
               </button>
               <button
-                class="rounded-md p-1.5 text-danger transition hover:bg-danger/10"
+                class="rounded-md inline-flex items-center gap-1 p-1.5 text-danger transition hover:bg-danger/10"
                 title="Hapus role"
                 @click="handleDelete(row)"
               >
-                <TrashIcon class="h-5 w-5" />
+                <TrashIcon class="h-4 w-4" />
+                Hapus
               </button>
             </div>
           </template>
         </DataTable>
 
-        <div class="flex flex-col gap-3 border-t border-gray-100 px-4 py-4 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          class="flex flex-col gap-3 border-t border-gray-100 px-4 py-4 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between"
+        >
           <p>
             Halaman
-            <span class="font-semibold text-gray-800">{{ roleStore.pagination.currentPage }}</span>
+            <span class="font-semibold text-gray-800">{{
+              roleStore.pagination.currentPage
+            }}</span>
             dari
-            <span class="font-semibold text-gray-800">{{ roleStore.pagination.lastPage }}</span>
+            <span class="font-semibold text-gray-800">{{
+              roleStore.pagination.lastPage
+            }}</span>
             ({{ rows.length }} role ditampilkan)
           </p>
           <div class="flex items-center gap-2">
@@ -174,14 +229,27 @@
         v-if="showForm"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8 backdrop-blur-sm"
       >
-        <div class="relative w-[95%] md:w-[600px] rounded-2xl bg-white p-4 shadow-xl">
+        <div
+          class="relative w-[95%] md:w-[600px] rounded-2xl bg-white p-4 shadow-xl"
+        >
           <button
             class="absolute right-4 top-4 text-gray-400 transition hover:text-gray-600"
             @click="closeForm"
           >
             <span class="sr-only">Tutup</span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
           <h3 class="mb-4 text-lg font-semibold text-surfaceDark">
@@ -222,9 +290,21 @@ const openConfirm = useConfirmDialog();
 
 const columns = [
   { field: 'name', title: 'Nama Role' },
+  
   { field: 'permissions', title: 'Permission', slotName: 'permissions' },
+  {
+    field: 'default',
+    title: 'Default',
+    slotName: 'defaultStatus',
+    className: 'w-32 text-left',
+  },
   { field: 'timeline', title: 'Riwayat', slotName: 'timeline' },
-  { field: 'actions', title: 'Aksi', slotName: 'actions', className: 'text-left' },
+  {
+    field: 'actions',
+    title: 'Aksi',
+    slotName: 'actions',
+    className: 'text-left',
+  },
 ];
 
 const searchTerm = ref('');
@@ -234,8 +314,12 @@ const isEdit = ref(false);
 const initialized = ref(false);
 const maxPermissionChip = 3;
 let debounceTimer = null;
+const defaultWarning = ref('');
 
 const rows = computed(() => roleStore.roles);
+const currentDefaultRole = computed(() =>
+  roleStore.roles.find((role) => role.isDefault)
+);
 
 const permissionOptions = computed(() => {
   if (permissionStore.permissions.length) return permissionStore.permissions;
@@ -243,7 +327,8 @@ const permissionOptions = computed(() => {
 });
 
 const noDataText = computed(() => {
-  if (roleStore.search) return 'Role tidak ditemukan untuk kata kunci tersebut.';
+  if (roleStore.search)
+    return 'Role tidak ditemukan untuk kata kunci tersebut.';
   return 'Belum ada role yang terdaftar.';
 });
 
@@ -255,20 +340,20 @@ const topRoleLabel = computed(() => {
   return `${top.name} (${top.userCount} pengguna)`;
 });
 
-watch(
-  searchTerm,
-  (value) => {
-    roleStore.setSearch(value);
-    if (!initialized.value) return;
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      roleStore.fetchRoles({ page: 1, search: value });
-    }, 400);
-  }
-);
+watch(searchTerm, (value) => {
+  roleStore.setSearch(value);
+  if (!initialized.value) return;
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    roleStore.fetchRoles({ page: 1, search: value });
+  }, 400);
+});
 
 onMounted(async () => {
-  await Promise.all([permissionStore.fetchPermissions({ perPage: 200 }), roleStore.fetchRoles()]);
+  await Promise.all([
+    permissionStore.fetchPermissions({ perPage: 200 }),
+    roleStore.fetchRoles(),
+  ]);
   initialized.value = true;
 });
 
@@ -288,6 +373,7 @@ function limitedPermissions(list = []) {
 }
 
 async function refreshRoles() {
+  defaultWarning.value = '';
   await roleStore.fetchRoles({
     page: roleStore.pagination.currentPage,
     search: roleStore.search,
@@ -327,6 +413,13 @@ async function handleSubmit(payload) {
 
 async function handleDelete(role) {
   if (!role?.id) return;
+  defaultWarning.value = '';
+  if (role.isDefault) {
+    defaultWarning.value =
+      `Role ${role.name} adalah role default dan tidak dapat dihapus. ` +
+      'Tetapkan role lain sebagai default terlebih dahulu.';
+    return;
+  }
   const ok = await openConfirm({
     title: 'Hapus role?',
     message: `Role ${role.name} beserta pengaturan izinnya akan dihapus.`,
@@ -335,6 +428,35 @@ async function handleDelete(role) {
   });
   if (!ok) return;
   await roleStore.removeRole(role.id);
+}
+
+async function toggleDefault(role) {
+  if (!role?.id) return;
+  defaultWarning.value = '';
+  const targetState = !role.isDefault;
+
+  let confirmMessage = '';
+  if (targetState) {
+    const otherDefault =
+      currentDefaultRole.value && currentDefaultRole.value.id !== role.id
+        ? currentDefaultRole.value
+        : null;
+    confirmMessage = otherDefault
+      ? `Role ${otherDefault.name} saat ini menjadi default. Mengganti default ke ${role.name}?`
+      : `Tetapkan ${role.name} sebagai role default?`;
+  } else {
+    confirmMessage = `Role ${role.name} tidak lagi menjadi default. Lanjutkan?`;
+  }
+
+  const ok = await openConfirm({
+    title: targetState ? 'Tetapkan role default?' : 'Nonaktifkan role default?',
+    message: confirmMessage,
+    confirmLabel: 'Ya',
+    variant: targetState ? 'primary' : 'warning',
+  });
+  if (!ok) return;
+
+  await roleStore.setDefaultRole(role.id, targetState);
 }
 </script>
 

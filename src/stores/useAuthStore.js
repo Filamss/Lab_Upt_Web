@@ -47,6 +47,7 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false
 
         const activityStore = useActivityStore()
+        activityStore.setActiveUser(user?.id ?? null)
         activityStore.addEvent({
           type: 'login',
           title: 'Login berhasil',
@@ -71,10 +72,15 @@ export const useAuthStore = defineStore('auth', {
           const res = await api.get('/api/v1/users/me')
           this.currentUser = res.data.data.user
           localStorage.setItem('currentUser', JSON.stringify(this.currentUser))
+          const activityStore = useActivityStore()
+          activityStore.setActiveUser(this.currentUser?.id ?? null)
         } catch (err) {
           console.warn('Token invalid, logout otomatis')
           this.logout()
         }
+      } else {
+        const activityStore = useActivityStore()
+        activityStore.setActiveUser(null)
       }
     },
 
@@ -90,6 +96,7 @@ export const useAuthStore = defineStore('auth', {
 
       if (lastUser) {
         const activityStore = useActivityStore()
+        activityStore.setActiveUser(lastUser.id ?? null)
         activityStore.addEvent({
           type: 'login',
           title: 'Logout',
@@ -97,6 +104,7 @@ export const useAuthStore = defineStore('auth', {
           status: 'info',
           metadata: { email: lastUser.email },
         })
+        activityStore.setActiveUser(null)
       }
     },
   },

@@ -173,20 +173,20 @@
           </template>
 
           <template #actions="{ row }">
-            <div class="flex gap-2">
+            <div class="flex gap-1">
               <button
-                class="rounded-md p-1.5 text-primary transition hover:bg-primary/10"
+                class="rounded-md inline-flex items-center gap-1 p-1.5 text-primary transition hover:bg-primary/10"
                 title="Edit pengguna"
                 @click="openEditForm(row)"
               >
-                <PencilSquareIcon class="h-5 w-5" />
+                <PencilSquareIcon class="h-4 w-4" />
               </button>
               <button
-                class="rounded-md p-1.5 text-danger transition hover:bg-danger/10"
+                class="rounded-md inline-flex items-center gap-1 p-1.5 text-danger transition hover:bg-danger/10"
                 title="Hapus pengguna"
                 @click="handleDelete(row)"
               >
-                <TrashIcon class="h-5 w-5" />
+                <TrashIcon class="h-4 w-4" />
               </button>
             </div>
           </template>

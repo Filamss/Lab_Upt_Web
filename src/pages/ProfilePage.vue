@@ -1,35 +1,66 @@
 <template>
-  <div class="p-6 max-w-2xl mx-auto">
-    <h1 class="text-2xl font-semibold mb-4 text-primary">My Profile</h1>
+  <div class="p-6 max-w-3xl mx-auto">
+    <h1 class="text-2xl font-semibold mb-4 text-primary">Profil Saya</h1>
 
-    <!-- === Tampilan Data Profil === -->
-    <div v-if="user" class="bg-white rounded-xl shadow p-6 space-y-3">
-      <div class="flex items-center gap-4 mb-4">
+    <div v-if="user" class="bg-white rounded-xl shadow p-6 space-y-6">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
         <img
           :src="userAvatar"
           alt="Avatar"
           class="w-20 h-20 rounded-full ring-2 ring-primary/40 object-cover"
         />
         <div>
-          <h2 class="text-xl font-semibold">{{ user.name }}</h2>
+          <h2 class="text-xl font-semibold text-surfaceDark">{{ user.name }}</h2>
           <p class="text-gray-500">{{ user.email }}</p>
-          <span
-            class="inline-block mt-1 px-2 py-1 text-xs bg-primary/10 text-primary rounded"
-          >
-            {{ user.role }}
-          </span>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <span class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primaryDark">
+              {{ primaryRoleLabel }}
+            </span>
+            <span
+              class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+              :class="accountStatusClass"
+            >
+              {{ accountStatusLabel }}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div class="pt-4 flex gap-3">
+      <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Nomor Telepon</dt>
+          <dd class="mt-1 text-gray-700">{{ phoneLabel }}</dd>
+        </div>
+        <div v-if="showNipField">
+          <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">NIP</dt>
+          <dd class="mt-1 text-gray-700">{{ nipLabel }}</dd>
+        </div>
+        <div class="sm:col-span-2">
+          <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Role</dt>
+          <dd class="mt-1 flex flex-wrap gap-2 text-gray-700">
+            <span
+              v-for="role in roleNames"
+              :key="role"
+              class="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primaryDark"
+            >
+              {{ role }}
+            </span>
+            <span v-if="!roleNames.length" class="text-gray-400">Belum ada role</span>
+          </dd>
+        </div>
+      </dl>
+
+      <div class="pt-5 flex flex-wrap gap-3">
         <button
-          class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primaryDark"
-          @click="editMode = !editMode"
+          class="px-4 py-2 rounded-lg bg-primary text-white transition hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-60"
+          :disabled="saving"
+          @click="toggleEditMode"
         >
-          {{ editMode ? 'Cancel' : 'Edit Profile' }}
+          {{ editMode ? 'Batal' : 'Edit Profil' }}
         </button>
         <button
-          class="px-4 py-2 bg-danger text-white rounded-lg hover:bg-red-700"
+          class="px-4 py-2 rounded-lg bg-danger text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+          :disabled="saving"
           @click="logout"
         >
           Logout
@@ -37,14 +68,12 @@
       </div>
     </div>
 
-    <!-- === Form Edit Profil === -->
     <div
-      v-if="editMode"
+      v-if="editMode && user"
       class="bg-white rounded-xl shadow p-6 space-y-4 mt-6 border border-border"
     >
-      <h2 class="text-lg font-semibold text-gray-700">Edit Profile</h2>
+      <h2 class="text-lg font-semibold text-gray-700">Edit Profil</h2>
 
-      <!-- Upload Foto -->
       <div>
         <label class="block text-gray-600 text-sm mb-1">Foto Profil</label>
         <div class="flex items-center gap-4">
@@ -56,8 +85,8 @@
           <input
             type="file"
             accept="image/*"
-            @change="handleFileUpload"
             class="text-sm"
+            @change="handleFileUpload"
           />
         </div>
       </div>
@@ -67,7 +96,8 @@
         <input
           v-model="form.name"
           type="text"
-          class="w-full border border-border rounded-lg px-3 py-2"
+          class="w-full border border-border rounded-lg px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+          placeholder="Nama lengkap"
         />
       </div>
 
@@ -76,8 +106,46 @@
         <input
           v-model="form.email"
           type="email"
-          class="w-full border border-border rounded-lg px-3 py-2"
+          class="w-full border border-border rounded-lg px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+          placeholder="email@uptlab.id"
         />
+      </div>
+
+      <div>
+        <label class="block text-gray-600 text-sm mb-1">Nomor Telepon</label>
+        <input
+          v-model="form.phone"
+          type="tel"
+          class="w-full border border-border rounded-lg px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+          placeholder="0812-3456-7890"
+        />
+      </div>
+
+      <div v-if="showNipField">
+        <label class="block text-gray-600 text-sm mb-1">NIP</label>
+        <input
+          v-model="form.employmentIdentityNumber"
+          type="text"
+          class="w-full border border-border rounded-lg px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+          placeholder="6404646066XXXXXX"
+        />
+      </div>
+
+      <div>
+        <label class="block text-gray-600 text-sm mb-1">Role</label>
+        <div class="flex flex-wrap gap-2 rounded-lg border border-dashed border-border px-3 py-2 bg-gray-50">
+          <span
+            v-for="role in roleNames"
+            :key="role"
+            class="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primaryDark"
+          >
+            {{ role }}
+          </span>
+          <span v-if="!roleNames.length" class="text-xs text-gray-400">
+            Role ditetapkan oleh admin dan tidak dapat diubah.
+          </span>
+        </div>
+        <p class="mt-1 text-xs text-gray-400">Role ditetapkan oleh administrator.</p>
       </div>
 
       <div>
@@ -85,38 +153,63 @@
         <input
           v-model="form.password"
           type="password"
-          class="w-full border border-border rounded-lg px-3 py-2"
-          placeholder="(optional)"
+          class="w-full border border-border rounded-lg px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+          placeholder="Kosongkan jika tidak diganti"
         />
       </div>
 
-      <div class="pt-4 flex gap-3">
+      <div class="pt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button
-          class="px-4 py-2 bg-success text-white rounded-lg hover:bg-green-700"
-          @click="saveProfile"
+          type="button"
+          class="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 sm:w-auto"
+          :disabled="saving"
+          @click="cancelEdit"
         >
-          Save
+          Batal
         </button>
         <button
-          class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
-          @click="editMode = false"
+          type="button"
+          class="flex w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          :disabled="saving || !canSave"
+          @click="saveProfile"
         >
-          Cancel
+          <svg
+            v-if="saving"
+            class="h-4 w-4 animate-spin"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              d="M4 12a8 8 0 018-8"
+              stroke="currentColor"
+              stroke-width="4"
+              stroke-linecap="round"
+            ></path>
+          </svg>
+          <span>{{ saving ? 'Menyimpan...' : 'Simpan Perubahan' }}</span>
         </button>
       </div>
     </div>
 
-    <!-- === Jika user belum login === -->
-    <div v-if="!user" class="text-gray-500 text-center mt-10">
-      Loading profile...
+    <div v-else-if="!user" class="text-gray-500 text-center mt-10">
+      Memuat profil...
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import axios from 'axios'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useUserStore } from '@/stores/useUserStore'
 
@@ -124,37 +217,104 @@ const authStore = useAuthStore()
 const userStore = useUserStore()
 const { currentUser: user } = storeToRefs(authStore)
 
-onMounted(() => {
-  if (!authStore.currentUser) {
-    authStore.init()
-  }
-})
+const editMode = ref(false)
+const saving = ref(false)
 
-/* -------------------------
-   Avatar dan Preview
---------------------------*/
 const previewAvatar = ref(null)
 const avatarFile = ref(null)
 
-const userAvatar = computed(() => {
-  return user.value?.avatar || 'https://placehold.co/100x100'
-})
-
-/* -------------------------
-   Form & State
---------------------------*/
-const editMode = ref(false)
-const form = ref({
-  name: user.value?.name || '',
-  email: user.value?.email || '',
+const form = reactive({
+  name: '',
+  email: '',
+  phone: '',
+  employmentIdentityNumber: '',
   password: '',
 })
 
-/* -------------------------
-   Upload Handler
---------------------------*/
-const handleFileUpload = (e) => {
-  const file = e.target.files[0]
+onMounted(async () => {
+  await authStore.init()
+})
+
+watch(
+  user,
+  (value) => {
+    if (!value) return
+    form.name = value.name || ''
+    form.email = value.email || ''
+    form.phone = value.phoneNumber || value.phone || ''
+    form.employmentIdentityNumber =
+      value.employmentIdentityNumber || value.employment_identity_number || ''
+    form.password = ''
+  },
+  { immediate: true }
+)
+
+const userAvatar = computed(() => user.value?.avatar || 'https://placehold.co/100x100')
+
+const roleNames = computed(() => {
+  if (!Array.isArray(user.value?.roles)) return []
+  return user.value.roles
+    .map((role) => role?.name || role?.title || role?.label)
+    .filter(Boolean)
+})
+
+const primaryRoleLabel = computed(() => roleNames.value[0] || 'Role belum ditetapkan')
+
+const accountStatusLabel = computed(() => (user.value?.isActive ? 'Aktif' : 'Tidak Aktif'))
+const accountStatusClass = computed(() =>
+  user.value?.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'
+)
+
+const hasCustomerRole = computed(() => {
+  if (!Array.isArray(user.value?.roles)) return false
+  return user.value.roles.some((role) => {
+    const candidate =
+      role?.slug || role?.code || role?.name || role?.title || role?.label || ''
+    return typeof candidate === 'string' && candidate.toLowerCase() === 'customer'
+  })
+})
+
+const showNipField = computed(() => !hasCustomerRole.value)
+
+const phoneLabel = computed(() => user.value?.phoneNumber || user.value?.phone || '-')
+const nipLabel = computed(
+  () =>
+    showNipField.value
+      ? user.value?.employmentIdentityNumber || user.value?.employment_identity_number || '-'
+      : '-'
+)
+
+const canSave = computed(() => !!form.name.trim() && !!form.email.trim())
+
+const resetForm = () => {
+  if (!user.value) return
+  form.name = user.value.name || ''
+  form.email = user.value.email || ''
+  form.phone = user.value.phoneNumber || user.value.phone || ''
+  form.employmentIdentityNumber =
+    user.value.employmentIdentityNumber || user.value.employment_identity_number || ''
+  form.password = ''
+  previewAvatar.value = null
+  avatarFile.value = null
+}
+
+const toggleEditMode = () => {
+  if (saving.value) return
+  if (editMode.value) {
+    cancelEdit()
+  } else {
+    resetForm()
+    editMode.value = true
+  }
+}
+
+const cancelEdit = () => {
+  editMode.value = false
+  resetForm()
+}
+
+const handleFileUpload = (event) => {
+  const file = event.target.files?.[0]
   if (!file) return
   avatarFile.value = file
 
@@ -165,63 +325,67 @@ const handleFileUpload = (e) => {
   reader.readAsDataURL(file)
 }
 
-/* -------------------------
-   Logout
---------------------------*/
-const logout = () => {
-  authStore.logout()
+watch(
+  showNipField,
+  (value) => {
+    if (!value) {
+      form.employmentIdentityNumber = ''
+    }
+  },
+  { immediate: true }
+)
+
+const logout = async () => {
+  await authStore.logout()
   window.location.href = '/login'
 }
 
-/* -------------------------
-   Simpan Profil (Local + API Ready)
---------------------------*/
 const saveProfile = async () => {
-  if (!user.value) return
+  if (!user.value || saving.value) return
 
   try {
-    // Siapkan data untuk dikirim ke backend nanti
-    const formData = new FormData()
-    formData.append('name', form.value.name)
-    formData.append('email', form.value.email)
-    if (form.value.password) formData.append('password', form.value.password)
-    if (avatarFile.value) formData.append('avatar', avatarFile.value)
+    saving.value = true
 
-    /* 🔹 API call — aktifkan ini saat backend Go siap
-    const res = await axios.put('/api/profile', formData, {
-      headers: {
-        Authorization: `Bearer ${authStore.token}`,
-        'Content-Type': 'multipart/form-data',
-      },
-    })
-    const updatedUser = res.data.user
-    */
+    const roleIds = Array.isArray(user.value.roles)
+      ? user.value.roles.map((role) => role.id).filter(Boolean)
+      : []
 
-    // 🔸 Untuk sekarang (tanpa backend)
-    const updatedUser = {
-      ...user.value,
-      name: form.value.name,
-      email: form.value.email,
-      avatar: previewAvatar.value || user.value.avatar,
+    const phone = form.phone?.trim() || undefined
+    const nip = showNipField.value
+      ? form.employmentIdentityNumber?.trim() || undefined
+      : undefined
+
+    const payload = {
+      name: form.name.trim(),
+      email: form.email.trim(),
+      password: form.password || undefined,
+      phone,
+      phone_number: phone,
+      employment_identity_number: nip,
+      employmentIdentityNumber: nip,
+      roles: roleIds,
+      role_ids: roleIds,
+      isActive: user.value.isActive,
+      is_active: user.value.isActive,
+      avatar: avatarFile.value || undefined,
     }
 
-    // Update password di local userStore (dummy)
-    if (form.value.password) {
-      const localUser = userStore.users.find(u => u.id === user.value.id)
-      if (localUser) localUser.password = form.value.password
-    }
+    const { data: updated } = await userStore.updateUser(user.value.id, payload)
+    authStore.currentUser = updated
 
-    // Update Pinia & localStorage
-    authStore.currentUser = updatedUser
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser))
+    await authStore.init()
 
     editMode.value = false
     previewAvatar.value = null
     avatarFile.value = null
-    alert('Profile updated successfully!')
+    form.password = ''
+
+    window.alert('Profile updated successfully!')
   } catch (err) {
     console.error('Error saving profile:', err)
-    alert('Failed to update profile.')
+    window.alert('Failed to update profile.')
+  } finally {
+    saving.value = false
   }
 }
 </script>

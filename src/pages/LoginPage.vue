@@ -142,6 +142,23 @@
                     showRegisterConfirmPassword = !showRegisterConfirmPassword
                   "
                 />
+                <label
+                  class="flex items-start gap-3 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-600"
+                >
+                  <input
+                    v-model="registerUseKodeUndangan"
+                    type="checkbox"
+                    class="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/60"
+                  />
+                  <span class="leading-5"> Saya memiliki kode undangan </span>
+                </label>
+                <FormField
+                  v-if="registerUseKodeUndangan"
+                  label="Kode Undangan"
+                  placeholder="Masukkan kode undangan"
+                  v-model="registerKodeUndangan"
+                  :error="formErrors.register.kodeUndangan"
+                />
 
                 <button
                   type="submit"
@@ -332,6 +349,23 @@
                   showRegisterConfirmPassword = !showRegisterConfirmPassword
                 "
               />
+              <label
+                class="flex items-start gap-3 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-600"
+              >
+                <input
+                  v-model="registerUseKodeUndangan"
+                  type="checkbox"
+                  class="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/60"
+                />
+                <span class="leading-5"> Saya memiliki kode undangan. </span>
+              </label>
+              <FormField
+                v-if="registerUseKodeUndangan"
+                label="Kode Undangan"
+                placeholder="Masukkan kode undangan"
+                v-model="registerKodeUndangan"
+                :error="formErrors.register.kodeUndangan"
+              />
               <button
                 type="submit"
                 :disabled="isLoading"
@@ -381,6 +415,7 @@ const formErrors = reactive({
     phone: '',
     password: '',
     confirmPassword: '',
+    kodeUndangan: '',
   },
 });
 
@@ -389,6 +424,8 @@ const registerEmail = ref('');
 const registerPhone = ref('');
 const registerPassword = ref('');
 const registerConfirmPassword = ref('');
+const registerUseKodeUndangan = ref(false);
+const registerKodeUndangan = ref('');
 const showRegisterPassword = ref(false);
 const showRegisterConfirmPassword = ref(false);
 const registerError = ref('');
@@ -414,6 +451,12 @@ watch(isRegister, (value, oldValue) => {
   } else if (!value && route.path !== '/login') {
     router.replace('/login');
   }
+});
+
+watch(registerUseKodeUndangan, (value) => {
+  if (value) return;
+  registerKodeUndangan.value = '';
+  formErrors.register.kodeUndangan = '';
 });
 
 async function handleLogin() {
@@ -465,6 +508,14 @@ async function handleRegister() {
     formErrors.register.phone = '';
   }
 
+  if (registerUseKodeUndangan.value) {
+    formErrors.register.kodeUndangan = registerKodeUndangan.value.trim()
+      ? ''
+      : 'Kode undangan wajib diisi.';
+  } else {
+    formErrors.register.kodeUndangan = '';
+  }
+
   if (registerPassword.value !== registerConfirmPassword.value) {
     registerError.value = 'Password dan konfirmasi password tidak sama.';
     formErrors.register.password = 'Pastikan password sama.';
@@ -477,7 +528,8 @@ async function handleRegister() {
     formErrors.register.email ||
     formErrors.register.password ||
     formErrors.register.confirmPassword ||
-    formErrors.register.phone
+    formErrors.register.phone ||
+    formErrors.register.kodeUndangan
   ) {
     registerError.value = 'Harap lengkapi data yang diperlukan.';
     return;
@@ -488,12 +540,17 @@ async function handleRegister() {
     email: registerEmail.value,
     password: registerPassword.value,
     phone_number: registerPhone.value || undefined,
+    invitation_code: registerUseKodeUndangan.value
+      ? registerKodeUndangan.value.trim()
+      : undefined,
   });
 
   if (res.ok) {
     registerSuccess.value = 'Registrasi berhasil. Silakan masuk.';
     loginEmail.value = registerEmail.value;
     loginPassword.value = registerPassword.value;
+    registerUseKodeUndangan.value = false;
+    registerKodeUndangan.value = '';
     resetErrors();
     setTimeout(() => switchToLogin(), 800);
   } else {
@@ -519,6 +576,10 @@ function resetErrors() {
   formErrors.register.phone = '';
   formErrors.register.password = '';
   formErrors.register.confirmPassword = '';
+  formErrors.register.kodeUndangan = '';
+  loginError.value = '';
+  registerError.value = '';
+  registerSuccess.value = '';
 }
 
 const renderEye = (pupilPath) =>

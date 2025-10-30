@@ -1,7 +1,21 @@
 import { defineStore } from 'pinia';
 
-const STORAGE_KEY = 'uptlab.activityHistory';
+const STORAGE_PREFIX = 'uptlab.activityHistory';
 const MAX_EVENTS = 200;
+const INITIAL_USER_ID = resolveInitialUserId();
+
+function resolveInitialUserId() {
+  if (typeof window === 'undefined') return null;
+  const rawUser = window.localStorage?.getItem('currentUser');
+  if (!rawUser) return null;
+  try {
+    const parsed = JSON.parse(rawUser);
+    return parsed?.id ?? null;
+  } catch (err) {
+    console.warn('[ActivityStore] gagal parsing currentUser', err);
+    return null;
+  }
+}
 
 function safeParse(json, fallback = []) {
   try {
@@ -19,6 +33,11 @@ function createId() {
   return `act-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function getStorageKey(userId) {
+  const suffix = userId ? String(userId) : 'guest';
+  return `${STORAGE_PREFIX}.${suffix}`;
+}
+
 function normalizeEvent(entry = {}) {
   return {
     id: entry.id || createId(),
@@ -28,15 +47,21 @@ function normalizeEvent(entry = {}) {
     status: entry.status || 'info',
     referenceId: entry.referenceId || null,
     metadata: entry.metadata || {},
+    userId: entry.userId || null,
     createdAt: entry.createdAt || new Date().toISOString(),
   };
 }
 
 export const useActivityStore = defineStore('activity', {
   state: () => ({
+    activeUserId: INITIAL_USER_ID,
     events:
       typeof window !== 'undefined'
-        ? safeParse(window.localStorage?.getItem(STORAGE_KEY) || '[]')
+        ? safeParse(
+            window.localStorage?.getItem(
+              getStorageKey(INITIAL_USER_ID)
+            ) || '[]'
+          )
         : [],
     loading: false,
   }),
@@ -60,16 +85,31 @@ export const useActivityStore = defineStore('activity', {
   actions: {
     hydrate() {
       if (typeof window === 'undefined') return;
-      this.events = safeParse(window.localStorage?.getItem(STORAGE_KEY) || '[]');
+      this.events = safeParse(
+        window.localStorage?.getItem(getStorageKey(this.activeUserId)) || '[]'
+      );
+    },
+
+    setActiveUser(userId) {
+      const normalized = userId ?? null;
+      if (this.activeUserId === normalized) return;
+      this.activeUserId = normalized;
+      this.hydrate();
     },
 
     persist() {
       if (typeof window === 'undefined') return;
-      window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(this.events));
+      window.localStorage?.setItem(
+        getStorageKey(this.activeUserId),
+        JSON.stringify(this.events)
+      );
     },
 
     addEvent(payload = {}) {
-      const event = normalizeEvent(payload);
+      const event = normalizeEvent({
+        ...payload,
+        userId: this.activeUserId ?? payload.userId ?? null,
+      });
       this.events = [event, ...this.events]
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, MAX_EVENTS);
@@ -78,7 +118,12 @@ export const useActivityStore = defineStore('activity', {
     },
 
     importEvents(list = []) {
-      const normalized = list.map((item) => normalizeEvent(item));
+      const normalized = list.map((item) =>
+        normalizeEvent({
+          ...item,
+          userId: this.activeUserId ?? item.userId ?? null,
+        })
+      );
       const combined = [...normalized, ...this.events];
       const uniqueMap = new Map();
       combined.forEach((item) => {
@@ -92,7 +137,9 @@ export const useActivityStore = defineStore('activity', {
 
     clear() {
       this.events = [];
-      this.persist();
+      if (typeof window !== 'undefined') {
+        window.localStorage?.removeItem(getStorageKey(this.activeUserId));
+      }
     },
   },
 });

@@ -173,6 +173,7 @@ import {
   UserGroupIcon,
   FolderIcon,
   ClockIcon,
+  KeyIcon,
 } from '@heroicons/vue/24/outline'
 import { useAuthStore } from '@/stores/useAuthStore'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
@@ -199,7 +200,7 @@ function toggleCollapse() {
   else showMobileSidebar.value = !showMobileSidebar.value
 }
 
-const groupedMenu = [
+const baseMenu = [
   {
     label: 'Pengujian',
     icon: FolderIcon,
@@ -239,12 +240,17 @@ const groupedMenu = [
       { label: 'Pengguna', path: '/users', icon: UserGroupIcon },
       { label: 'Role', path: '/roles', icon: Cog6ToothIcon },
       { label: 'Permission', path: '/permissions', icon: Cog6ToothIcon },
+      { label: 'Kode Undangan', path: '/kode-undangan', icon: KeyIcon },
     ],
   },
 ]
 
+const groupedMenu = computed(() => baseMenu)
+
 const pageTitle = computed(() => {
-  const activeChild = groupedMenu.flatMap((g) => g.children).find((i) => i.path === route.path)
+  const activeChild = groupedMenu.value
+    .flatMap((g) => g.children)
+    .find((i) => i.path === route.path)
   return activeChild ? activeChild.label : (route.path.replace('/', '') || 'Dashboard')
 })
 

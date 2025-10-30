@@ -67,6 +67,8 @@ function buildUserFormData(payload = {}) {
     appendIfFilled('password', payload.password, { allowEmptyString: true });
   }
 
+  appendIfFilled('avatar', payload.avatar ?? payload.avatarFile ?? null);
+
   const phoneNumber =
     payload.phone_number ?? payload.phoneNumber ?? payload.phone ?? null;
   appendIfFilled('phone_number', phoneNumber);
