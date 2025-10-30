@@ -251,7 +251,9 @@ const pageTitle = computed(() => {
   const activeChild = groupedMenu.value
     .flatMap((g) => g.children)
     .find((i) => i.path === route.path)
-  return activeChild ? activeChild.label : (route.path.replace('/', '') || 'Dashboard')
+  if (activeChild) return activeChild.label
+  const raw = route.path.replace('/', '') || 'Dashboard'
+  return raw.charAt(0).toUpperCase() + raw.slice(1)
 })
 
 const currentUserName = computed(() => authStore.currentUser?.name || 'Guest')

@@ -1,6 +1,7 @@
-import { defineStore } from 'pinia';
+﻿import { defineStore } from 'pinia';
 import api from '@/services/apiServices';
 import { useActivityStore } from '@/stores/useActivityStore';
+import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 
 function normalizeRequestEntry(entry = {}) {
   const rawItems = Array.isArray(entry.testItems) ? entry.testItems : [];
@@ -49,10 +50,10 @@ function normalizeRequestEntry(entry = {}) {
 
 const statusLabels = {
   draft: 'Draft',
-  submitted: 'Diajukan',
   pending_payment: 'Menunggu Pembayaran',
-  payment_pending: 'Menunggu Pembayaran',
-  payment_received: 'Pembayaran Diterima',
+  payment_pending_review: 'Menunggu Review Pembayaran',
+  payment_verified: 'Pembayaran Terverifikasi',
+  payment_review_rejected: 'Bukti Pembayaran Ditolak',
   approved: 'Disetujui',
   rejected: 'Ditolak',
   cancelled: 'Dibatalkan',
@@ -73,7 +74,7 @@ function logRequestEvent({ request, status, title, description, statusLevel = 'i
     title: title || `Permintaan ${request?.idOrder || ''}`.trim(),
     description:
       description ||
-      `${request?.customerName || 'Pemohon'} – ${statusLabels[status] || status || 'Aktivitas'}`,
+      `${request?.customerName || 'Pemohon'} - ${statusLabels[status] || status || 'Aktivitas'}`,
     status: statusLevel,
     referenceId: request?.idOrder || null,
     metadata: {
@@ -81,6 +82,175 @@ function logRequestEvent({ request, status, title, description, statusLevel = 'i
       customer: request?.customerName || '',
     },
   });
+}
+
+function createDummyRequests() {
+  const entries = [
+    {
+      idOrder: 'ORD-202501-001',
+      entryDate: '2025-01-04',
+      customerName: 'PT Maju Jaya Sejahtera',
+      phoneNumber: '021-555-0101',
+      address: 'Jl. Merdeka No. 12, Tegal',
+      jobCategory: 'Industri',
+      workPackage: 'Audit Material',
+      testItems: [
+        {
+          testId: 'UTK-001',
+          testName: 'Uji Tarik',
+          objectName: 'Besi Beton',
+          quantity: 2,
+          price: 250000,
+        },
+        {
+          testId: 'UKH-002',
+          testName: 'Uji Kekerasan',
+          objectName: 'Pelat Baja',
+          quantity: 1,
+          price: 150000,
+        },
+      ],
+      status: 'payment_verified',
+      paymentInfo: {
+        status: 'payment_verified',
+        reviewStatus: 'approved',
+        total: 650000,
+        amountPaid: 650000,
+        outstanding: 0,
+        paymentDate: '2025-01-05T08:30:00Z',
+        paymentDeadline: '2025-01-07T00:00:00Z',
+        reviewedBy: 'Admin Pembayaran',
+        reviewedAt: '2025-01-05T09:00:00Z',
+        reviewNote: 'Bukti transfer jelas dan sesuai nominal.',
+        transferFiles: [
+          {
+            id: 'ORD-202501-001-evidence-1',
+            name: 'Bukti-Transfer-ORD-001.png',
+            size: 245678,
+            type: 'image/png',
+            previewUrl: 'https://dummyimage.com/600x360/edf2f7/1a202c&text=Bukti+Transfer',
+          },
+        ],
+      },
+    },
+    {
+      idOrder: 'ORD-202501-004',
+      entryDate: '2025-01-08',
+      customerName: 'CV Sinar Terang Abadi',
+      phoneNumber: '0283-778899',
+      address: 'Jl. Sawo No. 8, Slawi',
+      jobCategory: 'Kontraktor',
+      workPackage: 'Proyek Gedung',
+      testItems: [
+        {
+          testId: 'UKK-010',
+          testName: 'Uji Komposisi Kimia',
+          objectName: 'Serbuk Aluminium',
+          quantity: 1,
+          price: 375000,
+        },
+      ],
+      status: 'payment_pending_review',
+      paymentInfo: {
+        status: 'payment_pending_review',
+        reviewStatus: 'pending',
+        total: 375000,
+        amountPaid: 375000,
+        outstanding: 0,
+        paymentDate: '2025-01-08T13:45:00Z',
+        paymentDeadline: '2025-01-10T00:00:00Z',
+        transferFiles: [
+          {
+            id: 'ORD-202501-004-evidence-1',
+            name: 'Screenshot-Transfer-ORD-004.jpg',
+            size: 198765,
+            type: 'image/jpeg',
+            previewUrl: 'https://dummyimage.com/600x360/fefcbf/7f5539&text=Screenshot',
+          },
+        ],
+      },
+    },
+    {
+      idOrder: 'ORD-202501-006',
+      entryDate: '2025-01-09',
+      customerName: 'PT Sentosa Logam',
+      phoneNumber: '021-770099',
+      address: 'Jl. Rajawali No. 17, Brebes',
+      jobCategory: 'Kontraktor',
+      workPackage: 'Proyek Infrastruktur',
+      testItems: [
+        {
+          testId: 'UKT-015',
+          testName: 'Uji Kekuatan Tekan',
+          objectName: 'Besi Cor',
+          quantity: 1,
+          price: 420000,
+        },
+      ],
+      status: 'payment_review_rejected',
+      paymentInfo: {
+        status: 'payment_review_rejected',
+        reviewStatus: 'rejected',
+        total: 420000,
+        amountPaid: 0,
+        outstanding: 420000,
+        paymentDate: '2025-01-09T10:15:00Z',
+        paymentDeadline: '2025-01-11T00:00:00Z',
+        reviewedBy: 'Admin Pembayaran',
+        reviewedAt: '2025-01-09T11:00:00Z',
+        reviewNote: 'Foto tidak menunjukkan bukti transfer yang jelas.',
+        transferFiles: [
+          {
+            id: 'ORD-202501-006-evidence-1',
+            name: 'Foto-WhatsApp.jpg',
+            size: 156789,
+            type: 'image/jpeg',
+            previewUrl: 'https://dummyimage.com/600x360/ffe0e0/9b2c2c&text=Foto+Blur',
+          },
+        ],
+      },
+    },
+    {
+      idOrder: 'ORD-202501-008',
+      entryDate: '2025-01-10',
+      customerName: 'CV Cahaya Mandiri',
+      phoneNumber: '0812-9988-7766',
+      address: 'Jl. Mawar No. 5, Tegal',
+      jobCategory: 'UMKM',
+      workPackage: 'Sertifikasi Produk',
+      testItems: [
+        {
+          testId: 'UPH-021',
+          testName: 'Uji pH',
+          objectName: 'Sampel Minuman',
+          quantity: 3,
+          price: 90000,
+        },
+      ],
+      status: 'pending_payment',
+    },
+    {
+      idOrder: 'ORD-202501-010',
+      entryDate: '2025-01-12',
+      customerName: 'UD Sentosa Teknik',
+      phoneNumber: '0857-4455-8899',
+      address: 'Jl. Kenanga No. 3, Adiwerna',
+      jobCategory: 'Internal',
+      workPackage: 'Peremajaan Alat',
+      testItems: [
+        {
+          testId: 'CAL-030',
+          testName: 'Kalibrasi Alat Ukur',
+          objectName: 'Alat Ukur Tekanan',
+          quantity: 1,
+          price: 180000,
+        },
+      ],
+      status: 'draft',
+    },
+  ];
+
+  return entries.map((entry) => normalizeRequestEntry(entry));
 }
 
 /**
@@ -106,51 +276,14 @@ export const usePermintaanStore = defineStore('request', {
       } catch (err) {
         console.warn('[PermintaanStore] API belum tersedia, memakai dummy data.');
         this.error = 'Dummy mode aktif (API belum terhubung).';
-        this.requestList = [
-          normalizeRequestEntry({
-            idOrder: '01K8FT3Y7Y0MWC4TD37GPCDX7C',
-            entryDate: '2025-10-01',
-            customerName: 'CV. Sinar Baja Elektrik',
-            phoneNumber: '081234567890',
-            address: 'Jl. Merpati No. 23, Tegal',
-            jobCategory: 'IKM',
-            workPackage: 'Paket Sertifikasi A',
-            testItems: [
-              { testId: 'dummy-utk', testName: 'Uji Tarik', objectName: 'Baut Baja', quantity: 2, price: 250000 },
-              { testId: 'dummy-hard', testName: 'Uji Kekerasan', objectName: 'Plat Baja', quantity: 1, price: 175000 },
-            ],
-            status: 'draft',
-            createdAt: '2025-10-01T09:00:00Z',
-          }),
-          normalizeRequestEntry({
-            idOrder: '01K8FT5BATGKRGK6PJY4ST0S9M',
-            entryDate: '2025-10-05',
-            customerName: 'PT. Baja Mulya',
-            phoneNumber: '081298765432',
-            address: 'Jl. Raya Industri No. 45, Slawi',
-            jobCategory: 'Kontraktor',
-            workPackage: 'Proyek Jembatan',
-            testItems: [
-              { testId: 'dummy-komp', testName: 'Uji Komposisi Kimia', objectName: 'Sampel Beton Jembatan', quantity: 3, price: 320000 },
-            ],
-            status: 'pending_payment',
-            createdAt: '2025-10-05T13:20:00Z',
-          }),
-          normalizeRequestEntry({
-            idOrder: '01K8FT5N8B67N9SYYC8VJHBW3A',
-            entryDate: '2025-10-08',
-            customerName: 'UD. Karya Logam',
-            phoneNumber: '082233445566',
-            address: 'Jl. Ahmad Yani No. 12, Adiwerna',
-            jobCategory: 'Internal',
-            workPackage: 'Maintenance Mesin',
-            testItems: [
-              { testId: 'dummy-cnc', testName: 'Pengujian CNC', objectName: 'Pisau CNC', quantity: 1, price: 450000 },
-            ],
-            status: 'payment_received',
-            createdAt: '2025-10-08T10:15:00Z',
-          }),
-        ];
+        const dummyRequests = createDummyRequests();
+        this.requestList = dummyRequests;
+        const kajiUlangStore = useKajiUlangStore();
+        dummyRequests.forEach((request) => {
+          kajiUlangStore.upsertFromRequest(request, {
+            paymentDetail: request.paymentInfo || null,
+          });
+        });
       } finally {
         this.loading = false;
       }
@@ -163,6 +296,12 @@ export const usePermintaanStore = defineStore('request', {
         const res = await api.post('/api/v1/requests', data);
         const newData = normalizeRequestEntry(res.data.data);
         this.requestList.push(newData);
+        if (newData.paymentInfo) {
+          const kajiUlangStore = useKajiUlangStore();
+          kajiUlangStore.upsertFromRequest(newData, {
+            paymentDetail: newData.paymentInfo,
+          });
+        }
         logRequestEvent({
           request: newData,
           status: newData.status,
@@ -180,6 +319,12 @@ export const usePermintaanStore = defineStore('request', {
           createdAt: new Date().toISOString(),
         });
         this.requestList.push(newData);
+        if (newData.paymentInfo) {
+          const kajiUlangStore = useKajiUlangStore();
+          kajiUlangStore.upsertFromRequest(newData, {
+            paymentDetail: newData.paymentInfo,
+          });
+        }
         logRequestEvent({
           request: newData,
           status: newData.status,
@@ -195,53 +340,66 @@ export const usePermintaanStore = defineStore('request', {
 
     /** Update permintaan */
     async updateRequest(idOrder, payload) {
+      let updated = null;
+      let dummy = false;
       try {
         const res = await api.put(`/api/v1/requests/${idOrder}`, payload);
-        const updated = normalizeRequestEntry(res.data.data);
+        updated = normalizeRequestEntry(res.data.data);
+      } catch (err) {
+        console.warn('[PermintaanStore] API tidak aktif, update dummy store.');
+        dummy = true;
         const idx = this.requestList.findIndex((r) => r.idOrder === idOrder);
-        if (idx !== -1) this.requestList[idx] = updated;
+        if (idx !== -1) {
+          updated = normalizeRequestEntry({
+            ...this.requestList[idx],
+            ...payload,
+          });
+        }
+      }
+
+      if (updated) {
+        const idx = this.requestList.findIndex((r) => r.idOrder === idOrder);
+        if (idx !== -1) {
+          this.requestList[idx] = updated;
+        } else {
+          this.requestList.push(updated);
+        }
+
+        const kajiUlangStore = useKajiUlangStore();
+        if (updated.paymentInfo) {
+          kajiUlangStore.upsertFromRequest(updated, {
+            paymentDetail: updated.paymentInfo,
+          });
+        } else {
+          kajiUlangStore.removeOrder(idOrder);
+        }
+
         if (payload?.status) {
           logRequestEvent({
             request: updated,
             status: payload.status,
-            title: 'Status permintaan diperbarui',
-            statusLevel: 'success',
+            title: dummy ? 'Status permintaan diperbarui (offline)' : 'Status permintaan diperbarui',
+            statusLevel: dummy ? 'warning' : 'success',
           });
         }
-        return { ok: true, data: updated };
-      } catch (err) {
-        console.warn('[PermintaanStore] API tidak aktif, update dummy store.');
-        const idx = this.requestList.findIndex((r) => r.idOrder === idOrder);
-        if (idx !== -1) {
-          const updated = normalizeRequestEntry({
-            ...this.requestList[idx],
-            ...payload,
-          });
-          this.requestList[idx] = updated;
-          if (payload?.status) {
-            logRequestEvent({
-              request: updated,
-              status: payload.status,
-              title: 'Status permintaan diperbarui (offline)',
-              statusLevel: 'warning',
-            });
-          }
-        }
-        return { ok: true, dummy: true };
       }
+
+      return { ok: true, data: updated, dummy };
     },
 
     /** Hapus permintaan */
     async deleteRequest(idOrder) {
+      let dummy = false;
       try {
         await api.delete(`/api/v1/requests/${idOrder}`);
-        this.requestList = this.requestList.filter((r) => r.idOrder !== idOrder);
-        return { ok: true };
       } catch (err) {
         console.warn('[PermintaanStore] API tidak aktif, hapus dari dummy store.');
-        this.requestList = this.requestList.filter((r) => r.idOrder !== idOrder);
-        return { ok: true, dummy: true };
+        dummy = true;
       }
+      this.requestList = this.requestList.filter((r) => r.idOrder !== idOrder);
+      const kajiUlangStore = useKajiUlangStore();
+      kajiUlangStore.removeOrder(idOrder);
+      return dummy ? { ok: true, dummy: true } : { ok: true };
     },
 
     /** Tandai permintaan disetujui */
@@ -281,3 +439,4 @@ export const usePermintaanStore = defineStore('request', {
     },
   },
 });
+

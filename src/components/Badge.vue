@@ -48,11 +48,29 @@ const statusMap = {
     border: 'border border-amber-200',
     label: 'Menunggu Pembayaran',
   },
+  payment_pending_review: {
+    bg: 'bg-amber-100',
+    text: 'text-amber-800',
+    border: 'border border-amber-200',
+    label: 'Menunggu Review Pembayaran',
+  },
+  payment_review_rejected: {
+    bg: 'bg-red-100',
+    text: 'text-red-700',
+    border: 'border border-red-200',
+    label: 'Bukti Ditolak',
+  },
   payment_received: {
     bg: 'bg-emerald-100',
     text: 'text-emerald-700',
     border: 'border border-emerald-200',
     label: 'Pembayaran Berhasil',
+  },
+  payment_verified: {
+    bg: 'bg-emerald-100',
+    text: 'text-emerald-800',
+    border: 'border border-emerald-200',
+    label: 'Pembayaran Terverifikasi',
   },
   in_testing: {
     bg: 'bg-indigo-100',
@@ -65,6 +83,18 @@ const statusMap = {
     text: 'text-emerald-700',
     border: 'border border-emerald-200',
     label: 'Selesai',
+  },
+  ready_for_kaji_ulang: {
+    bg: 'bg-blue-100',
+    text: 'text-blue-700',
+    border: 'border border-blue-200',
+    label: 'Siap Kaji Ulang',
+  },
+  cancelled: {
+    bg: 'bg-gray-200',
+    text: 'text-gray-600',
+    border: 'border border-gray-300',
+    label: 'Dibatalkan',
   },
 }
 

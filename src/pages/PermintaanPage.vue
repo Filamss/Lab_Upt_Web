@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="space-y-3">
     <!-- Header -->
     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -35,6 +35,7 @@
           searchable
           filterable
           selectable
+          :status-options="requestStatusOptions"
           mobile-mode="table"
           scroll-body-on-mobile
           body-scroll-height="55vh"
@@ -102,7 +103,7 @@
             @click="closeModal"
             class="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
           >
-            ✕
+            âœ•
           </button>
 
           <FormPermintaan
@@ -129,10 +130,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { usePermintaanStore } from '@/stores/usePermintaanStore';
 import { useTestStore } from '@/stores/useTestStore';
-import { useOrderStore } from '@/stores/useOrderStore';
 import { PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import FormPermintaan from '@/components/form/FormPermintaan.vue';
 import FormPayment from '@/components/form/FormPayment.vue';
@@ -142,9 +142,6 @@ import { useConfirmDialog } from '@/stores/useConfirmDialog';
 
 const store = usePermintaanStore();
 const testStore = useTestStore();
-const orderStore = useOrderStore();
-const search = ref('');
-const statusFilter = ref('');
 const showModal = ref(false);
 const showPaymentModal = ref(false);
 const isEdit = ref(false);
@@ -204,18 +201,16 @@ const columns = [
   },
 ];
 
-// ✅ Data Filtered
-const filteredRequests = computed(() => {
-  return store.requestList.filter((r) => {
-    const matchSearch = r.idOrder
-      ?.toLowerCase()
-      .includes(search.value.toLowerCase());
-    const matchStatus = statusFilter.value
-      ? r.status === statusFilter.value
-      : true;
-    return matchSearch && matchStatus;
-  });
-});
+const requestStatusOptions = [
+  { value: '', label: 'Semua Status' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'pending_payment', label: 'Menunggu Pembayaran' },
+  { value: 'payment_pending_review', label: 'Menunggu Review Pembayaran' },
+  { value: 'payment_verified', label: 'Pembayaran Terverifikasi' },
+  { value: 'payment_review_rejected', label: 'Bukti Pembayaran Ditolak' },
+  { value: 'cancelled', label: 'Dibatalkan' },
+];
+
 
 // === Modal logic ===
 function openAddModal() {
@@ -358,14 +353,15 @@ function resolveTestName(detail) {
 }
 
 async function handlePaymentSaved(detail) {
+  const paymentStatus = 'payment_pending_review';
+  const paymentInfo = {
+    ...detail,
+    status: paymentStatus,
+    reviewStatus: detail.reviewStatus || 'pending',
+  };
   await store.updateRequest(detail.orderId, {
-    status: detail.status || 'payment_received',
-    paymentInfo: detail,
-  });
-  const updatedRequest =
-    store.requestList.find((req) => req.idOrder === detail.orderId) || null;
-  orderStore.upsertFromRequest(updatedRequest || { idOrder: detail.orderId }, {
-    paymentDetail: detail,
+    status: paymentStatus,
+    paymentInfo,
   });
   closePaymentModal();
 }

@@ -1,10 +1,10 @@
 ﻿<template>
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+    class="fixed inset-0 z-50 flex items-stretch justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
     @click.self="handleClose"
   >
-    <div class="w-[95vw] max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-y-auto">
-      <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+    <div class="relative flex h-full w-full max-h-full flex-col bg-white shadow-2xl sm:h-auto sm:w-[95vw] sm:max-w-4xl sm:max-h-[90vh] sm:rounded-2xl overflow-hidden">
+      <div class="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
         <div>
           <p class="text-xs uppercase tracking-wide text-gray-500">Invoice Pembayaran</p>
           <h3 class="text-lg font-semibold text-surfaceDark">
@@ -23,10 +23,10 @@
         </button>
       </div>
 
-      <div class="px-6 py-6 space-y-6">
+      <div class="flex-1 overflow-y-auto px-4 py-5 pb-28 space-y-6 sm:px-6 sm:py-6 sm:pb-10">
         <div class="grid gap-6 md:grid-cols-[2fr_1fr]">
           <section class="space-y-4">
-            <div class="rounded-xl border border-gray-200 overflow-hidden">
+            <div class="hidden rounded-xl border border-gray-200 overflow-hidden md:block">
               <table class="min-w-full text-sm">
                 <thead class="bg-muted text-gray-600 uppercase text-xs tracking-wide">
                   <tr>
@@ -70,8 +70,45 @@
               </table>
             </div>
 
-            <div class="flex flex-col items-end gap-1 text-sm text-gray-600">
-              <div class="flex items-center justify-end gap-4">
+            <div class="space-y-3 md:hidden">
+              <article
+                v-for="(row, index) in testRows"
+                :key="`payment-card-${index}`"
+                class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+              >
+                <div class="flex items-center justify-between text-xs uppercase tracking-wide text-gray-500">
+                  <span>Pengujian {{ index + 1 }}</span>
+                  <span class="font-semibold text-surfaceDark">Rp {{ formatCurrency(rowSubtotal(row)) }}</span>
+                </div>
+                <div class="mt-2 space-y-1">
+                  <p class="text-sm font-semibold text-surfaceDark">
+                    {{ row.testName || '-' }}
+                  </p>
+                  <p class="text-xs text-gray-500">
+                    {{ row.objectName || '-' }}
+                  </p>
+                </div>
+                <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600">
+                  <div class="flex flex-col rounded-lg bg-gray-50 p-2">
+                    <span class="text-[11px] uppercase text-gray-500">Biaya</span>
+                    <span class="text-sm font-semibold text-surfaceDark">Rp {{ formatCurrency(row.price) }}</span>
+                  </div>
+                  <div class="flex flex-col rounded-lg bg-gray-50 p-2 text-right">
+                    <span class="text-[11px] uppercase text-gray-500">Jumlah</span>
+                    <span class="text-sm font-semibold text-surfaceDark">{{ row.quantity }}</span>
+                  </div>
+                </div>
+              </article>
+              <div
+                v-if="!testRows.length"
+                class="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-center text-sm text-gray-500"
+              >
+                Belum ada data pengujian untuk permintaan ini.
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2 text-sm text-gray-600 sm:items-end">
+              <div class="flex flex-col gap-2 rounded-xl bg-gray-50 p-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4 sm:bg-transparent sm:p-0">
                 <span>Total Pengujian</span>
                 <span class="font-semibold text-surfaceDark">
                   Rp {{ formatCurrency(grandTotal) }}
@@ -82,17 +119,17 @@
 
           <aside class="space-y-4">
             <div class="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-3 text-sm text-gray-600">
-              <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <span class="text-gray-500">Customer</span>
                 <span class="font-semibold text-surfaceDark">
                   {{ customerNameDisplay || '-' }}
                 </span>
               </div>
-              <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <span class="text-gray-500">Tanggal Permintaan</span>
                 <span class="font-medium">{{ formattedEntryDate }}</span>
               </div>
-              <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <span class="text-gray-500">Batas Pembayaran</span>
                 <span class="font-semibold text-danger">
                   {{ paymentDeadline.label }}
@@ -105,7 +142,7 @@
               <div
                 v-for="(account, idx) in bankAccounts"
                 :key="`bank-${idx}`"
-                class="rounded-lg border border-gray-100 bg-gray-50 p-3"
+                class="rounded-lg border border-gray-100 bg-gray-50 p-3 space-y-1"
               >
                 <p class="text-xs text-gray-500 uppercase tracking-wide">{{ account.bank }}</p>
                 <p class="text-base font-semibold text-surfaceDark">{{ account.number }}</p>
@@ -117,13 +154,13 @@
             </div>
 
             <div class="rounded-xl bg-white border border-gray-200 p-4 space-y-3 text-sm text-gray-600">
-              <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <span>Total Tagihan</span>
                 <span class="font-semibold text-surfaceDark">
                   Rp {{ formatCurrency(grandTotal) }}
                 </span>
               </div>
-              <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <span>Sisa Pembayaran</span>
                 <span class="font-semibold" :class="outstanding > 0 ? 'text-danger' : 'text-emerald-600'">
                   Rp {{ formatCurrency(outstanding) }}
@@ -153,21 +190,23 @@
           </div>
         </div>
 
-        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end sm:items-center">
+      </div>
+      <div class="sticky bottom-0 z-10 border-t border-gray-200 bg-white px-4 py-4 sm:px-6">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           <button
-            class="w-full sm:w-auto rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
+            class="w-full rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100 sm:w-auto"
             @click="downloadInvoice"
           >
             Unduh Invoice
           </button>
           <button
-            class="w-full sm:w-auto rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
+            class="w-full rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100 sm:w-auto"
             @click="handleClose"
           >
             Tutup
           </button>
           <button
-            class="w-full sm:w-auto rounded-md bg-primary text-white px-4 py-2 text-sm font-semibold transition hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-60"
+            class="w-full rounded-md bg-primary text-white px-4 py-2 text-sm font-semibold transition hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             :disabled="!canConfirmPayment"
             @click="savePayment"
           >
@@ -260,6 +299,31 @@ function rowSubtotal(row) {
   return Math.max(0, Number(row.price) || 0) * Math.max(1, Number(row.quantity) || 1);
 }
 
+function serializeTransferFiles() {
+  return transferFiles.value.map((file, idx) => {
+    if (!file) return null;
+    // Keep already-serialized entries as-is
+    if (typeof file === 'object' && !('lastModified' in file) && file.previewUrl) {
+      return { ...file };
+    }
+    if (file instanceof File) {
+      const previewUrl = URL.createObjectURL(file);
+      return {
+        id: `${file.name || 'file'}-${file.size || 0}-${file.lastModified || Date.now()}-${idx}`,
+        name: file.name || `Lampiran-${idx + 1}`,
+        size: file.size || 0,
+        type: file.type || 'application/octet-stream',
+        lastModified: file.lastModified || Date.now(),
+        previewUrl,
+      };
+    }
+    return {
+      ...file,
+      previewUrl: file.previewUrl || '',
+    };
+  }).filter(Boolean);
+}
+
 const grandTotal = computed(() =>
   testRows.value.reduce((sum, row) => sum + rowSubtotal(row), 0),
 );
@@ -296,20 +360,21 @@ async function savePayment() {
   normalizeAmount();
   const confirmed = await openConfirm({
     title: 'Konfirmasi pembayaran?',
-    message: 'Status permintaan akan diperbarui menjadi pembayaran berhasil.',
+    message: 'Status permintaan akan diperbarui menjadi menunggu review bukti pembayaran.',
     confirmLabel: 'Simpan Pembayaran',
   });
   if (!confirmed) return;
   const detail = {
     orderId: props.orderId,
-    status: 'payment_received',
+    status: 'payment_pending_review',
     total: grandTotal.value,
     amountPaid: amountPaid.value,
     outstanding: outstanding.value,
     paymentDeadline: paymentDeadline.value.iso,
     paymentDate: new Date().toISOString(),
     testRows: testRows.value.map((row) => ({ ...row })),
-    transferFiles: transferFiles.value,
+    transferFiles: serializeTransferFiles(),
+    reviewStatus: 'pending',
   };
   emit('payment-saved', detail);
   handleClose();
