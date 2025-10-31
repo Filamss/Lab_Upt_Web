@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/useAuthStore';
 
 // Lazy-load pages
+const LandingPage = () => import('../pages/LandingPage.vue');
 const DashboardPage = () => import('../pages/DashboardPage.vue');
 const PermintaanPage = () => import('../pages/PermintaanPage.vue');
 const KajiUlangPage = () => import('../pages/KajiUlangPage.vue');
@@ -22,7 +23,7 @@ const RiwayatPage = () => import('../pages/RiwayatPage.vue');
 const KodeUndanganPage = () => import('../pages/KodeUndanganPage.vue');
 
 const routes = [
-  { path: '/', redirect: '/dashboard' },
+  { path: '/', component: LandingPage, meta: { layout: 'public' } },
 
   { path: '/login', component: LoginPage, meta: { layout: 'auth', authMode: 'login' } },
   { path: '/register', component: LoginPage, meta: { layout: 'auth', authMode: 'register' } },
@@ -63,8 +64,9 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
 
-  // Izinkan halaman login & print tanpa autentikasi
-  if (to.meta.layout === 'auth' || to.meta.layout === 'print') {
+  // Izinkan halaman dengan layout khusus tanpa autentikasi
+  const publicLayouts = ['auth', 'print', 'public'];
+  if (publicLayouts.includes(to.meta.layout)) {
     return next();
   }
 

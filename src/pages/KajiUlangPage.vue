@@ -79,10 +79,11 @@
       v-if="showForm"
       :form="form"
       :kajiUlangRows="reviewRows"
-      :signatures="signatures"
       :tests="tests"
-      :selectedCustomerAddress="form.customerAddress || ''"
-      :getRowOptions="getRowOptions"
+      :isEditing="isEditing"
+      :lookup-loading="lookupLoading"
+      :lookup-error="lookupError"
+      @lookup-order="lookupOrder"
       @save-draft="saveDraft"
       @lolos-kaji-ulang="approveReview"
       @tolak="rejectReview"
@@ -214,13 +215,51 @@ const permintaanStore = usePermintaanStore();
 
 const showForm = ref(false);
 const editingOrderId = ref(null);
+const isEditing = ref(false);
+const lookupLoading = ref(false);
+const lookupError = ref('');
 const showReviewModal = ref(false);
 const reviewingOrder = ref(null);
 const reviewNote = ref('');
 const reviewerName = 'Admin';
 
+const makeDefaultReviewRows = () => [
+  { topic: 'Peralatan', result: '' },
+  { topic: 'Personel', result: '' },
+  { topic: 'Waktu', result: '' },
+  { topic: 'Kondisi', result: '' },
+  { topic: 'Laboratorium Subkontrak', result: '' },
+];
+
+const cloneTestItems = (items = [], fallbackSample = '') =>
+  items.map((item) => ({
+    ...item,
+    sampleNo:
+      item.sampleNo !== undefined && item.sampleNo !== null && item.sampleNo !== ''
+        ? item.sampleNo
+        : fallbackSample || '',
+    testCode:
+      item.testCode && item.testCode.trim()
+        ? item.testCode
+        : item.testId
+        ? String(item.testId).split('-')[0]
+        : '',
+  }));
+
+const clonePaymentInfo = (info) => (info ? { ...info } : null);
+
+const resolveYearFromDate = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (!Number.isNaN(date.getTime())) return String(date.getFullYear());
+  const match = /^(\d{4})/.exec(String(value));
+  return match ? match[1] : '';
+};
+
 const form = reactive({
   orderNo: '',
+  orderNumber: null,
+  orderYear: '',
   sampleNo: '',
   date: new Date().toISOString().slice(0, 10),
   customerName: '',
@@ -228,17 +267,11 @@ const form = reactive({
   customerAddress: '',
   testType: '',
   note: '',
+  testItems: [],
+  paymentInfo: null,
 });
 
-const reviewRows = reactive([
-  { topic: 'Peralatan', result: '' },
-  { topic: 'Personel', result: '' },
-  { topic: 'Waktu', result: '' },
-  { topic: 'Kondisi', result: '' },
-  { topic: 'Laboratorium Subkontrak', result: '' },
-]);
-
-const signatures = reactive({ customer: null, admin: null });
+const reviewRows = reactive(makeDefaultReviewRows());
 const reviewFiles = computed(
   () => reviewingOrder.value?.paymentInfo?.transferFiles || [],
 );
@@ -299,9 +332,36 @@ const tableRows = computed(() =>
 
 const tests = computed(() => testStore.tests || []);
 
+function setReviewRows(rows) {
+  const source = Array.isArray(rows) && rows.length ? rows : makeDefaultReviewRows();
+  reviewRows.splice(0, reviewRows.length, ...source.map((row) => ({ ...row })));
+}
+
+function applyOrderToForm(order) {
+  if (!order) return;
+  const derivedYear = order.orderYear || resolveYearFromDate(order.date || order.entryDate);
+  Object.assign(form, {
+    orderNo: order.orderNo || '',
+    orderNumber: order.orderNumber ?? null,
+    orderYear: derivedYear,
+    sampleNo: order.sampleNo || '',
+    date: order.date || new Date().toISOString().slice(0, 10),
+    customerName: order.customerName || '',
+    customerPhone: order.customerPhone || '',
+    customerAddress: order.customerAddress || '',
+    testType: order.testType || '',
+    note: order.note || '',
+    paymentInfo: clonePaymentInfo(order.paymentInfo),
+  });
+  form.testItems = cloneTestItems(order.testItems || [], order.sampleNo);
+  setReviewRows(order.kajiUlangRows);
+}
+
 function resetForm() {
   Object.assign(form, {
     orderNo: '',
+    orderNumber: null,
+    orderYear: '',
     sampleNo: '',
     date: new Date().toISOString().slice(0, 10),
     customerName: '',
@@ -309,20 +369,19 @@ function resetForm() {
     customerAddress: '',
     testType: '',
     note: '',
+    paymentInfo: null,
   });
-  reviewRows.forEach((row) => (row.result = ''));
-  signatures.customer = null;
-  signatures.admin = null;
+  form.testItems = [];
+  setReviewRows();
   editingOrderId.value = null;
+  isEditing.value = false;
+  lookupError.value = '';
+  lookupLoading.value = false;
 }
 
 function handleAdd() {
-  const nextReady = kajiUlangStore.readyForReview[0];
-  if (!nextReady) {
-    alert('Belum ada permintaan dengan pembayaran terverifikasi.');
-    return;
-  }
-  handleEdit({ id: nextReady.id, orderNo: nextReady.orderNo });
+  resetForm();
+  showForm.value = true;
 }
 
 function handleEdit(row) {
@@ -334,19 +393,10 @@ function handleEdit(row) {
     alert('Bukti pembayaran belum disetujui. Selesaikan review terlebih dahulu.');
     return;
   }
-  Object.assign(form, {
-    orderNo: order.orderNo || '',
-    sampleNo: order.sampleNo || '',
-    date: order.date || new Date().toISOString().slice(0, 10),
-    customerName: order.customerName || '',
-    customerPhone: order.customerPhone || '',
-    customerAddress: order.customerAddress || '',
-    testType: order.testType || '',
-    note: order.note || '',
-  });
-  reviewRows.splice(0, reviewRows.length, ...(order.kajiUlangRows || []).map((row) => ({ ...row })));
-  signatures.customer = order.kajiUlangSignatures?.customer || null;
-  signatures.admin = order.kajiUlangSignatures?.admin || null;
+  isEditing.value = true;
+  lookupError.value = '';
+  lookupLoading.value = false;
+  applyOrderToForm(order);
   editingOrderId.value = order.id;
   showForm.value = true;
 }
@@ -422,54 +472,125 @@ async function rejectPaymentEvidence() {
   closeReviewModal();
 }
 
-function getRowOptions(topic) {
-  const yesNo = ['Peralatan', 'Personel', 'Waktu', 'Laboratorium Subkontrak'];
-  if (yesNo.includes(topic)) return ['Ada', 'Tidak'];
-  if (topic === 'Kondisi') return ['Siap Uji', 'Prepare Sampel'];
-  return ['Ada', 'Tidak'];
+async function lookupOrder(orderNo) {
+  const query = (orderNo || '').trim();
+  if (!query) {
+    lookupError.value = 'Masukkan ID Order terlebih dahulu.';
+    return;
+  }
+  lookupLoading.value = true;
+  lookupError.value = '';
+  try {
+    const lower = query.toLowerCase();
+    let order =
+      kajiUlangStore.orders.find((o) => o.orderNo?.toLowerCase() === lower) || null;
+
+    if (!order) {
+      let request =
+        permintaanStore.requestList.find((r) => r.idOrder?.toLowerCase() === lower) || null;
+
+      if (!request) {
+        const { ok, data, error } = await permintaanStore.checkOrderStatus(query);
+        if (ok && data) {
+          request = data;
+        } else {
+          lookupError.value = error || 'Data permintaan tidak ditemukan.';
+          return;
+        }
+      }
+
+      const paymentInfo = request.paymentInfo;
+      const approved =
+        paymentInfo?.reviewStatus === 'approved' ||
+        request.status === 'payment_verified';
+
+      if (!approved) {
+        lookupError.value = 'Pembayaran belum terverifikasi atau masih dalam review.';
+        return;
+      }
+
+      order = kajiUlangStore.upsertFromRequest(request, {
+        paymentDetail: paymentInfo,
+      });
+    }
+
+    if (!order) {
+      lookupError.value = 'Gagal memuat data order.';
+      return;
+    }
+
+    applyOrderToForm(order);
+    editingOrderId.value = order.id;
+    showForm.value = true;
+  } catch (err) {
+    console.error('lookupOrder error', err);
+    lookupError.value = 'Terjadi kesalahan saat mencari ID Order.';
+  } finally {
+    lookupLoading.value = false;
+  }
 }
 
 function saveDraft() {
+  if (!form.orderNo) {
+    alert('Masukkan ID Order terlebih dahulu.');
+    return;
+  }
   if (!editingOrderId.value) {
-    alert('Draft disimpan (dummy)');
+    alert('Cari ID Order terlebih dahulu sebelum menyimpan.');
     return;
   }
   kajiUlangStore.updateOrder(editingOrderId.value, {
     sampleNo: form.sampleNo,
+    orderNumber: form.orderNumber,
+    orderYear: form.orderYear,
     customerName: form.customerName,
     customerPhone: form.customerPhone,
     customerAddress: form.customerAddress,
     testType: form.testType,
     note: form.note,
+    testItems: cloneTestItems(form.testItems, form.sampleNo),
+    paymentInfo: clonePaymentInfo(form.paymentInfo),
   });
   kajiUlangStore.updateReview(editingOrderId.value, {
     rows: reviewRows,
     note: form.note,
-    signatures,
   });
   alert('Draft disimpan');
 }
 
 function approveReview() {
+  if (!form.orderNo) {
+    alert('Masukkan ID Order terlebih dahulu.');
+    return;
+  }
+  if (!form.testItems.length) {
+    alert('Data pengujian belum tersedia. Cari ID Order yang valid.');
+    return;
+  }
   if (editingOrderId.value) {
     kajiUlangStore.updateOrder(editingOrderId.value, {
       sampleNo: form.sampleNo,
+      orderNumber: form.orderNumber,
+      orderYear: form.orderYear,
       customerName: form.customerName,
       customerPhone: form.customerPhone,
       customerAddress: form.customerAddress,
       testType: form.testType,
       note: form.note,
+      testItems: cloneTestItems(form.testItems, form.sampleNo),
+      paymentInfo: clonePaymentInfo(form.paymentInfo),
     });
     kajiUlangStore.updateReview(editingOrderId.value, {
       rows: reviewRows,
       note: form.note,
-      signatures,
       status: 'pending_validation',
       validator: 'Manajer Teknis',
     });
   } else {
     const created = kajiUlangStore.addOrder({
       orderNo: form.orderNo,
+      orderNumber: form.orderNumber,
+      orderYear: form.orderYear,
       sampleNo: form.sampleNo,
       date: form.date,
       customerName: form.customerName,
@@ -477,18 +598,19 @@ function approveReview() {
       customerAddress: form.customerAddress,
       testType: form.testType,
       note: form.note,
+      testItems: cloneTestItems(form.testItems, form.sampleNo),
       status: 'pending_validation',
-      paymentInfo: { status: 'payment_verified', reviewStatus: 'approved' },
+      paymentInfo: clonePaymentInfo(form.paymentInfo) || { status: 'payment_verified', reviewStatus: 'approved' },
     });
     kajiUlangStore.updateReview(created.id, {
       rows: reviewRows,
       note: form.note,
-      signatures,
       status: 'pending_validation',
       validator: 'Manajer Teknis',
     });
   }
   showForm.value = false;
+  resetForm();
 }
 
 function rejectReview() {
@@ -496,11 +618,11 @@ function rejectReview() {
     kajiUlangStore.updateReview(editingOrderId.value, {
       rows: reviewRows,
       note: form.note,
-      signatures,
       status: 'rejected',
     });
   }
   showForm.value = false;
+  resetForm();
 }
 
 function closeForm() {

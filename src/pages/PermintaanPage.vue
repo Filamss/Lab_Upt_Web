@@ -46,6 +46,11 @@
             {{ value || '-' }}
           </span>
         </template>
+        <template #orderNumber="{ row }">
+          <span class="text-sm text-gray-700">
+            {{ formatOrderNumber(row) }}
+          </span>
+        </template>
         <template #testItems="{ value, row }">
           <div class="text-left">
             <template v-if="value?.length">
@@ -165,6 +170,11 @@ const columns = [
     title: 'ID Order',
     className: 'max-w-[180px] min-w-[140px] pr-4',
     slotName: 'idOrder',
+  },
+  {
+    field: 'orderNumber',
+    title: 'No. Order',
+    className: 'min-w-[120px]',
   },
   { field: 'entryDate', title: 'Tanggal Masuk' },
   {
@@ -332,6 +342,12 @@ async function deleteSelected() {
     await store.deleteRequest(row.idOrder);
   }
   selectedRows.value = [];
+}
+
+function formatOrderNumber(row) {
+  if (!row || !row.orderNumber) return '-';
+  const year = row.orderYear || (row.entryDate ? new Date(row.entryDate).getFullYear() : '');
+  return year ? `${row.orderNumber}/${year}` : String(row.orderNumber);
 }
 
 function resolveTestName(detail) {

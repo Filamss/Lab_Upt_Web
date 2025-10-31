@@ -3,7 +3,7 @@ import axios from 'axios';
 import router from '@/router';
 
 const baseURL = import.meta.env.VITE_API_URL;
-console.log('API Base URL:', import.meta.env.VITE_API_URL);
+console.log('API Base URL:', baseURL);
 
 // === Konfigurasi dasar ===
 const api = axios.create({
@@ -29,11 +29,13 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token invalid / expired → logout dan arahkan ke login
+    const status = error.response?.status;
+    const config = error.config || {};
+    if (status === 401 && !config.skipAuthRedirect) {
+      // Token invalid / expired -> logout dan arahkan ke login
       localStorage.removeItem('token');
       localStorage.removeItem('currentUser');
-      delete axios.defaults.headers.common['Authorization'];
+      delete axios.defaults.headers.common.Authorization;
 
       if (router.currentRoute.value.path !== '/login') {
         router.push('/login');

@@ -3,6 +3,19 @@ import api from '@/services/apiServices';
 import { useActivityStore } from '@/stores/useActivityStore';
 import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 
+function extractYear(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (!Number.isNaN(date.getTime())) return String(date.getFullYear());
+  const match = /^(\d{4})/.exec(String(value));
+  return match ? match[1] : null;
+}
+
+function coerceOrderNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : null;
+}
+
 function normalizeRequestEntry(entry = {}) {
   const rawItems = Array.isArray(entry.testItems) ? entry.testItems : [];
   const testItems = rawItems
@@ -28,6 +41,7 @@ function normalizeRequestEntry(entry = {}) {
         price,
         quantity,
         unit: item.unit || '',
+        testCode: item.testCode || item.code || '',
       };
     });
 
@@ -38,6 +52,10 @@ function normalizeRequestEntry(entry = {}) {
           .join(', ')
       : '';
 
+  const entryDate = entry.entryDate || entry.createdAt || null;
+  const orderYear = entry.orderYear || extractYear(entryDate);
+  const orderNumber = coerceOrderNumber(entry.orderNumber ?? entry.order_sequence);
+
   return {
     ...entry,
     status: entry.status || 'draft',
@@ -45,10 +63,12 @@ function normalizeRequestEntry(entry = {}) {
     testItems,
     testCategory: aggregated || entry.testCategory || entry.purpose || '',
     purpose: entry.purpose || aggregated,
+    orderNumber,
+    orderYear,
   };
 }
 
-const statusLabels = {
+export const requestStatusLabels = {
   draft: 'Draft',
   pending_payment: 'Menunggu Pembayaran',
   payment_pending_review: 'Menunggu Review Pembayaran',
@@ -74,7 +94,7 @@ function logRequestEvent({ request, status, title, description, statusLevel = 'i
     title: title || `Permintaan ${request?.idOrder || ''}`.trim(),
     description:
       description ||
-      `${request?.customerName || 'Pemohon'} - ${statusLabels[status] || status || 'Aktivitas'}`,
+      `${request?.customerName || 'Pemohon'} - ${requestStatusLabels[status] || status || 'Aktivitas'}`,
     status: statusLevel,
     referenceId: request?.idOrder || null,
     metadata: {
@@ -87,7 +107,7 @@ function logRequestEvent({ request, status, title, description, statusLevel = 'i
 function createDummyRequests() {
   const entries = [
     {
-      idOrder: 'ORD-202501-001',
+      idOrder: '01K8WJ96E56HTJCC9CJ97MM78P',
       entryDate: '2025-01-04',
       customerName: 'PT Maju Jaya Sejahtera',
       phoneNumber: '021-555-0101',
@@ -124,7 +144,7 @@ function createDummyRequests() {
         reviewNote: 'Bukti transfer jelas dan sesuai nominal.',
         transferFiles: [
           {
-            id: 'ORD-202501-001-evidence-1',
+            id: '01K8WJ96E56HTJCC9CJ97MM78P-evidence-1',
             name: 'Bukti-Transfer-ORD-001.png',
             size: 245678,
             type: 'image/png',
@@ -134,7 +154,7 @@ function createDummyRequests() {
       },
     },
     {
-      idOrder: 'ORD-202501-004',
+      idOrder: '01K8WJ96E56HTJCC9CJ97MM78P',
       entryDate: '2025-01-08',
       customerName: 'CV Sinar Terang Abadi',
       phoneNumber: '0283-778899',
@@ -171,7 +191,7 @@ function createDummyRequests() {
       },
     },
     {
-      idOrder: 'ORD-202501-006',
+      idOrder: '01K8WJ96E56HTJCC9CJ97MM78P',
       entryDate: '2025-01-09',
       customerName: 'PT Sentosa Logam',
       phoneNumber: '021-770099',
@@ -201,7 +221,7 @@ function createDummyRequests() {
         reviewNote: 'Foto tidak menunjukkan bukti transfer yang jelas.',
         transferFiles: [
           {
-            id: 'ORD-202501-006-evidence-1',
+            id: '01K8WJ96E56HTJCC9CJ97MM78P-evidence-1',
             name: 'Foto-WhatsApp.jpg',
             size: 156789,
             type: 'image/jpeg',
@@ -211,7 +231,7 @@ function createDummyRequests() {
       },
     },
     {
-      idOrder: 'ORD-202501-008',
+      idOrder: '01K8WJ96E56HTJCC9CJ97MM78P',
       entryDate: '2025-01-10',
       customerName: 'CV Cahaya Mandiri',
       phoneNumber: '0812-9988-7766',
@@ -230,7 +250,7 @@ function createDummyRequests() {
       status: 'pending_payment',
     },
     {
-      idOrder: 'ORD-202501-010',
+      idOrder: '01K8WJ96E56HTJCC9CJ97MM78P',
       entryDate: '2025-01-12',
       customerName: 'UD Sentosa Teknik',
       phoneNumber: '0857-4455-8899',
@@ -250,7 +270,26 @@ function createDummyRequests() {
     },
   ];
 
-  return entries.map((entry) => normalizeRequestEntry(entry));
+  const normalized = entries.map((entry) => normalizeRequestEntry(entry));
+  const counters = {};
+  return normalized.map((entry) => {
+    const year = entry.orderYear || extractYear(entry.entryDate) || String(new Date().getFullYear());
+    counters[year] = Math.max(counters[year] || 0, coerceOrderNumber(entry.orderNumber) || 0);
+    if (!entry.orderNumber) {
+      counters[year] += 1;
+    }
+    const orderNumber = entry.orderNumber || counters[year];
+    counters[year] = Math.max(counters[year], orderNumber);
+    return {
+      ...entry,
+      orderYear: year,
+      orderNumber,
+      testItems: (entry.testItems || []).map((item) => ({
+        ...item,
+        testCode: item.testCode || (item.testId ? String(item.testId).split('-')[0] : ''),
+      })),
+    };
+  });
 }
 
 /**
@@ -262,9 +301,57 @@ export const usePermintaanStore = defineStore('request', {
     requestList: [],
     loading: false,
     error: null,
+    orderNumberCache: {},
   }),
 
   actions: {
+    rebuildOrderNumberCache() {
+      const cache = {};
+      this.requestList.forEach((request) => {
+        const year = request.orderYear || extractYear(request.entryDate);
+        const number = coerceOrderNumber(request.orderNumber);
+        if (!year || !number) return;
+        cache[year] = Math.max(cache[year] || 0, number);
+      });
+      this.orderNumberCache = cache;
+    },
+
+    peekNextOrderNumber(dateOrYear) {
+      const year = extractYear(dateOrYear) || String(new Date().getFullYear());
+      const cached = this.orderNumberCache[year] || 0;
+      let countInYear = 0;
+      const maxInList = this.requestList.reduce((max, request) => {
+        const requestYear = request.orderYear || extractYear(request.entryDate);
+        if (requestYear === year) {
+          countInYear += 1;
+        }
+        const number = coerceOrderNumber(request.orderNumber);
+        if (requestYear === year && number && number > max) {
+          return number;
+        }
+        return max;
+      }, 0);
+      const baseline = Math.max(cached, maxInList, countInYear);
+      return baseline + 1;
+    },
+
+    assignOrderIdentifiers(data = {}) {
+      const entryDate = data.entryDate || new Date().toISOString().slice(0, 10);
+      const orderYear = data.orderYear || extractYear(entryDate) || String(new Date().getFullYear());
+      let orderNumber = coerceOrderNumber(data.orderNumber);
+      if (!orderNumber) {
+        orderNumber = this.peekNextOrderNumber(entryDate);
+      }
+      const idOrder = data.idOrder || this.generateOrderId({ entryDate, orderNumber });
+      this.orderNumberCache[orderYear] = Math.max(this.orderNumberCache[orderYear] || 0, orderNumber);
+      return {
+        ...data,
+        idOrder,
+        orderNumber,
+        orderYear,
+      };
+    },
+
     /** Fetch semua permintaan (API atau fallback dummy) */
     async fetchAll() {
       this.loading = true;
@@ -272,12 +359,14 @@ export const usePermintaanStore = defineStore('request', {
         const res = await api.get('/api/v1/requests');
         const remote = Array.isArray(res.data?.data) ? res.data.data : [];
         this.requestList = remote.map((entry) => normalizeRequestEntry(entry));
+        this.rebuildOrderNumberCache();
         this.error = null;
       } catch (err) {
         console.warn('[PermintaanStore] API belum tersedia, memakai dummy data.');
         this.error = 'Dummy mode aktif (API belum terhubung).';
         const dummyRequests = createDummyRequests();
         this.requestList = dummyRequests;
+        this.rebuildOrderNumberCache();
         const kajiUlangStore = useKajiUlangStore();
         dummyRequests.forEach((request) => {
           kajiUlangStore.upsertFromRequest(request, {
@@ -292,10 +381,18 @@ export const usePermintaanStore = defineStore('request', {
     /** Tambah permintaan baru */
     async addRequest(data) {
       this.loading = true;
+      const payload = this.assignOrderIdentifiers({ ...data });
       try {
-        const res = await api.post('/api/v1/requests', data);
+        const res = await api.post('/api/v1/requests', payload);
         const newData = normalizeRequestEntry(res.data.data);
+        if (!newData.orderNumber) {
+          newData.orderNumber = payload.orderNumber || null;
+        }
+        if (!newData.orderYear) {
+          newData.orderYear = payload.orderYear || extractYear(payload.entryDate);
+        }
         this.requestList.push(newData);
+        this.rebuildOrderNumberCache();
         if (newData.paymentInfo) {
           const kajiUlangStore = useKajiUlangStore();
           kajiUlangStore.upsertFromRequest(newData, {
@@ -313,12 +410,12 @@ export const usePermintaanStore = defineStore('request', {
       } catch (err) {
         console.warn('[PermintaanStore] API tidak aktif, simpan ke dummy store.');
         const newData = normalizeRequestEntry({
-          ...data,
-          idOrder: data.idOrder || this.generateOrderId(),
-          status: data.status || 'draft',
+          ...payload,
+          status: payload.status || 'draft',
           createdAt: new Date().toISOString(),
         });
         this.requestList.push(newData);
+        this.rebuildOrderNumberCache();
         if (newData.paymentInfo) {
           const kajiUlangStore = useKajiUlangStore();
           kajiUlangStore.upsertFromRequest(newData, {
@@ -364,6 +461,7 @@ export const usePermintaanStore = defineStore('request', {
         } else {
           this.requestList.push(updated);
         }
+        this.rebuildOrderNumberCache();
 
         const kajiUlangStore = useKajiUlangStore();
         if (updated.paymentInfo) {
@@ -397,6 +495,7 @@ export const usePermintaanStore = defineStore('request', {
         dummy = true;
       }
       this.requestList = this.requestList.filter((r) => r.idOrder !== idOrder);
+      this.rebuildOrderNumberCache();
       const kajiUlangStore = useKajiUlangStore();
       kajiUlangStore.removeOrder(idOrder);
       return dummy ? { ok: true, dummy: true } : { ok: true };
@@ -417,11 +516,13 @@ export const usePermintaanStore = defineStore('request', {
     },
 
     /** Generate ID Order otomatis */
-    generateOrderId() {
-      const now = new Date();
-      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-      const randomNum = Math.floor(100 + Math.random() * 900);
-      return `ORD-${dateStr}-${randomNum}`;
+    generateOrderId({ entryDate, orderNumber } = {}) {
+      const date = entryDate ? new Date(entryDate) : new Date();
+      const validDate = Number.isNaN(date.getTime()) ? new Date() : date;
+      const year = validDate.getFullYear();
+      const month = String(validDate.getMonth() + 1).padStart(2, '0');
+      const sequence = String(orderNumber || this.peekNextOrderNumber(validDate)).padStart(4, '0');
+      return `ORD-${year}${month}-${sequence}`;
     },
 
     /** Cari berdasarkan ID (case-insensitive, minimal 8 karakter) */
@@ -437,6 +538,49 @@ export const usePermintaanStore = defineStore('request', {
     searchPermintaanById(query) {
       return this.searchById(query);
     },
+
+    /** Cari status order publik berdasarkan ID */
+    async checkOrderStatus(idOrder) {
+      const query = (idOrder || '').trim();
+      if (!query) {
+        return { ok: false, error: 'ID Order harus diisi.' };
+      }
+
+      this.loading = true;
+      try {
+        const res = await api.get(`/api/v1/requests/${encodeURIComponent(query)}`, {
+          skipAuthRedirect: true,
+        });
+        const data = normalizeRequestEntry(res.data?.data || {});
+        if (data?.idOrder) {
+          const idx = this.requestList.findIndex((r) => r.idOrder === data.idOrder);
+          if (idx !== -1) {
+            this.requestList[idx] = data;
+          } else {
+            this.requestList.push(data);
+          }
+          return { ok: true, data };
+        }
+        return { ok: false, error: 'Data permintaan tidak ditemukan.' };
+      } catch (err) {
+        const localMatch = this.requestList.find(
+          (r) => r.idOrder?.toLowerCase() === query.toLowerCase()
+        );
+        if (localMatch) {
+          return { ok: true, data: localMatch, dummy: true };
+        }
+
+        let message = 'Gagal memuat status permintaan. Silakan coba lagi.';
+        const status = err?.response?.status;
+        if (status === 404) {
+          message = 'ID Order tidak ditemukan.';
+        } else if (status === 401) {
+          message = 'Tidak memiliki akses untuk melihat status ini.';
+        }
+        return { ok: false, error: message, status };
+      } finally {
+        this.loading = false;
+      }
+    },
   },
 });
-

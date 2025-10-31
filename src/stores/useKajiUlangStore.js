@@ -71,10 +71,13 @@ function deriveOrderStatusFromPayment(paymentInfo) {
 
 function buildDummyOrder(base = {}, paymentDetail = {}) {
   const paymentInfo = normalizePaymentDetail(paymentDetail, base.orderNo);
+  const orderYear = base.orderYear || (base.date ? String(base.date).slice(0, 4) : '');
   return {
     id: base.id,
     requestId: base.requestId || '',
     orderNo: base.orderNo || '',
+    orderNumber: base.orderNumber ?? null,
+    orderYear,
     sampleNo: base.sampleNo || '',
     date: base.date || new Date().toISOString().slice(0, 10),
     status: deriveOrderStatusFromPayment(paymentInfo),
@@ -105,6 +108,7 @@ function createDummyOrders() {
       id: 1,
       requestId: '01K-A1',
       orderNo: 'ORD-202501-001',
+      orderNumber: 1,
       sampleNo: 'S-2025-001',
       date: '2025-01-06',
       customerName: 'PT Maju Jaya Sejahtera',
@@ -157,6 +161,7 @@ function createDummyOrders() {
       id: 2,
       requestId: '01K-B2',
       orderNo: 'ORD-202501-004',
+      orderNumber: 2,
       sampleNo: 'S-2025-004',
       date: '2025-01-08',
       customerName: 'CV Sinar Terang Abadi',
@@ -199,6 +204,7 @@ function createDummyOrders() {
       id: 3,
       requestId: '01K-C3',
       orderNo: 'ORD-202501-006',
+      orderNumber: 3,
       sampleNo: 'S-2025-006',
       date: '2025-01-09',
       customerName: 'PT Sentosa Logam',
@@ -342,6 +348,11 @@ export const useKajiUlangStore = defineStore('kajiUlang', {
       const payload = {
         requestId,
         orderNo: request.idOrder || request.orderNo || '',
+        orderNumber:
+          request.orderNumber !== undefined && request.orderNumber !== null
+            ? Number(request.orderNumber)
+            : null,
+        orderYear: request.orderYear || (request.entryDate ? String(request.entryDate).slice(0, 4) : ''),
         sampleNo: request.sampleNo || '',
         date: request.entryDate || new Date().toISOString().slice(0, 10),
         status: deriveOrderStatusFromPayment(normalizedPayment),

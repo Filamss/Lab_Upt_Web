@@ -1,296 +1,367 @@
-<template>
-  <div>
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-semibold">Form Kaji Ulang</h2>
-      <button class="text-gray-600 hover:text-gray-900" @click="handleClose">
-        &larr; Kembali
-      </button>
-    </div>
-
-    <!-- === FORM INPUT === -->
-    <div class="bg-white rounded-xl shadow-md p-4 mb-6">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <!-- 🔍 Pencarian ID Order / Permintaan -->
-        <FormRow label="Cari ID Order / Permintaan">
-          <input
-            type="text"
-            v-model="searchId"
-            placeholder="Ketik minimal 8 karakter ULID..."
-            class="border border-gray-300 rounded-md px-3 py-2 w-full"
-            @input="handleSearch"
-          />
-          <ul
-            v-if="searchResults.length"
-            class="border border-gray-200 mt-1 rounded-md bg-white max-h-40 overflow-y-auto"
-          >
-            <li
-              v-for="item in searchResults"
-              :key="item.idOrder"
-              class="px-3 py-1 hover:bg-gray-100 cursor-pointer text-sm"
-              @click="selectPermintaan(item)"
-            >
-              {{ item.idOrder }} — {{ item.customerName }}
-            </li>
-          </ul>
-        </FormRow>
-
-        <FormRow label="Tanggal">
-          <input
-            type="date"
-            v-model="form.date"
-            class="border border-gray-300 rounded-md px-3 py-2 w-full"
-          />
-        </FormRow>
-
-        <FormRow label="Jenis Pengujian">
-          <select
-            v-model="form.testType"
-            class="border border-gray-300 rounded-md px-3 py-2 w-full"
-          >
-            <option :value="null">Pilih jenis pengujian</option>
-            <option v-for="test in tests" :key="test.id" :value="test.id">
-              {{ test.name }}
-            </option>
-          </select>
-        </FormRow>
-
-        <FormRow label="Nama Customer">
-          <input
-            type="text"
-            v-model="form.customerName"
-            class="border border-gray-300 rounded-md px-3 py-2 w-full"
-          />
-        </FormRow>
-
-        <FormRow label="No Handphone/WhatsApp">
-          <input
-            type="text"
-            v-model="form.customerPhone"
-            class="border border-gray-300 rounded-md px-3 py-2 w-full"
-          />
-        </FormRow>
-
-        <div class="sm:col-span-2">
-          <FormRow label="Alamat">
-            <input
-              type="text"
-              v-model="form.customerAddress"
-              class="border border-gray-300 rounded-md px-3 py-2 w-full"
-            />
-          </FormRow>
+﻿<template>
+  <div class="flex min-h-screen w-full flex-col bg-slate-50">
+    <header class="border-b border-slate-200 bg-white/90 backdrop-blur">
+      <div class="flex flex-col gap-3 px-4 py-5 md:flex-row md:items-center md:justify-between md:px-8">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.35em] text-slate-500">Form Kaji Ulang</p>
+          <h1 class="text-2xl font-semibold text-slate-900 md:text-3xl">
+            {{ isEditing ? 'Ubah Data Kaji Ulang' : 'Tambah Kaji Ulang' }}
+          </h1>
+          <p class="text-sm text-slate-500">
+            Isi informasi kaji ulang untuk permintaan dengan pembayaran terverifikasi.
+          </p>
         </div>
+        <button
+          type="button"
+          class="inline-flex items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+          @click="$emit('close')"
+        >
+          Tutup
+        </button>
       </div>
-    </div>
 
-    <!-- === EVALUASI === -->
-    <div class="bg-white rounded-xl shadow-md p-4 mb-6">
-      <h3 class="text-lg font-semibold mb-4">Evaluasi</h3>
-      <table class="min-w-full text-sm border border-gray-200">
-        <thead class="bg-muted">
-          <tr>
-            <th class="px-3 py-2 border-b">No</th>
-            <th class="px-3 py-2 border-b">Perihal</th>
-            <th class="px-3 py-2 border-b">Hasil</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(row, index) in kajiUlangRows"
-            :key="index"
-            class="odd:bg-white even:bg-gray-50"
-          >
-            <td class="px-3 py-2 border-b text-center">{{ index + 1 }}</td>
-            <td class="px-3 py-2 border-b">{{ row.topic }}</td>
-            <td class="px-3 py-2 border-b">
-              <select
-                v-model="row.result"
-                class="border border-gray-300 rounded-md px-2 py-1 w-full"
-              >
-                <option value="">-</option>
-                <option
-                  v-for="opt in getRowOptions(row.topic)"
-                  :key="opt"
-                  :value="opt"
-                >
-                  {{ opt }}
-                </option>
-              </select>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="border-t border-slate-100 px-4 pb-5 md:px-8">
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">ID Order</label>
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div class="flex w-full items-center gap-2">
+            <input
+              v-model="form.orderNo"
+              :readonly="isEditing"
+              type="text"
+              placeholder="Contoh: ORD-202501-001"
+              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:bg-slate-100"
+            />
+            <button
+              type="button"
+              class="inline-flex shrink-0 items-center justify-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+              :disabled="lookupDisabled"
+              @click="$emit('lookup-order', form.orderNo)"
+            >
+              {{ lookupLoading ? 'Mencari...' : 'Cari' }}
+            </button>
+          </div>
+          <p v-if="!isEditing" class="text-xs text-slate-500">
+            Masukkan ID order dari permintaan dengan status pembayaran terverifikasi.
+          </p>
+        </div>
+        <p v-if="lookupError" class="mt-2 text-xs font-medium text-rose-500">{{ lookupError }}</p>
+      </div>
+    </header>
 
-      <!-- CATATAN -->
-      <div class="mt-4">
-        <label class="block text-sm font-medium mb-1">Catatan</label>
+    <main class="flex-1 space-y-8 bg-white px-4 py-6 md:px-8 lg:px-12">
+      <section class="grid gap-6 lg:grid-cols-3">
+        <div class="space-y-4 lg:col-span-2">
+          <div class="grid gap-4 sm:grid-cols-3">
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Tanggal Permintaan</label>
+              <input
+                v-model="form.date"
+                type="date"
+                class="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">No Sampel</label>
+              <input
+                v-model="form.sampleNo"
+                type="text"
+                placeholder="Masukkan nomor sampel utama"
+                class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">No. Order</label>
+              <div class="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                {{ formattedOrderNumber }}
+              </div>
+            </div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Pemohon</p>
+              <p class="mt-2 text-base font-semibold text-slate-900">{{ form.customerName || '-' }}</p>
+              <p class="text-sm text-slate-600">{{ form.customerPhone || '-' }}</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Alamat Pemohon</p>
+              <p class="mt-2 text-sm text-slate-700">
+                {{ form.customerAddress || '-' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+          <p class="text-sm font-semibold text-slate-800">Ringkasan Pembayaran</p>
+          <dl class="mt-4 space-y-3 text-sm text-slate-600">
+            <div class="flex items-center justify-between rounded-lg bg-white px-3 py-2 font-semibold text-slate-900">
+              <dt>Total Biaya</dt>
+              <dd>Rp {{ formatCurrency(totalCost) }}</dd>
+            </div>
+            <div class="flex items-center justify-between px-3 py-2">
+              <dt>Telah Dibayar</dt>
+              <dd>Rp {{ formatCurrency(amountPaid) }}</dd>
+            </div>
+            <div class="flex items-center justify-between px-3 py-2">
+              <dt>Sisa Pembayaran</dt>
+              <dd>Rp {{ formatCurrency(remainingCost) }}</dd>
+            </div>
+            <div v-if="paymentReviewedAt" class="px-3 py-2 text-xs text-slate-500">
+              <p>Disetujui oleh <span class="font-medium text-slate-700">{{ paymentReviewedBy || '-' }}</span></p>
+              <p>Diperbarui: {{ formatDatetime(paymentReviewedAt) }}</p>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 class="text-lg font-semibold text-slate-900">Detail Pengujian</h2>
+          <p class="text-xs text-slate-500">Sesuaikan nomor sampel apabila tiap pengujian memiliki nomor berbeda.</p>
+        </div>
+
+        <div v-if="testItems.length" class="space-y-4">
+          <div class="hidden overflow-x-auto rounded-2xl border border-slate-200 md:block">
+            <table class="min-w-full divide-y divide-slate-200 text-sm">
+              <thead class="bg-slate-50 text-slate-500">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold">No</th>
+                  <th class="px-4 py-3 text-left font-semibold">Nama Pengujian</th>
+                  <th class="px-4 py-3 text-left font-semibold">No Sampel</th>
+                  <th class="px-4 py-3 text-left font-semibold">Objek Uji</th>
+                  <th class="px-4 py-3 text-right font-semibold">Tarif (Rp)</th>
+                  <th class="px-4 py-3 text-right font-semibold">Jumlah</th>
+                  <th class="px-4 py-3 text-right font-semibold">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 bg-white text-slate-700">
+                <tr v-for="(item, index) in testItems" :key="`uji-${index}`">
+                  <td class="px-4 py-3">{{ index + 1 }}</td>
+                  <td class="px-4 py-3">{{ item.testName || item.name || '-' }}</td>
+                  <td class="px-4 py-3">
+                    <input
+                      v-model="item.sampleNo"
+                      type="text"
+                      placeholder="No sampel"
+                      class="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                    />
+                    <p class="mt-1 text-xs text-slate-500">{{ sampleCode(item) }}</p>
+                  </td>
+                  <td class="px-4 py-3">{{ item.objectName || '-' }}</td>
+                  <td class="px-4 py-3 text-right">Rp {{ formatCurrency(item.price) }}</td>
+                  <td class="px-4 py-3 text-right">{{ item.quantity || 1 }}</td>
+                  <td class="px-4 py-3 text-right">
+                    Rp {{ formatCurrency((Number(item.price) || 0) * (Number(item.quantity) || 1)) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="space-y-3 md:hidden">
+            <div
+              v-for="(item, index) in testItems"
+              :key="`uji-mobile-${index}`"
+              class="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm"
+            >
+              <div class="flex items-center justify-between pb-2">
+                <span class="text-xs font-semibold text-slate-500">Pengujian {{ index + 1 }}</span>
+                <span class="text-xs text-slate-400">Subtotal Rp {{ formatCurrency((Number(item.price) || 0) * (Number(item.quantity) || 1)) }}</span>
+              </div>
+              <p class="text-base font-semibold text-slate-900">{{ item.testName || item.name || '-' }}</p>
+              <p class="text-xs text-slate-500">{{ item.objectName || '-' }}</p>
+              <div class="mt-3 flex flex-col gap-2">
+                <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">No Sampel</label>
+                <input
+                  v-model="item.sampleNo"
+                  type="text"
+                  placeholder="No sampel"
+                  class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                />
+                <p class="text-xs text-slate-500">Kode: {{ sampleCode(item) }}</p>
+              </div>
+              <div class="mt-3 grid grid-cols-2 gap-3">
+                <div>
+                  <p class="text-xs text-slate-500">Tarif</p>
+                  <p class="text-sm font-semibold text-slate-900">Rp {{ formatCurrency(item.price) }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs text-slate-500">Jumlah</p>
+                  <p class="text-sm font-semibold text-slate-900">{{ item.quantity || 1 }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p v-else class="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+          Data pengujian akan tampil setelah ID order ditemukan.
+        </p>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-semibold text-slate-900">Catatan Tambahan</h2>
         <textarea
           v-model="form.note"
-          rows="3"
-          class="border border-gray-300 rounded-md px-3 py-2 w-full"
-        />
-      </div>
-    </div>
+          rows="4"
+          placeholder="Tambahkan catatan atau rekomendasi lain yang diperlukan."
+          class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+        ></textarea>
+      </section>
+    </main>
 
-    <!-- === SIGNATURE === -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-      <div class="bg-white rounded-xl shadow-md p-4">
-        <h4 class="font-medium mb-2">Nama Customer</h4>
-        <input
-          type="text"
-          v-model="signatures.customer"
-          readonly
-          class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50"
-        />
+    <footer class="border-t border-slate-200 bg-white px-4 py-4 md:px-8">
+      <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          class="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+          @click="$emit('save-draft')"
+        >
+          Simpan Draft
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-100"
+          @click="$emit('tolak')"
+        >
+          Tolak
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow transition hover:opacity-90"
+          @click="$emit('lolos-kaji-ulang')"
+        >
+          Lolos Kaji Ulang
+        </button>
       </div>
-      <div class="bg-white rounded-xl shadow-md p-4">
-        <h4 class="font-medium mb-2">Nama Petugas / Administrasi</h4>
-        <input
-          type="text"
-          v-model="signatures.admin"
-          readonly
-          class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50"
-        />
-      </div>
-    </div>
-
-    <!-- === TOMBOL AKSI === -->
-    <div class="flex gap-4">
-      <button class="bg-primary text-white px-3 py-2 rounded" @click="printNow">
-        Cetak
-      </button>
-      <button
-        class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg"
-        @click="handleSaveDraft"
-      >
-        Simpan Draft
-      </button>
-      <button
-        class="bg-success text-white px-4 py-2 rounded-lg"
-        @click="handleLolos"
-      >
-        Lolos Kaji Ulang
-      </button>
-      <button
-        class="bg-danger text-white px-4 py-2 rounded-lg"
-        @click="handleTolak"
-      >
-        Tolak
-      </button>
-    </div>
+    </footer>
   </div>
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
-import { usePermintaanStore } from '@/stores/usePermintaanStore'
-import { useAuthStore } from '@/stores/useAuthStore'
-import FormRow from '@/components/FormRow.vue'
-import KajiUlangPrint from '@/components/print/KajiUlangPrint.vue'
+import { computed } from 'vue'
 
 const props = defineProps({
-  form: { type: Object, required: true },
-  kajiUlangRows: { type: Array, required: true },
-  signatures: { type: Object, required: false },
-  tests: { type: [Array, Object], required: true },
-  selectedCustomerAddress: { type: String, required: true },
-  getRowOptions: { type: Function, required: true },
-})
-const emit = defineEmits([
-  'save-draft',
-  'lolos-kaji-ulang',
-  'tolak',
-  'close',
-  'select-permintaan',
-])
-
-const permintaanStore = usePermintaanStore()
-const authStore = useAuthStore()
-const searchId = ref('')
-const searchResults = ref([])
-
-// === CARI PERMINTAAN ===
-function handleSearch() {
-  const query = searchId.value.trim()
-  if (query.length < 8) {
-    searchResults.value = []
-    return
-  }
-  searchResults.value = permintaanStore.searchPermintaanById(query)
-}
-
-// === KETIKA PERMINTAAN DIPILIH ===
-function selectPermintaan(item) {
-  searchId.value = item.idOrder
-  searchResults.value = []
-
-  // Isi otomatis semua field form
-  props.form.idOrder = item.idOrder
-  props.form.customerName = item.customerName
-  props.form.customerPhone = item.customerPhone
-  props.form.customerAddress = item.customerAddress
-  props.form.testType = item.workType || ''
-
-  // Auto isi tanda tangan
-  signatures.value.customer = item.customerName
-  signatures.value.admin = authStore.currentUser?.name || 'Petugas'
-}
-
-// === CETAK ===
-const printArea = ref(null)
-const printData = ref({})
-const signatures = ref({
-  customer: props.form.customerName || '',
-  admin: authStore.currentUser?.name || '',
+  form: {
+    type: Object,
+    required: true,
+  },
+  kajiUlangRows: {
+    type: Array,
+    required: true,
+  },
+  tests: {
+    type: Array,
+    default: () => [],
+  },
+  isEditing: {
+    type: Boolean,
+    default: false,
+  },
+  lookupLoading: {
+    type: Boolean,
+    default: false,
+  },
+  lookupError: {
+    type: String,
+    default: '',
+  },
 })
 
-async function printNow() {
-  printData.value = {
-    orderNo: props.form.orderNo,
-    sampleNo: props.form.sampleNo,
-    date: props.form.date,
-    customerName: props.form.customerName,
-    customerAddress: props.form.customerAddress,
-    testType: props.form.testType,
-    note: props.form.note,
-    kajiUlangRows: props.kajiUlangRows,
-    signatures: [
-      { label: 'Customer', name: signatures.value.customer },
-      { label: 'Petugas', name: signatures.value.admin },
-    ],
-  }
+defineEmits(['save-draft', 'lolos-kaji-ulang', 'tolak', 'close', 'lookup-order'])
 
-  await nextTick()
-  try {
-    const key = `print:kaji-ulang:${printData.value.orderNo || 'anon'}`
-    sessionStorage.setItem(key, JSON.stringify(printData.value))
-    window.__PRINT_DATA__ = printData.value
-    const url = `${location.origin}/print/kaji-ulang/${encodeURIComponent(
-      printData.value.orderNo || ''
-    )}`
-    window.open(url, '_blank', 'noopener')
-  } catch (e) {
-    const printEl = printArea.value
-    if (!printEl) return
-    const original = document.body.innerHTML
-    document.body.innerHTML = printEl.innerHTML
-    window.print()
-    document.body.innerHTML = original
-    window.location.reload()
-  }
+const testItems = computed(() => {
+  const items = props.form.testItems || []
+  items.forEach((item) => {
+    ensureTestCode(item)
+    if (item.sampleNo === undefined || item.sampleNo === null) {
+      item.sampleNo = ''
+    }
+  })
+  return items
+})
+const paymentInfo = computed(() => props.form.paymentInfo || null)
+
+const totalCost = computed(() => {
+  if (paymentInfo.value?.total != null) return Number(paymentInfo.value.total) || 0
+  return testItems.value.reduce((sum, item) => {
+    const price = Number(item.price) || 0
+    const qty = Number(item.quantity) || 1
+    return sum + price * qty
+  }, 0)
+})
+
+const amountPaid = computed(() => Number(paymentInfo.value?.amountPaid) || 0)
+const remainingCost = computed(() => {
+  if (paymentInfo.value?.outstanding != null) return Number(paymentInfo.value.outstanding) || 0
+  return Math.max(totalCost.value - amountPaid.value, 0)
+})
+const paymentReviewedAt = computed(() => paymentInfo.value?.reviewedAt || null)
+const paymentReviewedBy = computed(() => paymentInfo.value?.reviewedBy || '')
+
+const resolveDate = (value) => {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
 }
 
-// === AKSI ===
-function handleSaveDraft() {
-  emit('save-draft')
+const orderYear = computed(() => {
+  if (props.form.orderYear) return String(props.form.orderYear)
+  const date = resolveDate(props.form.date)
+  return date ? String(date.getFullYear()) : ''
+})
+
+const formattedOrderNumber = computed(() => {
+  const number = props.form.orderNumber
+  if (!number) return '-'
+  return orderYear.value ? `${number}/${orderYear.value}` : String(number)
+})
+
+const monthYearLabel = computed(() => {
+  const date = resolveDate(props.form.date)
+  if (date) {
+    return `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`
+  }
+  const year = orderYear.value || String(new Date().getFullYear())
+  const now = new Date()
+  return `${String(now.getMonth() + 1).padStart(2, '0')}/${year}`
+})
+
+const ensureTestCode = (item) => {
+  if (!item) return '--'
+  if (item.testCode && item.testCode.trim()) return item.testCode
+  if (item.testId) {
+    const base = String(item.testId).split('-')[0]
+    item.testCode = base
+    return base
+  }
+  return '--'
 }
-function handleLolos() {
-  emit('lolos-kaji-ulang')
+
+const sampleCode = (item) => {
+  const prefix = monthYearLabel.value
+  const orderNo = props.form.orderNumber ? String(props.form.orderNumber) : '--'
+  const code = ensureTestCode(item)
+  const sampleValue = item && item.sampleNo && String(item.sampleNo).trim()
+    ? String(item.sampleNo).trim()
+    : props.form.sampleNo && String(props.form.sampleNo).trim()
+      ? String(props.form.sampleNo).trim()
+      : '--'
+  return `${prefix}.${orderNo}/${code}/${sampleValue}`
 }
-function handleTolak() {
-  emit('tolak')
-}
-function handleClose() {
-  emit('close')
+
+const lookupDisabled = computed(() => props.isEditing || !props.form.orderNo || !props.form.orderNo.trim() || props.lookupLoading)
+
+const formatCurrency = (value) =>
+  Number(value || 0).toLocaleString('id-ID', { minimumFractionDigits: 0 })
+
+const formatDatetime = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
 }
 </script>

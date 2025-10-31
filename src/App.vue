@@ -21,12 +21,11 @@ import AppShell from '@/components/AppShell.vue'
 
 const route = useRoute()
 
-// Deteksi layout auth / print
-const isAuthLayout = computed(() =>
-  route.matched.some(
-    (r) => r.meta && (r.meta.layout === 'auth' || r.meta.layout === 'print')
-  )
-)
+// Deteksi layout tanpa AppShell (auth, print, landing)
+const isAuthLayout = computed(() => {
+  const standaloneLayouts = ['auth', 'print', 'public']
+  return route.matched.some((r) => r.meta && standaloneLayouts.includes(r.meta.layout))
+})
 </script>
 
 <style>

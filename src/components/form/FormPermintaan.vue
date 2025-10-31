@@ -8,6 +8,33 @@
       @submit.prevent="handleSubmit"
       class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4"
     >
+      <!-- ID Order -->
+      <div>
+        <label class="block text-sm font-medium mb-1">ID Order</label>
+        <input
+          v-model="form.idOrder"
+          type="text"
+          readonly
+          class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 text-gray-600"
+          placeholder="Akan diisi otomatis setelah permintaan disimpan"
+        />
+      </div>
+
+      <!-- Nomor Order (otomatis dari backend) -->
+      <div>
+        <label class="block text-sm font-medium mb-1">No. Order</label>
+        <input
+          :value="orderNumberDisplay"
+          type="text"
+          readonly
+          class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 text-gray-600"
+          placeholder="Belum tersedia"
+        />
+        <p class="mt-1 text-xs text-gray-500">
+          Nomor akan terisi otomatis saat data disimpan dan tidak dapat diubah.
+        </p>
+      </div>
+
       <!-- Tanggal Masuk -->
       <div>
         <label class="block text-sm font-medium mb-1">Tanggal Masuk</label>
@@ -253,6 +280,8 @@ const emit = defineEmits(['submit', 'cancel']);
 const openConfirm = useConfirmDialog();
 
 const testStore = useTestStore();
+const currentYear = new Date().getFullYear();
+const isEditMode = computed(() => props.isEdit);
 
 const testOptions = computed(() =>
   (testStore.tests || []).map((test) => {
@@ -269,6 +298,7 @@ const testOptions = computed(() =>
       label,
       price: Number(test.price ?? 0),
       unit: test.unit || '',
+      code: test.code || '',
     };
   })
 );
@@ -283,29 +313,61 @@ function todayString() {
   return new Date().toISOString().slice(0, 10);
 }
 
-const defaultForm = () => ({
-  idOrder: '',
-  entryDate: todayString(),
-  customerName: '',
-  phoneNumber: '',
-  address: '',
-  purpose: '',
-  testCategory: '',
-  jobCategory: '',
-  workPackage: '',
-  testItems: [],
-  status: 'draft',
-});
+function extractYear(dateStr) {
+  if (!dateStr) return String(currentYear);
+  const parsed = new Date(dateStr);
+  if (!Number.isNaN(parsed.getTime())) {
+    return String(parsed.getFullYear());
+  }
+  const match = /^(\d{4})/.exec(dateStr);
+  return match ? match[1] : String(currentYear);
+}
+
+const defaultForm = () => {
+  const entryDate = todayString();
+  const orderYear = extractYear(entryDate);
+  return {
+    idOrder: '',
+    orderNumber: null,
+    orderYear,
+    entryDate,
+    customerName: '',
+    phoneNumber: '',
+    address: '',
+    purpose: '',
+    testCategory: '',
+    jobCategory: '',
+    workPackage: '',
+    testItems: [],
+    status: 'draft',
+  };
+};
 
 const form = ref(defaultForm());
+
+const orderNumberDisplay = computed(() => {
+  const number = form.value.orderNumber;
+  if (number === null || number === undefined || number === '') {
+    return '-';
+  }
+  return String(number);
+});
+
+function updateOrderMetadata(entryDate) {
+  const year = extractYear(entryDate);
+  form.value.orderYear = year;
+}
 
 watch(
   () => props.modelValue,
   (val) => {
     if (val) {
+      const inheritedYear = extractYear(val.entryDate || todayString());
       form.value = {
         ...defaultForm(),
         ...val,
+        orderYear: val.orderYear || inheritedYear,
+        orderNumber: val.orderNumber ?? null,
         testItems: (val.testItems || []).map((item) => ({
           testId: item.testId || '',
           selectedLabel: item.testName || resolveTestName(item.testId) || '',
@@ -316,12 +378,14 @@ watch(
               ? String(item.price)
               : '',
           unit: item.unit || resolveTestUnit(item.testId) || '',
+          testCode: item.testCode || resolveTestCode(item.testId) || '',
           manualPrice: Boolean(item.manualPrice),
         })),
       };
     } else {
       form.value = defaultForm();
     }
+    updateOrderMetadata(form.value.entryDate);
   },
   { immediate: true }
 );
@@ -329,7 +393,7 @@ watch(
 watch(
   () => testOptions.value.length,
   (len) => {
-    if (len && !props.isEdit && form.value.testItems.length === 0) {
+    if (len && !isEditMode.value && form.value.testItems.length === 0) {
       addTestItem();
     }
   },
@@ -344,6 +408,7 @@ function addTestItem() {
     objectName: '',
     price: '',
     unit: '',
+    testCode: '',
     manualPrice: false,
   });
 }
@@ -373,6 +438,14 @@ function resolveTestUnit(testId) {
       ? testStore.getTestById(testId)
       : (testStore.tests || []).find((t) => t.id === testId);
   return test?.unit || '';
+}
+
+function resolveTestCode(testId) {
+  const test =
+    typeof testStore.getTestById === 'function'
+      ? testStore.getTestById(testId)
+      : (testStore.tests || []).find((t) => t.id === testId);
+  return test?.code || '';
 }
 
 function handleTestSelection(index) {
@@ -414,6 +487,7 @@ function applyOptionToItem(item, option) {
     item.price = String(option.price);
   }
   item.unit = option.unit || resolveTestUnit(option.value) || '';
+  item.testCode = option.code || resolveTestCode(option.value) || '';
 }
 
 watch(
@@ -437,9 +511,20 @@ watch(
       if (item.testId && !item.selectedLabel) {
         item.selectedLabel = resolveTestName(item.testId);
       }
+      if (item.testId && !item.testCode) {
+        item.testCode = resolveTestCode(item.testId);
+      }
     });
   },
   { deep: true }
+);
+
+watch(
+  () => form.value.entryDate,
+  (newDate) => {
+    if (!newDate) return;
+    updateOrderMetadata(newDate);
+  }
 );
 
 const normalizedTestItems = computed(() =>
@@ -449,9 +534,11 @@ const normalizedTestItems = computed(() =>
       const quantity = Math.max(1, Number(item.quantity) || 1);
       const price = Math.max(0, Number(item.price) || 0);
       const testName = resolveTestName(item.testId);
+      const testCode = item.testCode || resolveTestCode(item.testId) || '';
       return {
         testId: item.testId,
         testName,
+        testCode,
         objectName: item.objectName?.trim() || testName,
         price,
         quantity,
@@ -493,6 +580,8 @@ function buildPayload() {
 
   const {
     idOrder,
+    orderNumber,
+    orderYear,
     entryDate,
     customerName,
     phoneNumber,
@@ -504,6 +593,8 @@ function buildPayload() {
 
   return {
     idOrder,
+    orderNumber: orderNumber ? Number(orderNumber) : null,
+    orderYear: orderYear || extractYear(entryDate),
     entryDate,
     customerName,
     phoneNumber,
@@ -524,7 +615,7 @@ async function submitWith(action = 'save') {
     title:
       action === 'save-pay'
         ? 'Simpan & lanjutkan pembayaran?'
-        : props.isEdit
+        : isEditMode.value
         ? 'Simpan perubahan permintaan?'
         : 'Simpan permintaan baru?',
     message:
@@ -537,7 +628,7 @@ async function submitWith(action = 'save') {
   const payload = buildPayload();
   if (action === 'save-pay') {
     payload.status = 'pending_payment';
-  } else if (!props.isEdit) {
+  } else if (!isEditMode.value) {
     payload.status = payload.status || 'draft';
   }
   emit('submit', { action, data: payload });
