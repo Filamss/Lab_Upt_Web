@@ -65,6 +65,15 @@
                   <span v-if="!isLoading">Masuk</span>
                   <span v-else>Memproses...</span>
                 </button>
+                <div class="text-right">
+                  <button
+                    type="button"
+                    class="text-sm font-medium text-primaryLight hover:text-primaryDark transition disabled:opacity-50"
+                    @click="openResetPassword"
+                  >
+                    Lupa password?
+                  </button>
+                </div>
               </form>
 
               <AlertBanner v-if="loginError" tone="error" class="mt-6">
@@ -294,6 +303,15 @@
                 <span v-if="!isLoading">Masuk</span>
                 <span v-else>Memproses...</span>
               </button>
+              <div class="text-center">
+                <button
+                  type="button"
+                  class="text-sm font-medium text-primaryLight hover:text-primaryDark transition disabled:opacity-50"
+                  @click="openResetPassword"
+                >
+                  Lupa password?
+                </button>
+              </div>
             </form>
 
             <AlertBanner v-if="loginError" tone="error">
@@ -387,10 +405,143 @@
       </div>
     </div>
   </div>
+  <transition name="fade">
+    <div
+      v-if="isResetPasswordOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm px-4 py-8"
+      role="dialog"
+      aria-modal="true"
+      @click.self="closeResetPassword({ keepEmail: true })"
+    >
+      <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-8">
+        <button
+          type="button"
+          class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
+          @click="closeResetPassword({ keepEmail: true })"
+          aria-label="Tutup reset password"
+        >
+          <span class="text-2xl leading-none">&times;</span>
+        </button>
+        <h2 class="text-2xl font-semibold text-primaryDark">Reset Password</h2>
+        <p class="mt-2 text-sm text-gray-500">
+          {{ resetStageDescription }}
+        </p>
+
+        <template v-if="resetStage === 'request'">
+          <form @submit.prevent="handleResetRequest" class="mt-6 space-y-5">
+            <FormField
+              label="Email"
+              type="email"
+              placeholder="nama@gmail.com"
+              v-model="resetEmail"
+              :error="resetFormErrors.email"
+            />
+            <button
+              type="submit"
+              :disabled="resetLoading"
+              class="w-full bg-gradient-to-r from-primaryLight to-primaryDark text-white font-semibold py-3 rounded-xl shadow-lg hover:opacity-95 active:scale-[0.99] transition disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <span v-if="!resetLoading">Kirim Kode Reset</span>
+              <span v-else>Mengirim...</span>
+            </button>
+          </form>
+          <AlertBanner
+            v-if="resetError"
+            tone="error"
+            class="mt-5"
+          >
+            {{ resetError }}
+          </AlertBanner>
+        </template>
+
+        <template v-else-if="resetStage === 'verify'">
+          <form @submit.prevent="handleResetConfirm" class="mt-6 space-y-5">
+            <FormField
+              label="Email"
+              type="email"
+              placeholder="nama@gmail.com"
+              v-model="resetEmail"
+              :error="resetFormErrors.email"
+            />
+            <FormField
+              label="Kode Reset"
+              placeholder="Masukkan kode 6 digit"
+              v-model="resetCode"
+              :error="resetFormErrors.code"
+            />
+            <FormPasswordField
+              label="Password Baru"
+              placeholder="Buat password baru"
+              v-model="resetNewPassword"
+              :revealed="showResetNewPassword"
+              :error="resetFormErrors.password"
+              @toggle="showResetNewPassword = !showResetNewPassword"
+            />
+            <FormPasswordField
+              label="Konfirmasi Password"
+              placeholder="Ulangi password baru"
+              v-model="resetConfirmPassword"
+              :revealed="showResetConfirmPassword"
+              :error="resetFormErrors.confirmPassword"
+              @toggle="showResetConfirmPassword = !showResetConfirmPassword"
+            />
+            <div class="flex items-center justify-between text-xs text-gray-500">
+              <span>Cek folder spam jika email tidak ditemukan.</span>
+              <button
+                type="button"
+                class="font-semibold text-primaryLight hover:text-primaryDark transition disabled:opacity-50"
+                :disabled="resetLoading"
+                @click="resendResetCode"
+              >
+                Kirim ulang kode
+              </button>
+            </div>
+            <button
+              type="submit"
+              :disabled="resetLoading"
+              class="w-full bg-gradient-to-r from-primaryLight to-primaryDark text-white font-semibold py-3 rounded-xl shadow-lg hover:opacity-95 active:scale-[0.99] transition disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <span v-if="!resetLoading">Reset Password</span>
+              <span v-else>Memproses...</span>
+            </button>
+          </form>
+          <AlertBanner
+            v-if="resetError"
+            tone="error"
+            class="mt-5"
+          >
+            {{ resetError }}
+          </AlertBanner>
+          <AlertBanner
+            v-else-if="resetSuccess"
+            tone="success"
+            class="mt-5"
+          >
+            {{ resetSuccess }}
+          </AlertBanner>
+        </template>
+
+        <template v-else>
+          <div class="mt-6 space-y-5">
+            <AlertBanner tone="success">
+              {{ resetSuccess || 'Password berhasil direset. Silakan masuk menggunakan password baru.' }}
+            </AlertBanner>
+            <button
+              type="button"
+              class="w-full bg-gradient-to-r from-primaryLight to-primaryDark text-white font-semibold py-3 rounded-xl shadow-lg hover:opacity-95 active:scale-[0.99] transition"
+              @click="closeResetPassword({ keepEmail: true })"
+            >
+              Kembali ke login
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+  </transition>
 </template>
 
 <script setup>
-import { computed, defineComponent, h, reactive, ref, watch } from 'vue';
+import { computed, defineComponent, h, reactive, ref, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/useAuthStore';
 
@@ -398,7 +549,7 @@ const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 
-const isRegister = ref(route.path === '/register');
+const isRegister = ref(route.meta.authMode === 'register');
 
 const loginEmail = ref('');
 const loginPassword = ref('');
@@ -431,24 +582,74 @@ const showRegisterConfirmPassword = ref(false);
 const registerError = ref('');
 const registerSuccess = ref('');
 
+const isResetPasswordOpen = ref(false);
+const resetStage = ref('request');
+const resetEmail = ref('');
+const resetCode = ref('');
+const resetNewPassword = ref('');
+const resetConfirmPassword = ref('');
+const showResetNewPassword = ref(false);
+const showResetConfirmPassword = ref(false);
+const resetError = ref('');
+const resetSuccess = ref('');
+const resetLoading = ref(false);
+const resetFormErrors = reactive({
+  email: '',
+  code: '',
+  password: '',
+  confirmPassword: '',
+});
+
+const resetStageDescription = computed(() => {
+  switch (resetStage.value) {
+    case 'verify':
+      return 'Masukkan kode reset yang dikirim ke email Anda lalu atur password baru.';
+    case 'success':
+      return 'Password Anda berhasil direset. Silakan masuk menggunakan password baru.';
+    default:
+      return 'Masukkan email terdaftar untuk menerima kode reset password.';
+  }
+});
+
 const isLoading = computed(() => authStore.loading);
 
 watch(
-  () => route.path,
-  (path) => {
-    isRegister.value = path === '/register';
+  () => route.meta.authMode,
+  (mode) => {
+    if (route.meta?.layout !== 'auth') return;
+    const shouldRegister = mode === 'register';
+    if (isRegister.value !== shouldRegister) {
+      isRegister.value = shouldRegister;
+    }
+  }
+);
+
+watch(
+  () => route.meta.layout,
+  (layout) => {
+    if (layout !== 'auth' && isResetPasswordOpen.value) {
+      closeResetPassword({ keepEmail: true });
+    }
+    if (layout !== 'auth' && isRegister.value) {
+      isRegister.value = false;
+    }
   }
 );
 
 watch(isRegister, (value, oldValue) => {
   if (value === oldValue) return;
+  if (route.meta?.layout !== 'auth') return;
   loginError.value = '';
   registerError.value = '';
   registerSuccess.value = '';
+  if (isResetPasswordOpen.value) {
+    closeResetPassword({ keepEmail: true });
+  }
 
-  if (value && route.path !== '/register') {
+  const currentMode = route.meta.authMode;
+  if (value && currentMode !== 'register') {
     router.replace('/register');
-  } else if (!value && route.path !== '/login') {
+  } else if (!value && currentMode !== 'login') {
     router.replace('/login');
   }
 });
@@ -458,6 +659,179 @@ watch(registerUseKodeUndangan, (value) => {
   registerKodeUndangan.value = '';
   formErrors.register.kodeUndangan = '';
 });
+
+function clearResetErrors() {
+  resetFormErrors.email = '';
+  resetFormErrors.code = '';
+  resetFormErrors.password = '';
+  resetFormErrors.confirmPassword = '';
+}
+
+function clearResetFields({ keepEmail = false } = {}) {
+  if (!keepEmail) {
+    resetEmail.value = '';
+  } else {
+    resetEmail.value = resetEmail.value.trim();
+  }
+  resetCode.value = '';
+  resetNewPassword.value = '';
+  resetConfirmPassword.value = '';
+}
+
+function resetResetState({ keepEmail = false, stage = 'request' } = {}) {
+  clearResetErrors();
+  clearResetFields({ keepEmail });
+  resetError.value = '';
+  resetSuccess.value = '';
+  resetLoading.value = false;
+  resetStage.value = stage;
+  showResetNewPassword.value = false;
+  showResetConfirmPassword.value = false;
+}
+
+function openResetPassword() {
+  resetResetState({ keepEmail: !!loginEmail.value });
+  if (loginEmail.value) {
+    resetEmail.value = loginEmail.value.trim();
+  }
+  isResetPasswordOpen.value = true;
+}
+
+function closeResetPassword({ keepEmail = false } = {}) {
+  isResetPasswordOpen.value = false;
+  resetResetState({ keepEmail, stage: 'request' });
+}
+
+async function submitResetCode({ isResend = false } = {}) {
+  clearResetErrors();
+  if (!isResend) {
+    resetSuccess.value = '';
+  }
+  resetError.value = '';
+
+  const email = resetEmail.value.trim();
+  if (!email) {
+    resetFormErrors.email = 'Email wajib diisi.';
+    resetError.value = 'Harap masukkan email yang terdaftar.';
+    return;
+  }
+
+  resetLoading.value = true;
+  try {
+    const res = await authStore.requestPasswordReset({ email });
+    if (res.ok) {
+      resetStage.value = 'verify';
+      resetSuccess.value = res.message;
+    } else {
+      resetSuccess.value = '';
+      resetError.value =
+        res.message || 'Gagal mengirim kode reset password. Coba lagi.';
+      if (res.errors?.email?.length) {
+        [resetFormErrors.email] = res.errors.email;
+      }
+      if (!res.errors && res.status === 404) {
+        resetFormErrors.email = res.message;
+      }
+    }
+  } finally {
+    resetLoading.value = false;
+  }
+}
+
+async function handleResetRequest() {
+  await submitResetCode();
+}
+
+async function resendResetCode() {
+  await submitResetCode({ isResend: true });
+}
+
+async function handleResetConfirm() {
+  clearResetErrors();
+  resetError.value = '';
+  resetSuccess.value = '';
+
+  const email = resetEmail.value.trim();
+  const code = resetCode.value.trim();
+  const password = resetNewPassword.value;
+  const confirmation = resetConfirmPassword.value;
+
+  if (!email) {
+    resetFormErrors.email = 'Email wajib diisi.';
+  }
+  if (!code) {
+    resetFormErrors.code = 'Kode reset password wajib diisi.';
+  }
+  if (!password) {
+    resetFormErrors.password = 'Password baru wajib diisi.';
+  }
+  if (!confirmation) {
+    resetFormErrors.confirmPassword = 'Konfirmasi password wajib diisi.';
+  }
+  if (password && confirmation && password !== confirmation) {
+    const mismatchMessage = 'Password dan konfirmasi password harus sama.';
+    resetFormErrors.password = mismatchMessage;
+    resetFormErrors.confirmPassword = mismatchMessage;
+  }
+
+  if (
+    resetFormErrors.email ||
+    resetFormErrors.code ||
+    resetFormErrors.password ||
+    resetFormErrors.confirmPassword
+  ) {
+    resetError.value = 'Periksa kembali data reset password Anda.';
+    return;
+  }
+
+  resetLoading.value = true;
+  try {
+    const res = await authStore.resetPassword({
+      email,
+      code,
+      password,
+      password_confirmation: confirmation,
+    });
+
+    if (res.ok) {
+      resetSuccess.value = res.message;
+      resetStage.value = 'success';
+      loginEmail.value = email;
+      loginPassword.value = '';
+      clearResetFields({ keepEmail: true });
+      showResetNewPassword.value = false;
+      showResetConfirmPassword.value = false;
+    } else {
+      resetError.value =
+        res.message ||
+        'Reset password gagal. Periksa kembali data yang Anda masukkan.';
+      const { errors, status } = res;
+      if (errors?.email?.length) {
+        [resetFormErrors.email] = errors.email;
+      }
+      if (errors?.code?.length) {
+        [resetFormErrors.code] = errors.code;
+      }
+      if (errors?.password?.length) {
+        [resetFormErrors.password] = errors.password;
+      }
+      if (errors?.password_confirmation?.length) {
+        [resetFormErrors.confirmPassword] = errors.password_confirmation;
+        if (!resetFormErrors.password) {
+          [resetFormErrors.password] = errors.password_confirmation;
+        }
+      }
+      if (!errors && status === 400 && res.message?.toLowerCase().includes('kode reset')) {
+        resetFormErrors.code = res.message;
+      }
+      if (!errors && status === 404) {
+        resetFormErrors.email = res.message;
+      }
+    }
+  } finally {
+    resetLoading.value = false;
+  }
+}
 
 async function handleLogin() {
   loginError.value = '';
@@ -477,9 +851,29 @@ async function handleLogin() {
   });
   if (res.ok) {
     resetErrors();
-    router.push('/Dashboard');
+    if (route.path !== '/dashboard') {
+      await router.push('/dashboard');
+    } else {
+      await router.replace('/dashboard');
+    }
+    await nextTick();
   } else {
     loginError.value = res.message || 'Email atau password salah.';
+    if (res.errors?.email?.length) {
+      [formErrors.login.email] = res.errors.email;
+    }
+    if (res.errors?.password?.length) {
+      [formErrors.login.password] = res.errors.password;
+    }
+    if (res.status === 401) {
+      const fallback = res.message || 'Email atau password salah.';
+      if (!formErrors.login.email) {
+        formErrors.login.email = fallback;
+      }
+      if (!formErrors.login.password) {
+        formErrors.login.password = fallback;
+      }
+    }
   }
 }
 
@@ -539,6 +933,7 @@ async function handleRegister() {
     name: registerName.value,
     email: registerEmail.value,
     password: registerPassword.value,
+    password_confirmation: registerConfirmPassword.value,
     phone_number: registerPhone.value || undefined,
     invitation_code: registerUseKodeUndangan.value
       ? registerKodeUndangan.value.trim()
@@ -555,16 +950,52 @@ async function handleRegister() {
     setTimeout(() => switchToLogin(), 800);
   } else {
     registerError.value = res.message || 'Registrasi gagal. Coba lagi.';
+    const { errors, status } = res;
+    if (errors?.name?.length) {
+      [formErrors.register.name] = errors.name;
+    }
+    if (errors?.email?.length) {
+      [formErrors.register.email] = errors.email;
+    }
+    if (errors?.password?.length) {
+      [formErrors.register.password] = errors.password;
+    }
+    if (errors?.password_confirmation?.length) {
+      [formErrors.register.confirmPassword] = errors.password_confirmation;
+      if (!formErrors.register.password) {
+        [formErrors.register.password] = errors.password_confirmation;
+      }
+    }
+    if (errors?.phone_number?.length) {
+      [formErrors.register.phone] = errors.phone_number;
+    }
+    if (errors?.invitation_code?.length) {
+      [formErrors.register.kodeUndangan] = errors.invitation_code;
+    }
+    if (!errors && status === 422) {
+      // Fallback: tandai email jika pesan umum validasi
+      if (!formErrors.register.email) {
+        formErrors.register.email = res.message;
+      }
+    }
   }
 }
 
 function switchToRegister() {
+  if (route.meta?.layout !== 'auth') return;
   isRegister.value = true;
+  if (isResetPasswordOpen.value) {
+    closeResetPassword({ keepEmail: true });
+  }
   resetErrors();
 }
 
 function switchToLogin() {
+  if (route.meta?.layout !== 'auth') return;
   isRegister.value = false;
+  if (isResetPasswordOpen.value) {
+    closeResetPassword({ keepEmail: true });
+  }
   resetErrors();
 }
 
@@ -618,7 +1049,29 @@ const EyeIcon = defineComponent({
     return () =>
       props.revealed
         ? renderEye('M15 12a3 3 0 11-6 0 3 3 0 016 0z')
-        : renderEye('M15 12a3 3 0 11-6 0 3 3 0 016 0z');
+        : h(
+            'svg',
+            {
+              xmlns: 'http://www.w3.org/2000/svg',
+              fill: 'none',
+              viewBox: '0 0 24 24',
+              'stroke-width': 1.5,
+              stroke: 'currentColor',
+              class: 'w-5 h-5',
+            },
+            [
+              h('path', {
+                'stroke-linecap': 'round',
+                'stroke-linejoin': 'round',
+                d: 'M3.98 8.223A10.477 10.477 0 0112 4.5c4.478 0 8.268 2.943 9.802 7.023a10.52 10.52 0 01-1.28 2.243m-2.21 2.46A10.451 10.451 0 0112 19.5a10.451 10.451 0 01-6.803-2.774m-2.22-2.46A10.522 10.522 0 013.98 8.223',
+              }),
+              h('path', {
+                'stroke-linecap': 'round',
+                'stroke-linejoin': 'round',
+                d: 'M3 3l18 18',
+              }),
+            ]
+          );
   },
 });
 

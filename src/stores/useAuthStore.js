@@ -11,14 +11,38 @@ export const useAuthStore = defineStore('auth', {
   }),
 
   actions: {
-    async register({ name, email, password }) {
+    async register(payload = {}) {
       try {
         this.loading = true
-        const res = await api.post('/api/v1/users/register', {
-          name,
-          email,
-          password,
+        const body = {
+          name: payload.name,
+          email: payload.email,
+          password: payload.password,
+          password_confirmation:
+            payload.password_confirmation ??
+            payload.passwordConfirmation ??
+            payload.passwordConfirm ??
+            payload.password,
+          phone_number:
+            payload.phone_number ?? payload.phoneNumber ?? payload.phone,
+          invitation_code:
+            payload.invitation_code ?? payload.invitationCode ?? payload.code,
+          employment_identity_number:
+            payload.employment_identity_number ??
+            payload.employmentIdentityNumber ??
+            payload.employmentId,
+        }
+        Object.keys(body).forEach((key) => {
+          if (
+            body[key] === undefined ||
+            body[key] === null ||
+            (typeof body[key] === 'string' && body[key].trim() === '')
+          ) {
+            delete body[key]
+          }
         })
+
+        const res = await api.post('/api/v1/users/register', body)
         const payload = res.data?.data ?? res.data
         return { ok: true, data: payload }
       } catch (err) {
@@ -26,7 +50,9 @@ export const useAuthStore = defineStore('auth', {
           err.response?.data?.message ||
           err.message ||
           'Registrasi gagal. Periksa data Anda dan coba lagi.'
-        return { ok: false, message: msg }
+        const errors = err.response?.data?.errors || null
+        const status = err.response?.status || err.response?.data?.code || null
+        return { ok: false, message: msg, errors, status }
       } finally {
         this.loading = false
       }
@@ -62,7 +88,54 @@ export const useAuthStore = defineStore('auth', {
         const msg =
           err.response?.data?.message ||
           'Login gagal. Periksa email atau password.'
-        return { ok: false, message: msg }
+        const errors = err.response?.data?.errors || null
+        const status = err.response?.status || err.response?.data?.code || null
+        return { ok: false, message: msg, errors, status }
+      }
+    },
+
+    async requestPasswordReset({ email }) {
+      try {
+        const res = await api.post('/api/v1/codes/user-reset-password', {
+          email,
+        })
+        const message =
+          res.data?.message ||
+          'Kode reset password berhasil dikirim ke email Anda.'
+        return { ok: true, message }
+      } catch (err) {
+        const msg =
+          err.response?.data?.message ||
+          'Gagal mengirim kode reset password. Periksa email Anda.'
+        const errors = err.response?.data?.errors || null
+        const status = err.response?.status || err.response?.data?.code || null
+        return { ok: false, message: msg, errors, status }
+      }
+    },
+
+    async resetPassword({
+      email,
+      code,
+      password,
+      password_confirmation: passwordConfirmation,
+    }) {
+      try {
+        const res = await api.patch('/api/v1/users/reset-password', {
+          email,
+          code,
+          password,
+          password_confirmation: passwordConfirmation,
+        })
+        const message =
+          res.data?.message || 'Password berhasil direset. Silakan masuk.'
+        return { ok: true, message, data: res.data?.data }
+      } catch (err) {
+        const msg =
+          err.response?.data?.message ||
+          'Reset password gagal. Periksa kembali data yang Anda masukkan.'
+        const errors = err.response?.data?.errors || null
+        const status = err.response?.status || err.response?.data?.code || null
+        return { ok: false, message: msg, errors, status }
       }
     },
 

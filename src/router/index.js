@@ -3,14 +3,14 @@ import { useAuthStore } from '../stores/useAuthStore';
 
 // Lazy-load pages
 const LandingPage = () => import('../pages/LandingPage.vue');
-const DashboardPage = () => import('../pages/DashboardPage.vue');
+import DashboardPage from '../pages/DashboardPage.vue';
 const PermintaanPage = () => import('../pages/PermintaanPage.vue');
 const KajiUlangPage = () => import('../pages/KajiUlangPage.vue');
 const ValidasiPage = () => import('../pages/ValidasiPage.vue');
 const KartuKendaliPage = () => import('../pages/KartuKendaliPage.vue');
 const SuratPerintahPage = () => import('../pages/SuratPerintahPage.vue');
 const LayananPage = () => import('../pages/LayananPage.vue');
-const LoginPage = () => import('../pages/LoginPage.vue');
+const AuthPage = () => import('../pages/AuthPage.vue');
 const KeuanganPage = () => import('../pages/KeuanganPage.vue');
 const LaporanPage = () => import('../pages/LaporanPage.vue');
 const UsersPage = () => import('../pages/UsersPage.vue');
@@ -25,8 +25,8 @@ const KodeUndanganPage = () => import('../pages/KodeUndanganPage.vue');
 const routes = [
   { path: '/', component: LandingPage, meta: { layout: 'public' } },
 
-  { path: '/login', component: LoginPage, meta: { layout: 'auth', authMode: 'login' } },
-  { path: '/register', component: LoginPage, meta: { layout: 'auth', authMode: 'register' } },
+  { path: '/login', component: AuthPage, meta: { layout: 'auth', authMode: 'login' } },
+  { path: '/register', component: AuthPage, meta: { layout: 'auth', authMode: 'register' } },
   { path: '/dashboard', component: DashboardPage },
   { path: '/profile', component: ProfilePage },
   { path: '/permintaan', component: PermintaanPage },
@@ -70,8 +70,14 @@ router.beforeEach((to, from, next) => {
     return next();
   }
 
-  // Jika belum login, arahkan ke /login
-  if (!authStore.currentUser) {
+  const token = authStore.token || localStorage.getItem('token')
+  if (!authStore.currentUser && token && !authStore.loading) {
+    authStore.init().catch((err) => {
+      console.warn('Gagal sinkronisasi pengguna saat navigasi', err)
+    })
+  }
+
+  if (!authStore.currentUser && !token) {
     return next('/login');
   }
 

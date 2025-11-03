@@ -121,7 +121,7 @@
 
 <script setup>
 import { reactive, computed, ref, onMounted } from 'vue';
-import { useOrderStore } from '@/stores/useOrderStore';
+import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 import { useCustomerStore } from '@/stores/useCustomerStore';
 import { useActivityStore } from '@/stores/useActivityStore';
 import { useUserStore } from '@/stores/useUserStore';
@@ -129,7 +129,7 @@ import StatCard from '@/components/StatCard.vue';
 import Badge from '@/components/Badge.vue';
 
 // === Store setup ===
-const orderStore = useOrderStore();
+const orderStore = useKajiUlangStore();
 const customerStore = useCustomerStore();
 const activityStore = useActivityStore();
 const userStore = useUserStore();
