@@ -87,6 +87,9 @@
           <p v-if="roleStore.error" class="text-red-500">
             {{ roleStore.error }}
           </p>
+          <p v-else-if="defaultSuccess" class="text-emerald-600">
+            {{ defaultSuccess }}
+          </p>
           <p v-else-if="defaultWarning" class="text-amber-600">
             {{ defaultWarning }}
           </p>
@@ -131,24 +134,29 @@
             </div>
           </template>
           <template #defaultStatus="{ row }">
-            <button
-              type="button"
-              class="inline-flex items-center justify-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition"
-              :class="[
-                row.isDefault
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                  : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300',
-              ]"
-              :aria-pressed="row.isDefault"
-              :disabled="roleStore.saving"
-              @click="toggleDefault(row)"
+            <span
+              v-if="row.isDefault"
+              class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
             >
-              <span
-                class="h-2 w-2 rounded-full"
-                :class="row.isDefault ? 'bg-emerald-500' : 'bg-gray-300'"
-              ></span>
-              <span>{{ row.isDefault ? 'Aktif' : 'Tidak aktif' }}</span>
+              <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+              Default
+            </span>
+            <button
+              v-else-if="canSetDefault(row)"
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full border border-primary/40 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/5 transition"
+              :disabled="roleStore.saving"
+              @click="handleSetDefault(row)"
+            >
+              Jadikan default
             </button>
+            <span
+              v-else
+              class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-500"
+            >
+              <span class="h-2 w-2 rounded-full bg-gray-300"></span>
+              Tidak didukung
+            </span>
           </template>
 
           <template #timeline="{ row }">
@@ -315,6 +323,8 @@ const initialized = ref(false);
 const maxPermissionChip = 3;
 let debounceTimer = null;
 const defaultWarning = ref('');
+const defaultSuccess = ref('');
+const DEFAULT_ELIGIBLE_NAMES = ['customer'];
 
 const rows = computed(() => roleStore.roles);
 const currentDefaultRole = computed(() =>
@@ -331,6 +341,11 @@ const noDataText = computed(() => {
     return 'Role tidak ditemukan untuk kata kunci tersebut.';
   return 'Belum ada role yang terdaftar.';
 });
+
+function canSetDefault(role) {
+  if (!role?.name) return false;
+  return DEFAULT_ELIGIBLE_NAMES.includes(role.name.toLowerCase());
+}
 
 const topRoleLabel = computed(() => {
   if (!roleStore.roles.length) return 'Belum tersedia';
@@ -374,6 +389,7 @@ function limitedPermissions(list = []) {
 
 async function refreshRoles() {
   defaultWarning.value = '';
+  defaultSuccess.value = '';
   await roleStore.fetchRoles({
     page: roleStore.pagination.currentPage,
     search: roleStore.search,
@@ -414,6 +430,7 @@ async function handleSubmit(payload) {
 async function handleDelete(role) {
   if (!role?.id) return;
   defaultWarning.value = '';
+  defaultSuccess.value = '';
   if (role.isDefault) {
     defaultWarning.value =
       `Role ${role.name} adalah role default dan tidak dapat dihapus. ` +
@@ -430,33 +447,37 @@ async function handleDelete(role) {
   await roleStore.removeRole(role.id);
 }
 
-async function toggleDefault(role) {
-  if (!role?.id) return;
+async function handleSetDefault(role) {
+  if (!role?.id || role.isDefault || !canSetDefault(role)) return;
   defaultWarning.value = '';
-  const targetState = !role.isDefault;
+  defaultSuccess.value = '';
 
-  let confirmMessage = '';
-  if (targetState) {
-    const otherDefault =
-      currentDefaultRole.value && currentDefaultRole.value.id !== role.id
-        ? currentDefaultRole.value
-        : null;
-    confirmMessage = otherDefault
-      ? `Role ${otherDefault.name} saat ini menjadi default. Mengganti default ke ${role.name}?`
-      : `Tetapkan ${role.name} sebagai role default?`;
-  } else {
-    confirmMessage = `Role ${role.name} tidak lagi menjadi default. Lanjutkan?`;
-  }
+  const currentDefault =
+    currentDefaultRole.value && currentDefaultRole.value.id !== role.id
+      ? currentDefaultRole.value
+      : null;
+
+  const message = currentDefault
+    ? `Role ${currentDefault.name} akan digantikan oleh ${role.name} sebagai default. Lanjutkan?`
+    : `Tetapkan ${role.name} sebagai role default?`;
 
   const ok = await openConfirm({
-    title: targetState ? 'Tetapkan role default?' : 'Nonaktifkan role default?',
-    message: confirmMessage,
-    confirmLabel: 'Ya',
-    variant: targetState ? 'primary' : 'warning',
+    title: 'Tetapkan role default?',
+    message,
+    confirmLabel: 'Ya, tetapkan',
+    variant: 'primary',
   });
   if (!ok) return;
 
-  await roleStore.setDefaultRole(role.id, targetState);
+  try {
+    const result = await roleStore.setDefaultRole(role.id);
+    defaultSuccess.value = result.message || `Role ${role.name} kini menjadi default.`;
+  } catch (err) {
+    defaultWarning.value =
+      err.response?.data?.message ||
+      err.message ||
+      'Gagal menetapkan role default.';
+  }
 }
 </script>
 

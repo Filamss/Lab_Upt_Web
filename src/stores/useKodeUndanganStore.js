@@ -2,207 +2,149 @@ import { defineStore } from 'pinia';
 import api from '@/services/apiServices';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const INVITATION_CODE_TYPE = 'user_register_invitation';
+const CODE_GENERATE_ENDPOINT = '/api/v1/codes/user-register-invitation';
+const LOCAL_CODE_PREFIX = 'INV-LOCAL';
 
 function normalizeKodeUndangan(entry = {}) {
+  const payload = entry.code ?? entry;
+  const meta = payload.meta ?? entry.meta ?? {};
+  const fallbackCode = `${LOCAL_CODE_PREFIX}-${Math.random()
+    .toString(36)
+    .slice(2, 10)
+    .toUpperCase()}`;
+
   const code =
+    payload.value ||
+    payload.code ||
+    payload.invitation_code ||
+    payload.token ||
+    entry.value ||
     entry.code ||
-    entry.invitation_code ||
-    entry.token ||
-    entry.key ||
-    `INV-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
-
-  const usageLimit =
-    entry.usage_limit ??
-    entry.usageLimit ??
-    entry.max_use ??
-    entry.maxUse ??
-    entry.maxUsage ??
-    null;
-
-  const usedCount =
-    entry.used_count ??
-    entry.usedCount ??
-    entry.usage_count ??
-    entry.usageCount ??
-    0;
-
-  const status =
-    entry.status ||
-    (entry.revoked
-      ? 'revoked'
-      : entry.active === false
-      ? 'inactive'
-      : 'active');
+    fallbackCode;
 
   return {
-    id: entry.id || entry.ulid || code,
+    id: payload.id || entry.id || payload.ulid || code,
     code,
-    usageLimit,
-    usedCount,
-    status,
-    note: entry.note || entry.description || '',
-    expiresAt: entry.expires_at || entry.expiresAt || entry.expired_at || null,
-    createdAt:
-      entry.created_at || entry.createdAt || entry.created || new Date().toISOString(),
-    createdBy:
-      entry.created_by ||
-      entry.createdBy ||
-      entry.owner ||
-      entry.issued_by ||
+    type: payload.type || entry.type || INVITATION_CODE_TYPE,
+    usageLimit:
+      payload.usage_limit ??
+      payload.usageLimit ??
+      entry.usage_limit ??
+      entry.usageLimit ??
+      1,
+    usedCount:
+      payload.used_count ??
+      payload.usedCount ??
+      entry.used_count ??
+      entry.usedCount ??
+      0,
+    status:
+      payload.status ||
+      entry.status ||
+      (payload.used_at || entry.used_at ? 'inactive' : 'active'),
+    note: payload.note || entry.note || payload.description || entry.description || '',
+    expiresAt:
+      payload.expired_at ||
+      payload.expires_at ||
+      entry.expired_at ||
+      entry.expires_at ||
+      meta.expired_at ||
       null,
+    createdAt:
+      payload.created_at ||
+      entry.created_at ||
+      payload.createdAt ||
+      entry.createdAt ||
+      payload.created ||
+      entry.created ||
+      new Date().toISOString(),
     roleId:
+      payload.role_id ||
       entry.role_id ||
+      payload.roleId ||
       entry.roleId ||
-      entry.role_id_default ||
+      payload.role?.id ||
       entry.role?.id ||
-      entry.role ||
+      meta.role_id ||
       null,
     roleName:
+      payload.role_name ||
       entry.role_name ||
+      payload.roleName ||
       entry.roleName ||
+      payload.role?.name ||
       entry.role?.name ||
-      entry.role_label ||
+      meta.role_name ||
       '',
   };
 }
 
-function createLocalKodeUndangan(payload = {}) {
-  const createdAt = new Date();
-  const expiresAt = new Date(createdAt.getTime() + ONE_DAY_MS).toISOString();
-  return normalizeKodeUndangan({
-    code:
-      payload.code ||
-      `INV-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Date.now()
-        .toString()
-        .slice(-4)}`,
-    usage_limit: 1,
-    role_id: payload.role_id ?? payload.roleId ?? null,
-    role_name: payload.role_name ?? payload.roleName ?? payload.role_label ?? '',
-    expires_at: expiresAt,
-    created_at: createdAt.toISOString(),
-    note: '[dummy] kode undangan (API belum aktif)',
-  });
-}
-
-function isExpired(entry) {
-  const exp = new Date(entry.expiresAt || entry.createdAt);
-  if (Number.isNaN(exp.getTime())) return false;
-  return exp.getTime() < Date.now();
+function toApiDateTime(value) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return null;
+  // Backend expects local (WIB) timestamp; shift UTC by +7 hours
+  const shifted = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+  const iso = shifted.toISOString().replace('T', ' ').replace('Z', '');
+  const [datePart, timePart = '00:00:00'] = iso.split(' ');
+  const trimmedTime = timePart.split('.')[0];
+  return `${datePart} ${trimmedTime}`;
 }
 
 export const useKodeUndanganStore = defineStore('kodeUndangan', {
   state: () => ({
-    codes: [],
-    loading: false,
+    latestCode: null,
     saving: false,
     error: null,
   }),
 
-  getters: {
-    pendingOrActive(state) {
-      return state.codes.filter((item) => item.status !== 'revoked');
-    },
-  },
-
   actions: {
-    async fetchKodeUndangan() {
-      this.loading = true;
-      try {
-        const response = await api.get('/api/v1/invitations');
-        const payload = response.data?.data ?? response.data ?? {};
-        const items = Array.isArray(payload.items)
-          ? payload.items
-          : Array.isArray(payload)
-          ? payload
-          : Array.isArray(payload.data)
-          ? payload.data
-          : [];
-        const normalized = items.map((entry) => normalizeKodeUndangan(entry));
-        this.codes = normalized.filter((entry) => !isExpired(entry));
-        this.error = null;
-      } catch (err) {
-        console.warn('[KodeUndanganStore] API belum tersedia, gunakan data dummy.', err);
-        this.codes = [
-          createLocalKodeUndangan({
-            code: 'INV-ADMIN-001',
-            usage_limit: 1,
-            expires_at: new Date(Date.now() + ONE_DAY_MS).toISOString(),
-            role_name: 'Administrator',
-          }),
-          createLocalKodeUndangan({
-            code: 'INV-SUPERVISOR-001',
-            usage_limit: 1,
-            expires_at: new Date(Date.now() + ONE_DAY_MS).toISOString(),
-            role_name: 'Supervisor',
-          }),
-        ];
-        this.codes = this.codes.filter((entry) => !isExpired(entry));
-        this.error =
-          err.response?.data?.message ||
-          err.message ||
-          'Gagal memuat data kode undangan dari API.';
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    async refresh() {
-      await this.fetchKodeUndangan();
-    },
-
     async generateKodeUndangan(payload = {}) {
       this.saving = true;
       try {
         const expiresAt =
-          payload.expires_at ?? new Date(Date.now() + ONE_DAY_MS).toISOString();
-        const usageLimit = payload.usage_limit ?? 1;
-        const response = await api.post('/api/v1/invitations', {
-          usage_limit: usageLimit,
-          expires_at: expiresAt,
-          role_id: payload.role_id ?? payload.roleId ?? null,
-          note: payload.note ?? payload.description ?? null,
-        });
-        const data = response.data?.data ?? response.data ?? {};
-        const created = normalizeKodeUndangan(data);
-        this.codes = [created, ...this.codes.filter((item) => item.id !== created.id)].filter(
-          (entry) => !isExpired(entry)
-        );
+          payload.expired_at ??
+          payload.expires_at ??
+          toApiDateTime(new Date(Date.now() + ONE_DAY_MS));
+        const roleId = payload.role_id ?? payload.roleId ?? null;
+        const formData = new FormData();
+        if (roleId) formData.append('role_id', roleId);
+        if (expiresAt) formData.append('expired_at', expiresAt);
+        if (payload.note ?? payload.description) {
+          formData.append('note', payload.note ?? payload.description);
+        }
+        const response = await api.post(CODE_GENERATE_ENDPOINT, formData);
+        const raw = response.data ?? {};
+        const data = raw.data ?? raw;
+        const created = normalizeKodeUndangan(data.code ?? data);
+        if (!created.roleName) {
+          created.roleName =
+            payload.role_name ?? payload.roleName ?? payload.role_label ?? '';
+        }
+        this.latestCode = created;
         this.error = null;
-        return { ok: true, data: created };
+        return {
+          ok: true,
+          data: created,
+          message: raw.message || 'Kode undangan berhasil dibuat.',
+        };
       } catch (err) {
-        console.warn('[KodeUndanganStore] API generate gagal, fallback dummy.', err);
-        const created = createLocalKodeUndangan(payload);
-        this.codes = [created, ...this.codes].filter((entry) => !isExpired(entry));
-        this.error =
+        console.warn('[KodeUndanganStore] API generate gagal.', err);
+        const apiMessage =
           err.response?.data?.message ||
           err.message ||
-          'Gagal membuat kode undangan melalui API, menggunakan data dummy.';
-        return { ok: true, data: created, dummy: true };
+          'Gagal membuat kode undangan melalui API.';
+        this.error = apiMessage;
+        this.latestCode = null;
+        throw new Error(apiMessage);
       } finally {
         this.saving = false;
       }
     },
 
-    async deleteKodeUndangan(id) {
-      this.saving = true;
-      try {
-        await api.delete(`/api/v1/invitations/${id}`);
-        this.codes = this.codes.filter((item) => item.id !== id);
-        this.codes = this.codes.filter((entry) => !isExpired(entry));
-        this.error = null;
-        return { ok: true };
-      } catch (err) {
-        console.warn('[KodeUndanganStore] API delete gagal, hapus lokal.', err);
-        this.codes = this.codes.filter((item) => item.id !== id);
-        this.codes = this.codes.filter((entry) => !isExpired(entry));
-        this.error =
-          err.response?.data?.message ||
-          err.message ||
-          'Gagal menghapus kode undangan melalui API, data lokal dihapus.';
-        return { ok: true, dummy: true };
-      } finally {
-        this.saving = false;
-      }
+    clearLatest() {
+      this.latestCode = null;
+      this.error = null;
     },
   },
 });

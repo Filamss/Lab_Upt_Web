@@ -20,10 +20,7 @@ function resolveBaseURL() {
 }
 
 const resolvedBaseURL = resolveBaseURL();
-console.log(
-  'API Base URL:',
-  resolvedBaseURL || '[relative]/api (dev proxy)'
-);
+
 
 // === Konfigurasi dasar ===
 const api = axios.create({

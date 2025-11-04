@@ -293,30 +293,29 @@ export const useRoleStore = defineStore('role', {
       }
     },
 
-    async setDefaultRole(id, isDefault) {
+    async setDefaultRole(id) {
       this.saving = true;
       try {
-        await api.patch(`/api/v1/roles/${id}/default`, {
-          is_default: Boolean(isDefault),
-        });
+        const response = await api.patch(`/api/v1/roles/${id}/set-default`);
+        const payload = response.data?.data ?? response.data ?? {};
+        const updated = normalizeRole(payload.role ?? payload);
         this.roles = this.roles.map((role) => {
-          if (role.id === id) return { ...role, isDefault: Boolean(isDefault) };
-          if (isDefault) return { ...role, isDefault: false };
-          return role;
+          if (role.id === updated.id) return { ...role, ...updated, isDefault: true };
+          return { ...role, isDefault: false };
         });
-        return { ok: true };
+        this.error = null;
+        return {
+          ok: true,
+          data: updated,
+          message: response.data?.message || 'Role berhasil dijadikan default.',
+        };
       } catch (err) {
-        console.warn('[RoleStore] API set default gagal, gunakan pembaruan lokal.', err);
-        this.roles = this.roles.map((role) => {
-          if (role.id === id) return { ...role, isDefault: Boolean(isDefault) };
-          if (isDefault) return { ...role, isDefault: false };
-          return role;
-        });
+        console.error('[RoleStore] API set default gagal', err);
         this.error =
           err.response?.data?.message ||
           err.message ||
-          'Gagal memperbarui status default role melalui API.';
-        return { ok: true, dummy: true };
+          'Gagal menetapkan role default.';
+        throw err;
       } finally {
         this.saving = false;
       }
