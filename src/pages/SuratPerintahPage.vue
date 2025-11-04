@@ -188,14 +188,14 @@
 <script setup>
 import { ref, reactive, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { useOrderStore } from '@/stores/useOrderStore';
+import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 import { useUserStore } from '@/stores/useUserStore';
 import { useTestStore } from '@/stores/useTestStore';
 // SignaturePad removed - using file input for signatures
 import PrintArea from '@/components/PrintArea.vue';
 
 const route = useRoute();
-const orderStore = useOrderStore();
+const orderStore = useKajiUlangStore();
 const userStore = useUserStore();
 const testStore = useTestStore();
 

@@ -131,11 +131,11 @@
 <script setup>
 import { ref, reactive, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { useOrderStore } from '@/stores/useOrderStore';
+import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 // SignaturePad removed - replaced with simple file input
 
 const route = useRoute();
-const orderStore = useOrderStore();
+const orderStore = useKajiUlangStore();
 
 const orderId = computed(() => Number(route.query.orderId) || null);
 const order = computed(() =>

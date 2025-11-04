@@ -20,7 +20,7 @@
         />
       </div>
 
-      <!-- Nomor Order (otomatis dari backend) -->
+      <!-- Nomor Order -->
       <div>
         <label class="block text-sm font-medium mb-1">No. Order</label>
         <input
@@ -28,11 +28,9 @@
           type="text"
           readonly
           class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 text-gray-600"
-          placeholder="Belum tersedia"
+          placeholder="Akan diisi otomatis setelah permintaan disimpan"
         />
-        <p class="mt-1 text-xs text-gray-500">
-          Nomor akan terisi otomatis saat data disimpan dan tidak dapat diubah.
-        </p>
+        
       </div>
 
       <!-- Tanggal Masuk -->
@@ -348,7 +346,7 @@ const form = ref(defaultForm());
 const orderNumberDisplay = computed(() => {
   const number = form.value.orderNumber;
   if (number === null || number === undefined || number === '') {
-    return '-';
+    return '';
   }
   return String(number);
 });

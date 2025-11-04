@@ -24,11 +24,11 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useOrderStore } from '@/stores/useOrderStore';
+import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 import { useCustomerStore } from '@/stores/useCustomerStore';
 import DataTable from '@/components/DataTable.vue'; 
 
-const orderStore = useOrderStore();
+const orderStore = useKajiUlangStore();
 const customerStore = useCustomerStore();
 
 // Define finance table columns

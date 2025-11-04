@@ -65,34 +65,58 @@
         Memuat data...
       </div>
 
-      <vue3-datatable
-        v-else
-        :headers="orderHeaders"
-        :items="filteredOrders"
-        :rows-per-page="5"
-        theme-color="#0284C7"
-        table-class="rounded-md overflow-hidden"
-        header-text-direction="left"
-        no-data-text="Belum ada data order."
-      >
-        <template #item-status="{ status }">
-          <Badge :status="status" />
-        </template>
-
-        <template #item-remaining="{ remaining }">
-          Rp {{ Number(remaining || 0).toLocaleString('id-ID') }}
-        </template>
-
-        <template #item-action="{ item }">
-          <router-link
-            v-if="item?.id"
-            :to="{ path: '/kaji-ulang', query: { orderId: item.id } }"
-            class="text-blue-600 hover:underline text-sm"
-          >
-            Detail
-          </router-link>
-        </template>
-      </vue3-datatable>
+      <div v-else class="overflow-x-auto">
+        <table class="min-w-full text-sm text-left text-gray-600">
+          <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
+            <tr>
+              <th class="px-4 py-3">No Order</th>
+              <th class="px-4 py-3">Customer</th>
+              <th class="px-4 py-3">Komoditi</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Tgl Masuk</th>
+              <th class="px-4 py-3">Sisa Bayar</th>
+              <th class="px-4 py-3">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="!visibleOrders.length">
+              <td
+                colspan="7"
+                class="px-4 py-6 text-center text-gray-500 text-sm"
+              >
+                Belum ada data order.
+              </td>
+            </tr>
+            <tr
+              v-for="order in visibleOrders"
+              :key="order.id || order.orderNo"
+              class="border-b last:border-b-0"
+            >
+              <td class="px-4 py-3 font-medium text-gray-900">
+                {{ order.orderNo || '-' }}
+              </td>
+              <td class="px-4 py-3">{{ order.customerName || '-' }}</td>
+              <td class="px-4 py-3">{{ order.commodity || '-' }}</td>
+              <td class="px-4 py-3">
+                <Badge :status="order.status" />
+              </td>
+              <td class="px-4 py-3">{{ order.date || '-' }}</td>
+              <td class="px-4 py-3">
+                Rp {{ Number(order.remaining || 0).toLocaleString('id-ID') }}
+              </td>
+              <td class="px-4 py-3">
+                <router-link
+                  v-if="order?.id"
+                  :to="{ path: '/kaji-ulang', query: { orderId: order.id } }"
+                  class="text-blue-600 hover:underline text-xs font-semibold"
+                >
+                  Detail
+                </router-link>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Recent Activity -->
@@ -105,16 +129,38 @@
         Memuat aktivitas...
       </div>
 
-      <vue3-datatable
-        v-else
-        :headers="activityHeaders"
-        :items="recentActivities"
-        :rows-per-page="5"
-        theme-color="#0284C7"
-        table-class="rounded-md overflow-hidden"
-        header-text-direction="left"
-        no-data-text="Belum ada aktivitas."
-      />
+      <div v-else class="overflow-x-auto">
+        <table class="min-w-full text-sm text-left text-gray-600">
+          <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
+            <tr>
+              <th class="px-4 py-3">Tanggal</th>
+              <th class="px-4 py-3">Pengguna</th>
+              <th class="px-4 py-3">Aksi</th>
+              <th class="px-4 py-3">Order</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="!visibleActivities.length">
+              <td
+                colspan="4"
+                class="px-4 py-6 text-center text-gray-500 text-sm"
+              >
+                Belum ada aktivitas.
+              </td>
+            </tr>
+            <tr
+              v-for="activity in visibleActivities"
+              :key="activity.id || activity.timestamp || activity.orderNo"
+              class="border-b last:border-b-0"
+            >
+              <td class="px-4 py-3">{{ activity.date }}</td>
+              <td class="px-4 py-3">{{ activity.userName }}</td>
+              <td class="px-4 py-3">{{ activity.action }}</td>
+              <td class="px-4 py-3">{{ activity.orderNo }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
@@ -158,24 +204,6 @@ const customerMap = computed(() => {
   return map;
 });
 
-// === Headers ===
-const orderHeaders = [
-  { text: 'No Order', value: 'orderNo' },
-  { text: 'Customer', value: 'customerName' },
-  { text: 'Komoditi', value: 'commodity' },
-  { text: 'Status', value: 'status' },
-  { text: 'Tgl Masuk', value: 'date' },
-  { text: 'Sisa Bayar', value: 'remaining' },
-  { text: 'Aksi', value: 'action' },
-];
-
-const activityHeaders = [
-  { text: 'Tanggal', value: 'date' },
-  { text: 'Pengguna', value: 'userName' },
-  { text: 'Aksi', value: 'action' },
-  { text: 'Order', value: 'orderNo' },
-];
-
 // === Filters ===
 const filters = reactive({
   search: '',
@@ -206,18 +234,28 @@ const filteredOrders = computed(() =>
   })
 );
 
+const rowsPerPage = 5;
+const visibleOrders = computed(() =>
+  filteredOrders.value.slice(0, rowsPerPage)
+);
+
 // === Recent Activities ===
 const recentActivities = computed(() =>
-  (activityStore.activities || []).slice(0, 5).map((a) => {
+  (activityStore.activities || []).map((a) => {
     const user = userStore.users?.find((u) => u.id === a.userId) ?? null;
     const order = orderStore.orders?.find((o) => o.id === a.orderId) ?? null;
     return {
+      id: a.id,
       date: a.timestamp ? new Date(a.timestamp).toLocaleString('id-ID') : '-',
-      userName: user?.name || '—',
-      action: a.action || '—',
-      orderNo: order?.orderNo || '—',
+      userName: user?.name || '-',
+      action: a.action || '-',
+      orderNo: order?.orderNo || '-',
     };
   })
+);
+
+const visibleActivities = computed(() =>
+  recentActivities.value.slice(0, rowsPerPage)
 );
 </script>
 

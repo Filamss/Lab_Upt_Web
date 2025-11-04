@@ -134,19 +134,19 @@
           <template #actions="{ row }">
             <div class="flex gap-2">
               <button
-                class="rounded-md inline-flex items-center p-1.5 text-primary transition hover:bg-primary/10"
+                class="rounded-md inline-flex items-center gap-1 p-1.5 text-primary transition hover:bg-primary/10"
                 title="Edit permission"
                 @click="openEditForm(row)"
               >
-                <PencilSquareIcon class="h-4 w-4" />
+                <PencilSquareIcon class="h-5 w-5" />
                 Edit
               </button>
               <button
-                class="rounded-md inline-flex items-center p-1.5 text-danger transition hover:bg-danger/10"
+                class="rounded-md inline-flex items-center gap-1 p-1.5 text-danger transition hover:bg-danger/10"
                 title="Hapus permission"
                 @click="handleDelete(row)"
               >
-                <TrashIcon class="h-4 w-4" />
+                <TrashIcon class="h-5 w-5" />
                 Hapus
               </button>
             </div>

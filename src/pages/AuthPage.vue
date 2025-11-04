@@ -161,6 +161,10 @@
                   />
                   <span class="leading-5"> Saya memiliki kode undangan </span>
                 </label>
+                <p class="text-xs text-gray-500 px-1">
+                  Tidak punya kode? Biarkan opsi ini tidak dicentang dan Anda
+                  tetap bisa daftar.
+                </p>
                 <FormField
                   v-if="registerUseKodeUndangan"
                   label="Kode Undangan"
@@ -168,6 +172,21 @@
                   v-model="registerKodeUndangan"
                   :error="formErrors.register.kodeUndangan"
                 />
+                <FormField
+                  v-if="registerUseKodeUndangan"
+                  label="NIP"
+                  placeholder="Masukkan NIP"
+                  v-model="registerEmploymentId"
+                  :error="formErrors.register.employmentId"
+                />
+                <button
+                  v-if="registerUseKodeUndangan"
+                  type="button"
+                  class="text-xs font-semibold text-primaryLight hover:text-primaryDark transition px-1"
+                  @click="disableInvitationMode"
+                >
+                  Daftar tanpa kode undangan
+                </button>
 
                 <button
                   type="submit"
@@ -377,6 +396,10 @@
                 />
                 <span class="leading-5"> Saya memiliki kode undangan. </span>
               </label>
+              <p class="text-xs text-gray-500 px-1">
+                Tidak punya kode? Biarkan opsi ini tidak dicentang dan Anda
+                tetap bisa daftar.
+              </p>
               <FormField
                 v-if="registerUseKodeUndangan"
                 label="Kode Undangan"
@@ -384,6 +407,21 @@
                 v-model="registerKodeUndangan"
                 :error="formErrors.register.kodeUndangan"
               />
+              <FormField
+                v-if="registerUseKodeUndangan"
+                label="NIP"
+                placeholder="Masukkan NIP"
+                v-model="registerEmploymentId"
+                :error="formErrors.register.employmentId"
+              />
+              <button
+                v-if="registerUseKodeUndangan"
+                type="button"
+                class="text-xs font-semibold text-primaryLight hover:text-primaryDark transition px-1"
+                @click="disableInvitationMode"
+              >
+                Daftar tanpa kode undangan
+              </button>
               <button
                 type="submit"
                 :disabled="isLoading"
@@ -438,11 +476,14 @@
             />
             <button
               type="submit"
-              :disabled="resetLoading"
+              :disabled="resetLoading || resetCooldown > 0"
               class="w-full bg-gradient-to-r from-primaryLight to-primaryDark text-white font-semibold py-3 rounded-xl shadow-lg hover:opacity-95 active:scale-[0.99] transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <span v-if="!resetLoading">Kirim Kode Reset</span>
-              <span v-else>Mengirim...</span>
+              <span v-if="resetLoading">Mengirim...</span>
+              <span v-else-if="resetCooldown > 0">
+                Tunggu {{ resetCooldown }} dtk
+              </span>
+              <span v-else>Kirim Kode Reset</span>
             </button>
           </form>
           <AlertBanner
@@ -462,6 +503,7 @@
               placeholder="nama@gmail.com"
               v-model="resetEmail"
               :error="resetFormErrors.email"
+              :readonly="true"
             />
             <FormField
               label="Kode Reset"
@@ -490,10 +532,14 @@
               <button
                 type="button"
                 class="font-semibold text-primaryLight hover:text-primaryDark transition disabled:opacity-50"
-                :disabled="resetLoading"
+                :disabled="resetLoading || resetCooldown > 0"
                 @click="resendResetCode"
               >
-                Kirim ulang kode
+                {{
+                  resetCooldown > 0
+                    ? 'Kirim ulang (' + resetCooldown + 's)'
+                    : 'Kirim ulang kode'
+                }}
               </button>
             </div>
             <button
@@ -541,13 +587,25 @@
 </template>
 
 <script setup>
-import { computed, defineComponent, h, reactive, ref, watch, nextTick } from 'vue';
+import {
+  computed,
+  defineComponent,
+  h,
+  reactive,
+  ref,
+  watch,
+  nextTick,
+  onBeforeUnmount,
+} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const AUTH_ROUTE_DELAY = 380;
+const RESET_COOLDOWN_SECONDS = 60;
+let resetCooldownTimer = null;
 
 const isRegister = ref(route.meta.authMode === 'register');
 
@@ -567,6 +625,7 @@ const formErrors = reactive({
     password: '',
     confirmPassword: '',
     kodeUndangan: '',
+    employmentId: '',
   },
 });
 
@@ -577,10 +636,12 @@ const registerPassword = ref('');
 const registerConfirmPassword = ref('');
 const registerUseKodeUndangan = ref(false);
 const registerKodeUndangan = ref('');
+const registerEmploymentId = ref('');
 const showRegisterPassword = ref(false);
 const showRegisterConfirmPassword = ref(false);
 const registerError = ref('');
 const registerSuccess = ref('');
+let pendingRouteSync = null;
 
 const isResetPasswordOpen = ref(false);
 const resetStage = ref('request');
@@ -593,6 +654,7 @@ const showResetConfirmPassword = ref(false);
 const resetError = ref('');
 const resetSuccess = ref('');
 const resetLoading = ref(false);
+const resetCooldown = ref(0);
 const resetFormErrors = reactive({
   email: '',
   code: '',
@@ -647,10 +709,9 @@ watch(isRegister, (value, oldValue) => {
   }
 
   const currentMode = route.meta.authMode;
-  if (value && currentMode !== 'register') {
-    router.replace('/register');
-  } else if (!value && currentMode !== 'login') {
-    router.replace('/login');
+  const targetPath = value ? '/register' : '/login';
+  if ((value && currentMode !== 'register') || (!value && currentMode !== 'login')) {
+    scheduleAuthRoute(targetPath);
   }
 });
 
@@ -658,6 +719,21 @@ watch(registerUseKodeUndangan, (value) => {
   if (value) return;
   registerKodeUndangan.value = '';
   formErrors.register.kodeUndangan = '';
+  registerEmploymentId.value = '';
+  formErrors.register.employmentId = '';
+});
+
+function disableInvitationMode() {
+  if (!registerUseKodeUndangan.value) return;
+  registerUseKodeUndangan.value = false;
+}
+
+onBeforeUnmount(() => {
+  if (pendingRouteSync) {
+    clearTimeout(pendingRouteSync);
+    pendingRouteSync = null;
+  }
+  clearResetCooldown();
 });
 
 function clearResetErrors() {
@@ -687,6 +763,27 @@ function resetResetState({ keepEmail = false, stage = 'request' } = {}) {
   resetStage.value = stage;
   showResetNewPassword.value = false;
   showResetConfirmPassword.value = false;
+  clearResetCooldown();
+}
+
+function clearResetCooldown() {
+  if (resetCooldownTimer) {
+    clearInterval(resetCooldownTimer);
+    resetCooldownTimer = null;
+  }
+  resetCooldown.value = 0;
+}
+
+function startResetCooldown() {
+  clearResetCooldown();
+  resetCooldown.value = RESET_COOLDOWN_SECONDS;
+  resetCooldownTimer = setInterval(() => {
+    if (resetCooldown.value <= 1) {
+      clearResetCooldown();
+    } else {
+      resetCooldown.value -= 1;
+    }
+  }, 1000);
 }
 
 function openResetPassword() {
@@ -716,12 +813,19 @@ async function submitResetCode({ isResend = false } = {}) {
     return;
   }
 
+  if (isResend && resetCooldown.value > 0) {
+    return;
+  }
+
   resetLoading.value = true;
   try {
     const res = await authStore.requestPasswordReset({ email });
     if (res.ok) {
-      resetStage.value = 'verify';
+      if (!isResend) {
+        resetStage.value = 'verify';
+      }
       resetSuccess.value = res.message;
+      startResetCooldown();
     } else {
       resetSuccess.value = '';
       resetError.value =
@@ -729,8 +833,11 @@ async function submitResetCode({ isResend = false } = {}) {
       if (res.errors?.email?.length) {
         [resetFormErrors.email] = res.errors.email;
       }
-      if (!res.errors && res.status === 404) {
+      if (!res.errors && (res.status === 404 || res.notFound)) {
         resetFormErrors.email = res.message;
+      }
+      if (res.notFound && !resetFormErrors.email) {
+        resetFormErrors.email = res.message || 'Email belum terdaftar.';
       }
     }
   } finally {
@@ -743,6 +850,7 @@ async function handleResetRequest() {
 }
 
 async function resendResetCode() {
+  if (resetCooldown.value > 0) return;
   await submitResetCode({ isResend: true });
 }
 
@@ -796,6 +904,7 @@ async function handleResetConfirm() {
     if (res.ok) {
       resetSuccess.value = res.message;
       resetStage.value = 'success';
+      clearResetCooldown();
       loginEmail.value = email;
       loginPassword.value = '';
       clearResetFields({ keepEmail: true });
@@ -877,6 +986,55 @@ async function handleLogin() {
   }
 }
 
+function applyInvitationMessage(message) {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  let applied = false;
+  if (normalized.includes('kode undangan')) {
+    if (!formErrors.register.kodeUndangan) {
+      formErrors.register.kodeUndangan = message;
+    }
+    applied = true;
+  }
+  if (
+    normalized.includes('nip') ||
+    normalized.includes('identitas') ||
+    normalized.includes('employment')
+  ) {
+    if (!formErrors.register.employmentId) {
+      formErrors.register.employmentId = message;
+    }
+    applied = true;
+  }
+  return applied;
+}
+
+function applyGeneralMessageToField(message) {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  const setIfEmpty = (field) => {
+    if (!formErrors.register[field]) {
+      formErrors.register[field] = message;
+      return true;
+    }
+    return false;
+  };
+  if (normalized.includes('nama')) return setIfEmpty('name');
+  if (normalized.includes('email')) return setIfEmpty('email');
+  if (normalized.includes('telepon') || normalized.includes('phone'))
+    return setIfEmpty('phone');
+  if (normalized.includes('konfirmasi')) {
+    let applied = setIfEmpty('confirmPassword');
+    if (!formErrors.register.password) {
+      formErrors.register.password = message;
+      applied = true;
+    }
+    return applied;
+  }
+  if (normalized.includes('password')) return setIfEmpty('password');
+  return false;
+}
+
 async function handleRegister() {
   registerError.value = '';
   registerSuccess.value = '';
@@ -886,6 +1044,9 @@ async function handleRegister() {
   formErrors.register.email = registerEmail.value.trim()
     ? ''
     : 'Email wajib diisi.';
+  formErrors.register.phone = registerPhone.value.trim()
+    ? ''
+    : 'Nomor telepon wajib diisi';
   formErrors.register.password = registerPassword.value.trim()
     ? ''
     : 'Password wajib diisi.';
@@ -893,21 +1054,24 @@ async function handleRegister() {
     ? ''
     : 'Konfirmasi password wajib diisi.';
 
-  if (
-    registerPhone.value &&
-    !/^(0|\+?\d)\d{8,15}$/.test(registerPhone.value.trim())
-  ) {
-    formErrors.register.phone = 'Nomor telepon tidak valid.';
-  } else {
-    formErrors.register.phone = '';
+  if (!formErrors.register.phone) {
+    if (!/^(0|\+?\d)\d{8,15}$/.test(registerPhone.value.trim())) {
+      formErrors.register.phone = 'Nomor telepon tidak valid.';
+    } else {
+      formErrors.register.phone = '';
+    }
   }
 
   if (registerUseKodeUndangan.value) {
     formErrors.register.kodeUndangan = registerKodeUndangan.value.trim()
       ? ''
       : 'Kode undangan wajib diisi.';
+    formErrors.register.employmentId = registerEmploymentId.value.trim()
+      ? ''
+      : 'NIP wajib diisi.';
   } else {
     formErrors.register.kodeUndangan = '';
+    formErrors.register.employmentId = '';
   }
 
   if (registerPassword.value !== registerConfirmPassword.value) {
@@ -923,29 +1087,49 @@ async function handleRegister() {
     formErrors.register.password ||
     formErrors.register.confirmPassword ||
     formErrors.register.phone ||
-    formErrors.register.kodeUndangan
+    formErrors.register.kodeUndangan ||
+    formErrors.register.employmentId
   ) {
     registerError.value = 'Harap lengkapi data yang diperlukan.';
     return;
   }
 
-  const res = await authStore.register({
-    name: registerName.value,
-    email: registerEmail.value,
+  const usingInvitation = registerUseKodeUndangan.value;
+  const trimmedName = registerName.value.trim();
+  const trimmedEmail = registerEmail.value.trim();
+  const trimmedPhone = registerPhone.value.trim();
+  const trimmedInvitation = usingInvitation
+    ? registerKodeUndangan.value.trim()
+    : undefined;
+  const trimmedEmployment = usingInvitation
+    ? registerEmploymentId.value.trim()
+    : undefined;
+
+  const registerPayload = {
+    name: trimmedName,
+    email: trimmedEmail,
     password: registerPassword.value,
     password_confirmation: registerConfirmPassword.value,
-    phone_number: registerPhone.value || undefined,
-    invitation_code: registerUseKodeUndangan.value
-      ? registerKodeUndangan.value.trim()
-      : undefined,
-  });
+    phone_number: trimmedPhone,
+  };
+
+  if (usingInvitation) {
+    registerPayload.invitation_code = trimmedInvitation;
+    registerPayload.employment_identity_number = trimmedEmployment;
+  }
+
+  const res = await authStore.register(registerPayload);
 
   if (res.ok) {
-    registerSuccess.value = 'Registrasi berhasil. Silakan masuk.';
-    loginEmail.value = registerEmail.value;
+    registerSuccess.value = res.message || 'Registrasi berhasil. Silakan masuk.';
+    loginEmail.value = trimmedEmail;
     loginPassword.value = registerPassword.value;
+    registerName.value = trimmedName;
+    registerEmail.value = trimmedEmail;
+    registerPhone.value = trimmedPhone;
     registerUseKodeUndangan.value = false;
     registerKodeUndangan.value = '';
+    registerEmploymentId.value = '';
     resetErrors();
     setTimeout(() => switchToLogin(), 800);
   } else {
@@ -969,16 +1153,39 @@ async function handleRegister() {
     if (errors?.phone_number?.length) {
       [formErrors.register.phone] = errors.phone_number;
     }
-    if (errors?.invitation_code?.length) {
+    if (usingInvitation && errors?.invitation_code?.length) {
       [formErrors.register.kodeUndangan] = errors.invitation_code;
     }
-    if (!errors && status === 422) {
-      // Fallback: tandai email jika pesan umum validasi
-      if (!formErrors.register.email) {
+    if (usingInvitation && errors?.employment_identity_number?.length) {
+      [formErrors.register.employmentId] = errors.employment_identity_number;
+    }
+    if (!errors && typeof res.message === 'string' && res.message) {
+      let handled = false;
+      if (usingInvitation && [400, 404].includes(status)) {
+        handled = applyInvitationMessage(res.message);
+      }
+      if (!handled) {
+        handled = applyGeneralMessageToField(res.message);
+      }
+      if (!handled && status === 422 && !formErrors.register.email) {
         formErrors.register.email = res.message;
       }
     }
   }
+}
+
+function scheduleAuthRoute(path) {
+  if (pendingRouteSync) {
+    clearTimeout(pendingRouteSync);
+    pendingRouteSync = null;
+  }
+  if (router.currentRoute.value.path === path) return;
+  pendingRouteSync = setTimeout(() => {
+    if (router.currentRoute.value.path !== path) {
+      router.replace(path);
+    }
+    pendingRouteSync = null;
+  }, AUTH_ROUTE_DELAY);
 }
 
 function switchToRegister() {
@@ -988,6 +1195,7 @@ function switchToRegister() {
     closeResetPassword({ keepEmail: true });
   }
   resetErrors();
+  scheduleAuthRoute('/register');
 }
 
 function switchToLogin() {
@@ -997,6 +1205,7 @@ function switchToLogin() {
     closeResetPassword({ keepEmail: true });
   }
   resetErrors();
+  scheduleAuthRoute('/login');
 }
 
 function resetErrors() {
@@ -1008,6 +1217,7 @@ function resetErrors() {
   formErrors.register.password = '';
   formErrors.register.confirmPassword = '';
   formErrors.register.kodeUndangan = '';
+  formErrors.register.employmentId = '';
   loginError.value = '';
   registerError.value = '';
   registerSuccess.value = '';
@@ -1115,6 +1325,10 @@ const FormField = defineComponent({
       type: String,
       default: '',
     },
+    readonly: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ['update:modelValue'],
   setup(props, { emit }) {
@@ -1136,6 +1350,7 @@ const FormField = defineComponent({
           placeholder: props.placeholder,
           value: props.modelValue,
           inputmode: props.inputmode,
+          readonly: props.readonly,
           onInput,
         }),
         props.error
@@ -1222,3 +1437,5 @@ const FormPasswordField = defineComponent({
   transform: translateY(16px);
 }
 </style>
+
+

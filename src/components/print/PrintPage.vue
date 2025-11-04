@@ -14,7 +14,7 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue';
-import { useOrderStore } from '@/stores/useOrderStore';
+import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
@@ -84,7 +84,7 @@ onMounted(async () => {
   // If still no data and we have an id (orderNo), try loading from order store
   try {
     if (!dataToPrint.value && id) {
-      const orderStore = useOrderStore();
+      const orderStore = useKajiUlangStore();
       // try to find by orderNo or numeric id
       const byOrderNo = orderStore.orders.find((o) => o.orderNo === id);
       const byId = orderStore.orders.find((o) => String(o.id) === String(id));

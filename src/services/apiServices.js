@@ -2,12 +2,32 @@
 import axios from 'axios';
 import router from '@/router';
 
-const baseURL = import.meta.env.VITE_API_URL;
-console.log('API Base URL:', baseURL);
+const rawApiUrl = import.meta.env.VITE_API_URL?.trim();
+const isDev = import.meta.env.DEV;
+
+function resolveBaseURL() {
+  if (isDev) {
+    // Saat development pakai proxy Vite (/api -> target) agar lolos CORS.
+    return '';
+  }
+  if (rawApiUrl) {
+    return rawApiUrl;
+  }
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  return '/';
+}
+
+const resolvedBaseURL = resolveBaseURL();
+console.log(
+  'API Base URL:',
+  resolvedBaseURL || '[relative]/api (dev proxy)'
+);
 
 // === Konfigurasi dasar ===
 const api = axios.create({
-  baseURL: '', // gunakan proxy dari vite.config.js
+  baseURL: resolvedBaseURL || undefined,
   timeout: 10000, // optional (10 detik)
 });
 

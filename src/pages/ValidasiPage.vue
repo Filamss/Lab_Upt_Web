@@ -25,7 +25,7 @@
 <script setup>
 import { ref, reactive, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useOrderStore } from '@/stores/useOrderStore';
+import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 import { useTestStore } from '@/stores/useTestStore';
 import { useUserStore } from '@/stores/useUserStore';
 

@@ -2,10 +2,10 @@
   <div>
     <h2 class="text-xl font-semibold mb-6">Layanan & Tarif</h2>
 
-    <!-- === DAFTAR PENGUJIAN === -->
+    <!-- === DAFTAR LAYANAN === -->
     <div class="bg-white rounded-xl shadow-md p-5 mb-8">
       <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
-        <h3 class="text-lg font-semibold text-surfaceDark">Daftar Pengujian</h3>
+        <h3 class="text-lg font-semibold text-surfaceDark">Daftar Layanan</h3>
         <button
           class="bg-gradient-to-r from-primaryLight to-primaryDark text-white px-4 py-2 rounded-md text-sm shadow-sm hover:opacity-90"
           @click="showModal = true"

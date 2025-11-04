@@ -1,76 +1,83 @@
-<template>
-  <FormPrint
-    :data="formMeta"
-    :showBlankArea="true"
-    :signatures="data?.signatures || []"
-  >
+﻿<template>
+  <FormPrint :data="formMeta" :showBlankArea="true" :signatures="data?.signatures || []">
     <div class="print-container">
-      <!-- === DATA PEMESAN === -->
-      <table class="info-table">
-        <tbody>
-          <tr>
-            <td>No. Order</td>
-            <td>: {{ data?.orderNo || '-' }}</td>
-          </tr>
-          <tr>
-            <td>No. Sampel</td>
-            <td>: {{ data?.sampleNo || '-' }}</td>
-          </tr>
-          <tr>
-            <td>Tanggal</td>
-            <td>: {{ data?.date || '-' }}</td>
-          </tr>
-          <tr>
-            <td>Nama Customer</td>
-            <td>: {{ data?.customerName || '-' }}</td>
-          </tr>
-          <tr>
-            <td>Alamat</td>
-            <td>: {{ data?.address || '-' }}</td>
-          </tr>
-          <tr>
-            <td>Jenis Pengujian</td>
-            <td>: {{ data?.testType || '-' }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <section class="info-section">
+        <table class="info-table">
+          <tbody>
+            <tr>
+              <td class="label">ID Order</td>
+              <td>: {{ data?.orderNo || '-' }}</td>
+            </tr>
+            <tr>
+              <td class="label">No. Order</td>
+              <td>: {{ orderNumberDisplay }}</td>
+            </tr>
+            <tr>
+              <td class="label">Tanggal</td>
+              <td>: {{ data?.date || '-' }}</td>
+            </tr>
+            <tr>
+              <td class="label">Nama Customer</td>
+              <td>: {{ data?.customerName || '-' }}</td>
+            </tr>
+            <tr>
+              <td class="label">Kontak</td>
+              <td>: {{ data?.customerPhone || data?.phoneNumber || '-' }}</td>
+            </tr>
+            <tr>
+              <td class="label">Alamat</td>
+              <td>: {{ data?.customerAddress || data?.address || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
 
-      <!-- EVALUASI -->
-      <table class="border-table mt-2">
-        <thead>
-          <tr>
-            <th style="width: 5%">No</th>
-            <th>PERIHAL</th>
-            <th style="width: 30%">HASIL</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(row, i) in data?.kajiUlangRows || []" :key="i">
-            <td class="text-center">{{ i + 1 }}</td>
-            <td>{{ row.perihal }}</td>
-            <td class="text-center">{{ row.hasil || '-' }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <section class="mt-3">
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Nama Pengujian</th>
+              <th>Kode</th>
+              <th>Jumlah</th>
+              <th>No. Sampel</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item, idx) in testItems" :key="idx">
+              <td class="text-center">{{ idx + 1 }}</td>
+              <td>{{ item.testName || '-' }}</td>
+              <td class="text-center">{{ resolveTestCode(item) }}</td>
+              <td class="text-center">{{ item.quantity || '-' }}</td>
+              <td>{{ sampleCode(item) }}</td>
+            </tr>
+            <tr v-if="!testItems.length">
+              <td colspan="5" class="text-center">Data pengujian belum tersedia.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
 
-      <div class="notes mt-2">
-        <strong>CATATAN:</strong>
-        <div class="note-box">{{ data?.note || '' }}</div>
-      </div>
+      <section class="mt-3">
+        <h4 class="section-title">Catatan</h4>
+        <div class="note-box">{{ data?.note || '-' }}</div>
+      </section>
     </div>
   </FormPrint>
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import FormPrint from './FormPrint.vue';
+import { computed } from 'vue'
+import FormPrint from './FormPrint.vue'
 
 const props = defineProps({
   data: { type: Object, required: true },
-});
+})
+
+const baseData = computed(() => props.data || {})
 
 const formMeta = computed(() => {
-  const d = props.data || {};
+  const d = baseData.value
   return {
     formTitle: d.formTitle || 'KAJI ULANG PERMINTAAN',
     docNo: d.docNo || d.noDok || 'F/UPT-LAB/7.1-1',
@@ -79,113 +86,110 @@ const formMeta = computed(() => {
     tglRev: d.tglRev || '-',
     noVol: d.noVol || '-',
     hal: d.hal || '-',
-  };
-});
+  }
+})
+
+const resolveDate = (value) => {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const orderYear = computed(() => {
+  const d = baseData.value
+  if (d.orderYear) return String(d.orderYear)
+  const date = resolveDate(d.date)
+  return date ? String(date.getFullYear()) : ''
+})
+
+const orderNumberDisplay = computed(() => {
+  const number = baseData.value.orderNumber
+  if (!number) return '-'
+  return orderYear.value ? ${number}/ : String(number)
+})
+
+const monthYearLabel = computed(() => {
+  const date = resolveDate(baseData.value.date)
+  if (date) {
+    return ${String(date.getMonth() + 1).padStart(2, '0')}/
+  }
+  const year = orderYear.value || String(new Date().getFullYear())
+  const now = new Date()
+  return ${String(now.getMonth() + 1).padStart(2, '0')}/
+})
+
+const testItems = computed(() => baseData.value.testItems || [])
+
+const resolveTestCode = (item) => {
+  if (!item) return '--'
+  if (item.testCode) return item.testCode
+  if (item.testId) return String(item.testId).split('-')[0]
+  return '--'
+}
+
+const sampleCode = (item) => {
+  const orderNo = baseData.value.orderNumber ? String(baseData.value.orderNumber) : '--'
+  const code = resolveTestCode(item)
+  const sampleRaw = item?.sampleNo ?? baseData.value.sampleNo
+  const sampleVal = sampleRaw && String(sampleRaw).trim() ? String(sampleRaw).trim() : '--'
+  return ${monthYearLabel.value}.//
+}
 </script>
 
 <style scoped>
-@page {
-  size: A4;
-  margin: 15mm;
-}
-
-body {
-  font-family: 'Times New Roman', serif;
-  color: #000;
-  background: white;
-}
-
 .print-container {
   width: 100%;
+  padding: 12px;
   border: 1px solid #000;
-  padding: 10px;
+  font-family: 'Times New Roman', serif;
+  color: #000;
 }
 
-/* === KOP SURAT === */
-.kop-table {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid #000;
-  text-align: center;
-  font-size: 11pt;
-}
-
-.kop-table td {
-  border: 1px solid #000;
-  padding: 3px;
-  vertical-align: middle;
-}
-
-.logo {
-  width: 90px;
-  height: auto;
-  display: block;
-  margin: 5px auto;
-}
-
-.instansi {
-  text-align: center;
-  font-size: 11pt;
-  font-weight: bold;
-  line-height: 1.4;
-}
-
-.judul-form,
-.judul-sub {
-  font-weight: bold;
-  font-size: 12pt;
-}
-
-.meta-left {
-  text-align: left;
-  padding-left: 6px;
-  font-size: 10pt;
-}
-
-/* === TABLES === */
 .info-table,
-.border-table {
+.detail-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 11pt;
-  margin-top: 8px;
 }
 
-.border-table th,
-.border-table td {
+.info-table td {
+  padding: 4px 6px;
+  vertical-align: top;
+}
+
+.info-table .label {
+  width: 160px;
+  font-weight: 600;
+}
+
+.detail-table th,
+.detail-table td {
   border: 1px solid #000;
   padding: 4px;
 }
 
-.border-table th {
+.detail-table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+.text-center {
   text-align: center;
 }
 
-/* === CATATAN === */
-.notes .note-box {
+.section-title {
+  font-size: 11pt;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.note-box {
   border: 1px solid #000;
-  height: 60px;
-  margin-top: 4px;
+  min-height: 60px;
+  padding: 6px;
 }
 
-.footnote {
-  font-size: 9pt;
-  font-style: italic;
-  margin-top: 2px;
-}
-
-/* === SIGNATURES === */
-.signatures {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 30px;
-}
-
-.sig {
-  width: 40%;
-}
-
-.sig .spacer {
-  height: 60px;
+.mt-3 {
+  margin-top: 12px;
 }
 </style>

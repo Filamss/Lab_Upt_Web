@@ -159,7 +159,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   HomeIcon,
@@ -199,6 +199,19 @@ function toggleCollapse() {
   if (window.innerWidth >= 768) collapsed.value = !collapsed.value
   else showMobileSidebar.value = !showMobileSidebar.value
 }
+
+function handleItemClick() {
+  if (window.innerWidth < 768) {
+    showMobileSidebar.value = false
+  }
+}
+
+watch(
+  () => route.path,
+  () => {
+    handleItemClick()
+  }
+)
 
 const baseMenu = [
   {
@@ -287,3 +300,6 @@ aside::-webkit-scrollbar {
   transform: translateY(-5px);
 }
 </style>
+
+
+
