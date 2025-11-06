@@ -197,6 +197,112 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async requestEmailVerificationCode({ email }) {
+      try {
+        const formData = new FormData()
+        appendIfPresent(formData, 'email', normalizeString(email))
+
+        const res = await api.post(
+          '/api/v1/codes/user-email-verification',
+          formData,
+          { skipAuthRedirect: true }
+        )
+        const payload = res.data ?? {}
+        const apiStatus = typeof payload.status === 'string' ? payload.status.toLowerCase() : ''
+        const message =
+          payload.message || 'Kode verifikasi email berhasil dikirim.'
+        const statusCode = res.status ?? payload.code ?? null
+        const lowerMsg = typeof message === 'string' ? message.toLowerCase() : ''
+
+        if (apiStatus && apiStatus !== 'success') {
+          return {
+            ok: false,
+            message,
+            errors: payload.errors ?? null,
+            status: statusCode,
+            notFound:
+              apiStatus === 'error' &&
+              (lowerMsg.includes('tidak ditemukan') ||
+                lowerMsg.includes('tidak terdaftar') ||
+                lowerMsg.includes('belum terdaftar')),
+          }
+        }
+
+        if (
+          lowerMsg.includes('tidak ditemukan') ||
+          lowerMsg.includes('tidak terdaftar') ||
+          lowerMsg.includes('belum terdaftar')
+        ) {
+          return {
+            ok: false,
+            message,
+            errors: payload.errors ?? null,
+            status: statusCode,
+            notFound: true,
+          }
+        }
+
+        return { ok: true, message, status: statusCode ?? 200 }
+      } catch (err) {
+        const msg =
+          err.response?.data?.message ||
+          'Gagal mengirim kode verifikasi email. Periksa email Anda.'
+        const errors = err.response?.data?.errors || null
+        const status = err.response?.status || err.response?.data?.code || null
+        const lowerMsg = typeof msg === 'string' ? msg.toLowerCase() : ''
+        return {
+          ok: false,
+          message: msg,
+          errors,
+          status,
+          notFound:
+            status === 404 ||
+            lowerMsg.includes('tidak ditemukan') ||
+            lowerMsg.includes('tidak terdaftar') ||
+            lowerMsg.includes('belum terdaftar'),
+        }
+      }
+    },
+
+    async verifyEmail({ email, code }) {
+      try {
+        const formData = new FormData()
+        appendIfPresent(formData, 'email', normalizeString(email))
+        appendIfPresent(formData, 'code', normalizeString(code))
+
+        const res = await api.post('/api/v1/users/verify-email', formData, {
+          skipAuthRedirect: true,
+        })
+        const payload = res.data ?? {}
+        const message =
+          payload.message || 'Email berhasil diverifikasi.'
+        const data = payload.data ?? null
+        return { ok: true, message, data, status: res.status ?? payload.code }
+      } catch (err) {
+        const msg =
+          err.response?.data?.message ||
+          'Verifikasi email gagal. Periksa kode yang Anda masukkan.'
+        const errors = err.response?.data?.errors || null
+        const status = err.response?.status || err.response?.data?.code || null
+        const lowerMsg = typeof msg === 'string' ? msg.toLowerCase() : ''
+        return {
+          ok: false,
+          message: msg,
+          errors,
+          status,
+          invalidCode:
+            status === 400 ||
+            lowerMsg.includes('kode salah') ||
+            lowerMsg.includes('kode tidak valid'),
+          notFound:
+            status === 404 ||
+            lowerMsg.includes('tidak ditemukan') ||
+            lowerMsg.includes('tidak terdaftar') ||
+            lowerMsg.includes('belum terdaftar'),
+        }
+      }
+    },
+
     async resetPassword({
       email,
       code,
