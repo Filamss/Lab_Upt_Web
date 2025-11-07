@@ -113,6 +113,11 @@
           mobile-mode="stack"
           :no-data-text="noDataText"
         >
+          <template #roleName="{ row }">
+            <span class="text-sm font-semibold text-surfaceDark">
+              {{ formatRoleLabel(row.name) }}
+            </span>
+          </template>
           <template #permissions="{ row }">
             <div class="flex flex-wrap items-center gap-2">
               <span
@@ -297,7 +302,7 @@ const permissionStore = usePermissionStore();
 const openConfirm = useConfirmDialog();
 
 const columns = [
-  { field: 'name', title: 'Nama Role' },
+  { field: 'name', title: 'Nama Role', slotName: 'roleName' },
   
   { field: 'permissions', title: 'Permission', slotName: 'permissions' },
   {
@@ -351,8 +356,9 @@ const topRoleLabel = computed(() => {
   if (!roleStore.roles.length) return 'Belum tersedia';
   const sorted = [...roleStore.roles].sort((a, b) => b.userCount - a.userCount);
   const top = sorted[0];
-  if (!top?.userCount) return `${top.name} (0 pengguna)`;
-  return `${top.name} (${top.userCount} pengguna)`;
+  const nameLabel = formatRoleLabel(top?.name || '') || top?.name || 'Tidak diketahui';
+  if (!top?.userCount) return `${nameLabel} (0 pengguna)`;
+  return `${nameLabel} (${top.userCount} pengguna)`;
 });
 
 watch(searchTerm, (value) => {
@@ -371,6 +377,15 @@ onMounted(async () => {
   ]);
   initialized.value = true;
 });
+
+function formatRoleLabel(value) {
+  if (!value) return '';
+  return value
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
 
 function formatDate(value) {
   if (!value) return '-';

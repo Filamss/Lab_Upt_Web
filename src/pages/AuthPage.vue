@@ -89,11 +89,7 @@
               <AlertBanner v-if="loginError" tone="error" class="mt-3">
                 {{ loginError }}
               </AlertBanner>
-              <AlertBanner
-                v-else-if="loginInfo"
-                tone="success"
-                class="mt-6"
-              >
+              <AlertBanner v-else-if="loginInfo" tone="success" class="mt-6">
                 {{ loginInfo }}
               </AlertBanner>
             </div>
@@ -563,7 +559,7 @@ watch(
 watch(
   () => route.meta.authMode,
   (mode) => {
-    if (route.meta?.layout !== 'auth') return;
+    if (route.meta?.layout !== 'auth') retudrn;
     const shouldRegister = mode === 'register';
     if (isRegister.value !== shouldRegister) {
       isRegister.value = shouldRegister;
@@ -592,7 +588,10 @@ watch(isRegister, (value, oldValue) => {
 
   const currentMode = route.meta.authMode;
   const targetPath = value ? '/register' : '/login';
-  if ((value && currentMode !== 'register') || (!value && currentMode !== 'login')) {
+  if (
+    (value && currentMode !== 'register') ||
+    (!value && currentMode !== 'login')
+  ) {
     scheduleAuthRoute(targetPath);
   }
 });
@@ -673,8 +672,9 @@ async function handleLogin() {
 
   const trimmedEmail = loginEmail.value.trim();
   const normalizedEmail = trimmedEmail.toLowerCase();
-  const pendingEmail =
-    (localStorage.getItem(PENDING_VERIFICATION_KEY) || '').toLowerCase();
+  const pendingEmail = (
+    localStorage.getItem(PENDING_VERIFICATION_KEY) || ''
+  ).toLowerCase();
   if (pendingEmail && normalizedEmail && pendingEmail === normalizedEmail) {
     loginError.value =
       'Email Anda belum diverifikasi. Silakan masukkan kode yang dikirim ke email.';
@@ -856,7 +856,8 @@ async function handleRegister() {
   const res = await authStore.register(registerPayload);
 
   if (res.ok) {
-    registerSuccess.value = res.message || 'Registrasi berhasil. Silakan masuk.';
+    registerSuccess.value =
+      res.message || 'Registrasi berhasil. Silakan masuk.';
     loginEmail.value = trimmedEmail;
     loginPassword.value = registerPassword.value;
     registerName.value = trimmedName;
@@ -865,10 +866,7 @@ async function handleRegister() {
     registerUseKodeUndangan.value = false;
     registerKodeUndangan.value = '';
     registerEmploymentId.value = '';
-    localStorage.setItem(
-      PENDING_VERIFICATION_KEY,
-      trimmedEmail.toLowerCase()
-    );
+    localStorage.setItem(PENDING_VERIFICATION_KEY, trimmedEmail.toLowerCase());
     navigateToEmailVerification({
       email: trimmedEmail,
       lockEmail: true,
@@ -1093,5 +1091,3 @@ const FormPasswordField = defineComponent({
   transform: translateY(16px);
 }
 </style>
-
-
