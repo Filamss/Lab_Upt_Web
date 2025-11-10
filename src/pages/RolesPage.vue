@@ -22,9 +22,9 @@
           Kelompokkan akses pengguna dengan role dan permission yang fleksibel.
         </p>
       </div>
-      <div class="flex flex-wrap gap-2">
+      <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
         <button
-          class="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
+          class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 sm:w-auto"
           @click="refreshRoles"
         >
           <ArrowPathIcon
@@ -37,7 +37,7 @@
         </button>
         <button
           v-if="canCreateRole"
-          class="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+          class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 sm:w-auto"
           @click="openCreateForm"
         >
           <PlusIcon class="h-5 w-5" />
@@ -125,7 +125,6 @@
           :searchable="false"
           :filterable="false"
           :showPagination="false"
-          mobile-mode="stack"
           :no-data-text="noDataText"
         >
           <template #roleName="{ row }">

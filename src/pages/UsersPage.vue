@@ -21,25 +21,25 @@
             Atur akun, role, dan status akses pengguna Sistem Informasi Pelayanan Pengujian.
           </p>
         </div>
-        <div class="flex flex-wrap gap-2">
+        <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
           <button
-            class="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
+            class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 sm:w-auto"
             @click="refreshUsers"
           >
-          <ArrowPathIcon
-            :class="['h-5 w-5', userStore.loading ? 'animate-spin text-primary' : 'text-gray-500']"
-          />
-          Muat Ulang
-        </button>
-        <button
-          v-if="canCreateUser"
-          class="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
-          @click="openCreateForm"
-        >
-          <PlusIcon class="h-5 w-5" />
-          Tambah Pengguna
-        </button>
-      </div>
+            <ArrowPathIcon
+              :class="['h-5 w-5', userStore.loading ? 'animate-spin text-primary' : 'text-gray-500']"
+            />
+            Muat Ulang
+          </button>
+          <button
+            v-if="canCreateUser"
+            class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 sm:w-auto"
+            @click="openCreateForm"
+          >
+            <PlusIcon class="h-5 w-5" />
+            Tambah Pengguna
+          </button>
+        </div>
     </header>
 
     <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -127,7 +127,6 @@
           :searchable="false"
           :filterable="false"
           :showPagination="false"
-          mobile-mode="stack"
           body-scroll-height="60vh"
           scroll-body-on-mobile
           :no-data-text="noDataText"

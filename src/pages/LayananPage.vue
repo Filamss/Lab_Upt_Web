@@ -1,17 +1,30 @@
 <template>
-  <div>
-    <h2 class="text-xl font-semibold mb-6">Layanan & Tarif</h2>
+  <div class="space-y-5">
+    <header
+      class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div>
+        <h2 class="text-xl font-semibold text-surfaceDark sm:text-2xl">Layanan & Tarif</h2>
+        <p class="text-sm text-gray-500">
+          Kelola daftar layanan pengujian, mesin, dan metode agar tim selalu menggunakan referensi terbaru.
+        </p>
+      </div>
+    </header>
 
     <!-- === DAFTAR LAYANAN === -->
-    <div class="bg-white rounded-xl shadow-md p-5 mb-8">
-      <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+    <div class="bg-white rounded-xl shadow-md p-5">
+      <div
+        class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
         <h3 class="text-lg font-semibold text-surfaceDark">Daftar Layanan</h3>
-        <button
-          class="bg-gradient-to-r from-primaryLight to-primaryDark text-white px-4 py-2 rounded-md text-sm shadow-sm hover:opacity-90"
-          @click="showModal = true"
-        >
-          + Tambah Pengujian
-        </button>
+        <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+          <button
+            class="w-full rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 sm:w-auto"
+            @click="showModal = true"
+          >
+            + Tambah Pengujian
+          </button>
+        </div>
       </div>
 
       <!-- ✅ DataTable Pengujian -->
@@ -20,7 +33,9 @@
         :rows="filteredTests"
         :pageSize="10"
         :filterable="false"
-        class="rounded-md "
+        scroll-body-on-mobile
+        body-scroll-height="55vh"
+        class="rounded-md"
       >
         <template #price="{ value }">
           Rp {{ value.toLocaleString('id-ID') }}
@@ -58,16 +73,18 @@
 
     <!-- === MESIN UJI === -->
     <div class="bg-white rounded-xl shadow-md p-5 mb-8">
-      <div class="flex justify-between items-center mb-4">
+      <div
+        class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
         <h3 class="text-lg font-semibold text-surfaceDark">Mesin Uji</h3>
-        <div class="flex flex-wrap gap-2">
+        <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
           <input
             v-model="newMachine"
             placeholder="Nama mesin uji"
-            class="border border-gray-300 rounded-md px-2 py-1 text-sm"
+            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm sm:w-64"
           />
           <button
-            class="bg-gradient-to-r from-primaryLight to-primaryDark text-white px-3 py-1.5 rounded text-sm shadow-sm"
+            class="w-full rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 sm:w-auto"
             @click="addMachine"
           >
             Tambah
@@ -79,6 +96,8 @@
         :columns="machineColumns"
         :rows="machineItems"
         :filterable="false"
+        scroll-body-on-mobile
+        body-scroll-height="40vh"
         class="rounded-md"
       >
         <template #actions="{ row, index }">
@@ -96,16 +115,18 @@
 
     <!-- === METODE UJI === -->
     <div class="bg-white  rounded-xl shadow-md p-5">
-      <div class="flex justify-between items-center mb-4">
+      <div
+        class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
         <h3 class="text-lg font-semibold text-surfaceDark">Metode Uji</h3>
-        <div class="flex flex-wrap gap-2">
+        <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
           <input
             v-model="newMethod"
             placeholder="Nama metode uji"
-            class="border border-gray-300 rounded-md px-2 py-1 text-sm"
+            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm sm:w-64"
           />
           <button
-            class="bg-gradient-to-r from-primaryLight to-primaryDark text-white px-3 py-1.5 rounded text-sm shadow-sm"
+            class="w-full rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 sm:w-auto"
             @click="addMethod"
           >
             Tambah
@@ -117,6 +138,8 @@
         :columns="methodColumns"
         :rows="methodItems"
         :filterable="false"
+        scroll-body-on-mobile
+        body-scroll-height="40vh"
         class="rounded-md"
       >
         <template #actions="{ row, index }">
@@ -139,7 +162,7 @@ import { computed, ref, onMounted } from 'vue';
 import { useTestStore } from '@/stores/useTestStore';
 import FormLayanan from '@/components/form/FormLayanan.vue';
 import { PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
-import DataTable from '../components/DataTable.vue';
+import DataTable from '../components/common/DataTable.vue';
 
 const testStore = useTestStore();
 

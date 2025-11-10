@@ -139,7 +139,7 @@
               >
                 <span
                   v-if="shouldShowMobileLabel(column)"
-                  class="mb-1 block text-xs font-medium uppercase text-gray-500 md:hidden"
+                  class="block text-[0.65rem] font-semibold uppercase tracking-widest text-gray-500/90 md:hidden"
                 >
                   {{ column.title }}
                 </span>
@@ -154,7 +154,15 @@
                   />
                 </template>
                 <template v-else>
-                  {{ formatCell(resolveValue(row, column.field)) }}
+                  <p
+                    v-if="isStackMode"
+                    class="text-sm font-medium text-slate-700"
+                  >
+                    {{ formatCell(resolveValue(row, column.field)) }}
+                  </p>
+                  <span v-else>
+                    {{ formatCell(resolveValue(row, column.field)) }}
+                  </span>
                 </template>
               </td>
             </tr>
@@ -216,7 +224,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, useSlots } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch, useSlots } from 'vue';
 import {
   CalendarIcon,
   ChevronUpDownIcon,
@@ -289,11 +297,6 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
-  mobileMode: {
-    type: String,
-    default: 'stack',
-    validator: (value) => ['stack', 'table'].includes(value),
-  },
   scrollBodyOnMobile: {
     type: Boolean,
     default: false,
@@ -320,7 +323,8 @@ const internalPageSize = ref(
   Number.isFinite(props.pageSize) && props.pageSize > 0 ? props.pageSize : 10,
 );
 const selectedKeySet = ref(new Set());
-const isStackMode = computed(() => props.mobileMode !== 'table');
+const isMobile = ref(false);
+const isStackMode = computed(() => isMobile.value);
 
 const normalizedStatusOptions = computed(() => {
   if (!props.statusOptions?.length) {
@@ -386,6 +390,23 @@ const normalizedPageSizeOptions = computed(() => {
   }
 
   return options;
+});
+
+function updateIsMobile() {
+  if (typeof window === 'undefined') {
+    isMobile.value = false;
+    return;
+  }
+  isMobile.value = window.innerWidth < 768;
+}
+
+onMounted(() => {
+  updateIsMobile();
+  window.addEventListener('resize', updateIsMobile);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateIsMobile);
 });
 
 const pageSizeSelection = computed({
@@ -648,17 +669,41 @@ function isColumnSortable(column) {
 }
 
 function getCellClasses(column) {
-  const baseClasses = ['dt-cell', 'whitespace-normal', 'break-words'];
+  const baseClasses = ['dt-cell'];
   if (isStackMode.value) {
-    baseClasses.push('w-full px-3 py-2 border-b border-gray-100 md:w-auto md:table-cell md:border-0 md:align-middle md:px-4 md:py-3');
-    if (!column?.className?.includes('hidden')) {
-      baseClasses.unshift('block');
-    }
+    baseClasses.push(
+      'block',
+      'w-full',
+      'space-y-1.5',
+      'rounded-xl',
+      'bg-white/80',
+      'px-3',
+      'py-2.5',
+      'shadow-sm',
+      'ring-1',
+      'ring-gray-100',
+      'md:w-auto',
+      'md:space-y-0',
+      'md:rounded-none',
+      'md:bg-transparent',
+      'md:px-4',
+      'md:py-3',
+      'md:shadow-none',
+      'md:ring-0',
+      'whitespace-normal',
+      'break-words',
+    );
   } else {
-    baseClasses.push('px-3 py-2 border-b border-gray-100 align-middle md:px-4 md:py-3');
-    if (!column?.className?.includes('hidden')) {
-      baseClasses.push('table-cell');
-    }
+    baseClasses.push(
+      'px-3',
+      'py-2',
+      'border-b',
+      'border-gray-100',
+      'align-middle',
+      'md:px-4',
+      'md:py-3',
+      'table-cell',
+    );
   }
   if (column?.className) {
     baseClasses.push(column.className);
@@ -679,8 +724,8 @@ function getRowClasses() {
     'border-b border-gray-100 text-sm text-gray-700 transition md:border-0 md:hover:bg-gray-50',
   ];
   if (isStackMode.value) {
-    classes.unshift('block');
-    classes.push('md:table-row');
+    classes.unshift('block space-y-2 rounded-2xl border border-gray-100 bg-gradient-to-b from-white to-gray-50/80 p-4 shadow-[0_6px_20px_rgba(15,23,42,0.08)] mb-4');
+    classes.push('md:table-row md:space-y-0 md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none md:mb-0');
   } else {
     classes.unshift('table-row');
   }
@@ -778,6 +823,7 @@ function getBodyWrapperStyle() {
 
 .dt-table {
   table-layout: fixed;
+  width: 100%;
 }
 
 .dt-cell,

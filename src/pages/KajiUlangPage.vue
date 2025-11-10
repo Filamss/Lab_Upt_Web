@@ -1,19 +1,27 @@
 <template>
   <div class="space-y-3">
-    <div
+    <header
       v-if="!showForm"
-      class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+      class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
     >
-      <h2 class="text-lg font-semibold text-surfaceDark sm:text-2xl">
-        Daftar Kaji Ulang
-      </h2>
-      <button
-        class="w-full rounded-lg bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-center text-white shadow-sm transition hover:opacity-90 sm:w-auto"
-        @click="handleAdd"
-      >
-        Tambah Kaji Ulang
-      </button>
-    </div>
+      <div>
+        <h2 class="text-xl font-semibold text-surfaceDark sm:text-2xl">
+          Manajemen Kaji Ulang
+        </h2>
+        <p class="text-sm text-gray-500">
+          Validasi permintaan pengujian, review pembayaran, dan catat hasil kaji
+          ulang secara menyeluruh.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button
+          class="inline-flex w-full items-center justify-center rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 sm:w-auto"
+          @click="handleAdd"
+        >
+          Tambah Kaji Ulang
+        </button>
+      </div>
+    </header>
 
     <div
       v-if="!showForm"
@@ -28,7 +36,6 @@
         status-field="status"
         date-field="date"
         :status-options="statusOptions"
-        mobile-mode="table"
         scroll-body-on-mobile
         body-scroll-height="55vh"
       >
@@ -36,7 +43,9 @@
           <span class="text-sm text-gray-700">{{ value || '-' }}</span>
         </template>
         <template #date="{ value }">
-          <span class="text-sm text-gray-700">{{ formatDateDisplay(value) }}</span>
+          <span class="text-sm text-gray-700">{{
+            formatDateDisplay(value)
+          }}</span>
         </template>
         <template #status="{ value }">
           <Badge :status="value" />
@@ -95,10 +104,16 @@
         v-if="showReviewModal"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
       >
-        <div class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
-          <div class="mb-4 flex items-center justify-between border-b border-gray-200 pb-4">
+        <div
+          class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+        >
+          <div
+            class="mb-4 flex items-center justify-between border-b border-gray-200 pb-4"
+          >
             <div>
-              <p class="text-xs uppercase tracking-wide text-gray-500">Review Bukti Pembayaran</p>
+              <p class="text-xs uppercase tracking-wide text-gray-500">
+                Review Bukti Pembayaran
+              </p>
               <h3 class="text-lg font-semibold text-surfaceDark">
                 Order {{ reviewingOrder?.orderNo || '-' }}
               </h3>
@@ -114,18 +129,54 @@
 
           <div class="space-y-4">
             <section class="rounded-xl border border-gray-200 p-4">
-              <h4 class="mb-2 text-sm font-semibold text-surfaceDark">Detail Pembayaran</h4>
+              <h4 class="mb-2 text-sm font-semibold text-surfaceDark">
+                Detail Pembayaran
+              </h4>
               <div class="grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
-                <span>Customer: <strong class="text-surfaceDark">{{ reviewingOrder?.customerName || '-' }}</strong></span>
-                <span>Total: <strong class="text-surfaceDark">Rp {{ formatCurrency(reviewingOrder?.paymentInfo?.total) }}</strong></span>
-                <span>Dibayar: <strong class="text-surfaceDark">Rp {{ formatCurrency(reviewingOrder?.paymentInfo?.amountPaid) }}</strong></span>
-                <span>Sisa: <strong class="text-surfaceDark">Rp {{ formatCurrency(reviewingOrder?.paymentInfo?.outstanding) }}</strong></span>
+                <span
+                  >Customer:
+                  <strong class="text-surfaceDark">{{
+                    reviewingOrder?.customerName || '-'
+                  }}</strong></span
+                >
+                <span
+                  >Total:
+                  <strong class="text-surfaceDark"
+                    >Rp
+                    {{
+                      formatCurrency(reviewingOrder?.paymentInfo?.total)
+                    }}</strong
+                  ></span
+                >
+                <span
+                  >Dibayar:
+                  <strong class="text-surfaceDark"
+                    >Rp
+                    {{
+                      formatCurrency(reviewingOrder?.paymentInfo?.amountPaid)
+                    }}</strong
+                  ></span
+                >
+                <span
+                  >Sisa:
+                  <strong class="text-surfaceDark"
+                    >Rp
+                    {{
+                      formatCurrency(reviewingOrder?.paymentInfo?.outstanding)
+                    }}</strong
+                  ></span
+                >
               </div>
             </section>
 
             <section class="rounded-xl border border-gray-200 p-4">
-              <h4 class="mb-3 text-sm font-semibold text-surfaceDark">Lampiran Bukti</h4>
-              <div v-if="!reviewFiles.length" class="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+              <h4 class="mb-3 text-sm font-semibold text-surfaceDark">
+                Lampiran Bukti
+              </h4>
+              <div
+                v-if="!reviewFiles.length"
+                class="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500"
+              >
                 Tidak ada file yang diunggah.
               </div>
               <div v-else class="grid gap-4 sm:grid-cols-2">
@@ -149,7 +200,9 @@
                       <span>{{ file.type || 'Lampiran' }}</span>
                     </div>
                   </div>
-                  <div class="flex items-center justify-between bg-white px-3 py-2 text-xs text-gray-600">
+                  <div
+                    class="flex items-center justify-between bg-white px-3 py-2 text-xs text-gray-600"
+                  >
                     <span class="truncate">{{ file.name }}</span>
                     <span>{{ formatFileSize(file.size) }}</span>
                   </div>
@@ -158,7 +211,10 @@
             </section>
 
             <section class="rounded-xl border border-gray-200 p-4">
-              <label class="mb-1 block text-sm font-medium text-surfaceDark" for="review-note">
+              <label
+                class="mb-1 block text-sm font-medium text-surfaceDark"
+                for="review-note"
+              >
                 Catatan Review
               </label>
               <textarea
@@ -202,7 +258,12 @@ import { reactive, ref, computed } from 'vue';
 import DataTable from '@/components/common/DataTable.vue';
 import Badge from '@/components/common/Badge.vue';
 import FormKajiUlang from '@/components/form/FormKajiUlang.vue';
-import { PencilIcon, TrashIcon, EyeIcon, XCircleIcon } from '@heroicons/vue/24/outline';
+import {
+  PencilIcon,
+  TrashIcon,
+  EyeIcon,
+  XCircleIcon,
+} from '@heroicons/vue/24/outline';
 import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 import { useTestStore } from '@/stores/useTestStore';
 import { useConfirmDialog } from '@/stores/useConfirmDialog';
@@ -235,7 +296,9 @@ const cloneTestItems = (items = [], fallbackSample = '') =>
   items.map((item) => ({
     ...item,
     sampleNo:
-      item.sampleNo !== undefined && item.sampleNo !== null && item.sampleNo !== ''
+      item.sampleNo !== undefined &&
+      item.sampleNo !== null &&
+      item.sampleNo !== ''
         ? item.sampleNo
         : fallbackSample || '',
     testCode:
@@ -273,18 +336,51 @@ const form = reactive({
 
 const reviewRows = reactive(makeDefaultReviewRows());
 const reviewFiles = computed(
-  () => reviewingOrder.value?.paymentInfo?.transferFiles || [],
+  () => reviewingOrder.value?.paymentInfo?.transferFiles || []
 );
 
 const columns = [
   { field: 'orderNo', title: 'ID Order', className: 'min-w-[150px]' },
-  { field: 'sampleNo', title: 'Sample No', slotName: 'sampleNo', className: 'min-w-[140px]' },
-  { field: 'date', title: 'Tanggal', slotName: 'date', className: 'min-w-[140px]' },
-  { field: 'customerName', title: 'Pelanggan', className: 'hidden md:table-cell min-w-[160px]' },
-  { field: 'status', title: 'Status', slotName: 'status', className: 'min-w-[150px]' },
-  { field: 'paymentReviewStatus', title: 'Review Pembayaran', slotName: 'paymentReviewStatus', className: 'min-w-[180px]' },
-  { field: 'testType', title: 'Jenis Pengujian', className: 'hidden lg:table-cell min-w-[160px]' },
-  { field: 'actions', title: 'Aksi', slotName: 'actions', className: 'text-center' },
+  {
+    field: 'sampleNo',
+    title: 'Sample No',
+    slotName: 'sampleNo',
+    className: 'min-w-[140px]',
+  },
+  {
+    field: 'date',
+    title: 'Tanggal',
+    slotName: 'date',
+    className: 'min-w-[140px]',
+  },
+  {
+    field: 'customerName',
+    title: 'Pelanggan',
+    className: 'hidden md:table-cell min-w-[160px]',
+  },
+  {
+    field: 'status',
+    title: 'Status',
+    slotName: 'status',
+    className: 'min-w-[150px]',
+  },
+  {
+    field: 'paymentReviewStatus',
+    title: 'Review Pembayaran',
+    slotName: 'paymentReviewStatus',
+    className: 'min-w-[180px]',
+  },
+  {
+    field: 'testType',
+    title: 'Jenis Pengujian',
+    className: 'hidden lg:table-cell min-w-[160px]',
+  },
+  {
+    field: 'actions',
+    title: 'Aksi',
+    slotName: 'actions',
+    className: 'text-center',
+  },
 ];
 
 const statusOptions = [
@@ -308,8 +404,8 @@ const tableRows = computed(() =>
         reviewStatus === 'approved'
           ? 'payment_verified'
           : reviewStatus === 'rejected'
-            ? 'payment_review_rejected'
-            : 'payment_pending_review';
+          ? 'payment_review_rejected'
+          : 'payment_pending_review';
       return {
         id: order.id,
         orderNo: order.orderNo,
@@ -321,7 +417,8 @@ const tableRows = computed(() =>
         paymentReviewStatus: reviewStatus,
         paymentBadgeStatus,
         paymentInfo: order.paymentInfo,
-        canReviewPayment: reviewStatus !== 'approved' && order.status !== 'cancelled',
+        canReviewPayment:
+          reviewStatus !== 'approved' && order.status !== 'cancelled',
         canOpenForm:
           reviewStatus === 'approved' &&
           !['in_testing', 'completed'].includes(order.status),
@@ -333,13 +430,15 @@ const tableRows = computed(() =>
 const tests = computed(() => testStore.tests || []);
 
 function setReviewRows(rows) {
-  const source = Array.isArray(rows) && rows.length ? rows : makeDefaultReviewRows();
+  const source =
+    Array.isArray(rows) && rows.length ? rows : makeDefaultReviewRows();
   reviewRows.splice(0, reviewRows.length, ...source.map((row) => ({ ...row })));
 }
 
 function applyOrderToForm(order) {
   if (!order) return;
-  const derivedYear = order.orderYear || resolveYearFromDate(order.date || order.entryDate);
+  const derivedYear =
+    order.orderYear || resolveYearFromDate(order.date || order.entryDate);
   Object.assign(form, {
     orderNo: order.orderNo || '',
     orderNumber: order.orderNumber ?? null,
@@ -390,7 +489,9 @@ function handleEdit(row) {
     kajiUlangStore.orders.find((o) => o.orderNo === row.orderNo);
   if (!order) return;
   if (order.paymentInfo?.reviewStatus !== 'approved') {
-    alert('Bukti pembayaran belum disetujui. Selesaikan review terlebih dahulu.');
+    alert(
+      'Bukti pembayaran belum disetujui. Selesaikan review terlebih dahulu.'
+    );
     return;
   }
   isEditing.value = true;
@@ -483,14 +584,19 @@ async function lookupOrder(orderNo) {
   try {
     const lower = query.toLowerCase();
     let order =
-      kajiUlangStore.orders.find((o) => o.orderNo?.toLowerCase() === lower) || null;
+      kajiUlangStore.orders.find((o) => o.orderNo?.toLowerCase() === lower) ||
+      null;
 
     if (!order) {
       let request =
-        permintaanStore.requestList.find((r) => r.idOrder?.toLowerCase() === lower) || null;
+        permintaanStore.requestList.find(
+          (r) => r.idOrder?.toLowerCase() === lower
+        ) || null;
 
       if (!request) {
-        const { ok, data, error } = await permintaanStore.checkOrderStatus(query);
+        const { ok, data, error } = await permintaanStore.checkOrderStatus(
+          query
+        );
         if (ok && data) {
           request = data;
         } else {
@@ -505,7 +611,8 @@ async function lookupOrder(orderNo) {
         request.status === 'payment_verified';
 
       if (!approved) {
-        lookupError.value = 'Pembayaran belum terverifikasi atau masih dalam review.';
+        lookupError.value =
+          'Pembayaran belum terverifikasi atau masih dalam review.';
         return;
       }
 
@@ -600,7 +707,10 @@ function approveReview() {
       note: form.note,
       testItems: cloneTestItems(form.testItems, form.sampleNo),
       status: 'pending_validation',
-      paymentInfo: clonePaymentInfo(form.paymentInfo) || { status: 'payment_verified', reviewStatus: 'approved' },
+      paymentInfo: clonePaymentInfo(form.paymentInfo) || {
+        status: 'payment_verified',
+        reviewStatus: 'approved',
+      },
     });
     kajiUlangStore.updateReview(created.id, {
       rows: reviewRows,
@@ -647,10 +757,9 @@ function formatFileSize(size) {
   const units = ['B', 'KB', 'MB', 'GB'];
   const exponent = Math.min(
     Math.floor(Math.log(bytes) / Math.log(1024)),
-    units.length - 1,
+    units.length - 1
   );
   const value = bytes / 1024 ** exponent;
   return `${value.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`;
 }
 </script>
-

@@ -1,21 +1,34 @@
 <template>
   <div class="space-y-3">
     <!-- Header -->
-    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <h2 class="text-lg font-semibold text-surfaceDark sm:text-2xl">
-        Daftar Permintaan Pengujian
-      </h2>
-      <button
-        class="w-full rounded-lg bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-center text-white shadow-sm transition hover:opacity-90 sm:w-auto"
-        @click="openAddModal"
-      >
-        Tambah Permintaan
-      </button>
-    </div>
+    <header
+      class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div>
+        <h2 class="text-xl font-semibold text-surfaceDark sm:text-2xl">
+          Daftar Permintaan
+        </h2>
+        <p class="text-sm text-gray-500">
+          Buat Permintaan Pengujian baru atau kelola permintaan yang sudah ada.
+        </p>
+      </div>
+      <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+        <button
+          class="inline-flex w-full items-center justify-center rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 sm:w-auto"
+          @click="openAddModal"
+        >
+          Tambah Permintaan
+        </button>
+      </div>
+    </header>
 
     <!-- Datatable -->
-    <div class="rounded-xl border border-gray-200 bg-white p-3 shadow-md sm:p-4">
-      <div class="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      class="rounded-xl border border-gray-200 bg-white p-3 shadow-md sm:p-4"
+    >
+      <div
+        class="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+      >
         <h3 class="text-base font-semibold text-surfaceDark sm:text-lg"></h3>
         <!-- Tombol hapus massal -->
         <button
@@ -27,7 +40,7 @@
         </button>
       </div>
 
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto md:overflow-visible">
         <DataTable
           :columns="columns"
           :rows="store.requestList"
@@ -36,62 +49,61 @@
           filterable
           selectable
           :status-options="requestStatusOptions"
-          mobile-mode="table"
           scroll-body-on-mobile
           body-scroll-height="55vh"
           @update:selected="selectedRows = $event"
         >
-        <template #idOrder="{ value }">
-          <span class="block text-sm text-gray-700 break-all">
-            {{ value || '-' }}
-          </span>
-        </template>
-        <template #orderNumber="{ row }">
-          <span class="text-sm text-gray-700">
-            {{ formatOrderNumber(row) }}
-          </span>
-        </template>
-        <template #testItems="{ value, row }">
-          <div class="text-left">
-            <template v-if="value?.length">
-              <span
-                v-for="(item, idx) in value"
-                :key="`${row.idOrder}-test-${idx}`"
-                class="block text-xs text-gray-700"
-              >
-                {{ item.testName || resolveTestName(item) }}
-                <span class="text-gray-500">({{ item.quantity }})</span>
-              </span>
-            </template>
-            <span v-else class="text-xs text-gray-400">
-              {{ row.testCategory || '-' }}
+          <template #idOrder="{ value }">
+            <span class="block text-sm text-gray-700 break-all">
+              {{ value || '-' }}
             </span>
-          </div>
-        </template>
+          </template>
+          <template #orderNumber="{ row }">
+            <span class="text-sm text-gray-700">
+              {{ formatOrderNumber(row) }}
+            </span>
+          </template>
+          <template #testItems="{ value, row }">
+            <div class="text-left">
+              <template v-if="value?.length">
+                <span
+                  v-for="(item, idx) in value"
+                  :key="`${row.idOrder}-test-${idx}`"
+                  class="block text-xs text-gray-700"
+                >
+                  {{ item.testName || resolveTestName(item) }}
+                  <span class="text-gray-500">({{ item.quantity }})</span>
+                </span>
+              </template>
+              <span v-else class="text-xs text-gray-400">
+                {{ row.testCategory || '-' }}
+              </span>
+            </div>
+          </template>
 
-        <template #status="{ value }">
-          <div class="max-w-[140px] w-full">
-            <Badge :status="value" />
-          </div>
-        </template>
-        
-        <template #actions="{ row }">
-          <div class="flex gap-2 justify-center">
-            <button
-              class="p-1.5 rounded-md hover:bg-blue-50 text-blue-600 hover:text-blue-800"
-              @click="openEditModal(row)"
-            >
-              <PencilIcon class="w-5 h-5" />
-            </button>
-            <button
-              class="p-1.5 rounded-md hover:bg-red-50 text-red-600 hover:text-red-800"
-              @click="deleteRequest(row)"
-            >
-              <TrashIcon class="w-5 h-5" />
-            </button>
-          </div>
-        </template>
-      </DataTable>
+          <template #status="{ value }">
+            <div class="w-full">
+              <Badge :status="value" class="w-full justify-center" />
+            </div>
+          </template>
+
+          <template #actions="{ row }">
+            <div class="flex gap-2 justify-center">
+              <button
+                class="p-1.5 rounded-md hover:bg-blue-50 text-blue-600 hover:text-blue-800"
+                @click="openEditModal(row)"
+              >
+                <PencilIcon class="w-5 h-5" />
+              </button>
+              <button
+                class="p-1.5 rounded-md hover:bg-red-50 text-red-600 hover:text-red-800"
+                @click="deleteRequest(row)"
+              >
+                <TrashIcon class="w-5 h-5" />
+              </button>
+            </div>
+          </template>
+        </DataTable>
       </div>
     </div>
 
@@ -142,7 +154,7 @@ import { PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import FormPermintaan from '@/components/form/FormPermintaan.vue';
 import FormPayment from '@/components/form/FormPayment.vue';
 import Badge from '@/components/common/Badge.vue';
-import DataTable from '../components/DataTable.vue';
+import DataTable from '../components/common/DataTable.vue';
 import { useConfirmDialog } from '@/stores/useConfirmDialog';
 
 const store = usePermintaanStore();
@@ -168,19 +180,19 @@ const columns = [
   {
     field: 'idOrder',
     title: 'ID Order',
-    className: 'max-w-[180px] min-w-[140px] pr-4',
+    className: 'md:max-w-[180px] md:min-w-[140px] md:pr-4',
     slotName: 'idOrder',
   },
   {
     field: 'orderNumber',
     title: 'No. Order',
-    className: 'min-w-[120px]',
+    className: 'md:min-w-[120px]',
   },
   { field: 'entryDate', title: 'Tanggal Masuk' },
   {
     field: 'status',
     title: 'Status',
-    className: 'min-w-[110px] max-w-[140px] text-left',
+    className: 'md:min-w-[110px] md:max-w-[140px] text-left',
   },
 
   // Tampil mulai SM
@@ -206,7 +218,7 @@ const columns = [
   {
     field: 'actions',
     title: 'Aksi',
-    className: 'shrink-0 w-24',
+    className: 'md:shrink-0 md:w-24',
     sortable: false,
   },
 ];
@@ -220,7 +232,6 @@ const requestStatusOptions = [
   { value: 'payment_review_rejected', label: 'Bukti Pembayaran Ditolak' },
   { value: 'cancelled', label: 'Dibatalkan' },
 ];
-
 
 // === Modal logic ===
 function openAddModal() {
@@ -346,7 +357,9 @@ async function deleteSelected() {
 
 function formatOrderNumber(row) {
   if (!row || !row.orderNumber) return '-';
-  const year = row.orderYear || (row.entryDate ? new Date(row.entryDate).getFullYear() : '');
+  const year =
+    row.orderYear ||
+    (row.entryDate ? new Date(row.entryDate).getFullYear() : '');
   return year ? `${row.orderNumber}/${year}` : String(row.orderNumber);
 }
 
@@ -392,5 +405,5 @@ async function handlePaymentSaved(detail) {
 .fade-leave-to {
   opacity: 0;
 }
-</style>
 
+</style>
