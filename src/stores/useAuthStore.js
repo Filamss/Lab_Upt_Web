@@ -21,6 +21,67 @@ const appendIfPresent = (formData, key, value, { trim = true } = {}) => {
   formData.append(key, payload)
 }
 
+const DEFAULT_PROFILE_INCLUDES = ['roles', 'roles.permissions']
+
+const buildProfileUrl = (includeList) => {
+  const includes =
+    Array.isArray(includeList) && includeList.length
+      ? includeList.filter(Boolean)
+      : DEFAULT_PROFILE_INCLUDES
+  if (!includes.length) return '/api/v1/users/me'
+  const query = includes
+    .map((item) => `include=${encodeURIComponent(item)}`)
+    .join('&')
+  return `/api/v1/users/me?${query}`
+}
+
+const normalizeRoleIds = (input) => {
+  if (!input) return []
+  if (Array.isArray(input)) return input
+  return [input]
+}
+
+const buildProfileFormData = (payload = {}) => {
+  const formData = new FormData()
+
+  appendIfPresent(formData, 'name', normalizeString(payload.name))
+  appendIfPresent(formData, 'email', normalizeString(payload.email))
+
+  if ('password' in payload) {
+    appendIfPresent(formData, 'password', payload.password, { trim: false })
+  }
+
+  const phone = payload.phone_number ?? payload.phoneNumber ?? payload.phone
+  appendIfPresent(formData, 'phone_number', normalizeString(phone))
+
+  const nip =
+    payload.employment_identity_number ??
+    payload.employmentIdentityNumber ??
+    payload.nip
+  appendIfPresent(formData, 'employment_identity_number', normalizeString(nip))
+
+  const avatar = payload.avatar ?? payload.avatarFile ?? null
+  if (avatar) {
+    formData.append('avatar', avatar)
+  }
+
+  const roleIdsSource =
+    payload.role_ids ??
+    payload.roles ??
+    (payload.roleId !== undefined ? payload.roleId : undefined)
+  normalizeRoleIds(roleIdsSource)
+    .map((role) => (typeof role === 'object' ? role.id : role))
+    .filter(Boolean)
+    .forEach((roleId) => formData.append('role_id', roleId))
+
+  if (payload.is_active !== undefined || payload.isActive !== undefined) {
+    const isActive = payload.is_active ?? payload.isActive
+    formData.append('is_active', isActive ? 'true' : 'false')
+  }
+
+  return formData
+}
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     currentUser: JSON.parse(localStorage.getItem('currentUser') || 'null'),
@@ -104,21 +165,27 @@ export const useAuthStore = defineStore('auth', {
 
         localStorage.setItem('token', token)
         localStorage.setItem('currentUser', JSON.stringify(user))
-        this.loading = false
+
+        let hydratedUser = user
+        try {
+          const refreshed = await this.fetchProfile({ force: true })
+          if (refreshed) hydratedUser = refreshed
+        } catch (refreshErr) {
+          console.warn('[AuthStore] gagal memuat profil setelah login', refreshErr)
+        }
 
         const activityStore = useActivityStore()
-        activityStore.setActiveUser(user?.id ?? null)
+        activityStore.setActiveUser(hydratedUser?.id ?? null)
         activityStore.addEvent({
           type: 'login',
           title: 'Login berhasil',
-          description: `${user?.name || 'Pengguna'} berhasil masuk ke sistem`,
+          description: `${hydratedUser?.name || 'Pengguna'} berhasil masuk ke sistem`,
           status: 'success',
           metadata: { email },
         })
 
-        return { ok: true, user, message: res.data?.message }
+        return { ok: true, user: hydratedUser, message: res.data?.message }
       } catch (err) {
-        this.loading = false
         const isNetworkError = err.code === 'ERR_NETWORK' || (!err.response && err.request)
         const msg =
           (isNetworkError
@@ -132,6 +199,8 @@ export const useAuthStore = defineStore('auth', {
           err.response?.data?.code ||
           (isNetworkError ? 'NETWORK_ERROR' : null)
         return { ok: false, message: msg, errors, status, network: isNetworkError }
+      } finally {
+        this.loading = false
       }
     },
 
@@ -338,14 +407,93 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async fetchProfile({ force = false, include } = {}) {
+      if (!this.token) {
+        this.currentUser = null
+        const activityStore = useActivityStore()
+        activityStore.setActiveUser(null)
+        return null
+      }
+
+      if (!force && this.currentUser) {
+        return this.currentUser
+      }
+
+      try {
+        this.loading = true
+        const url = buildProfileUrl(include)
+        const res = await api.get(url)
+        const payload = res.data?.data ?? res.data
+        const user = payload?.user ?? payload
+        this.currentUser = user
+        localStorage.setItem('currentUser', JSON.stringify(user))
+        const activityStore = useActivityStore()
+        activityStore.setActiveUser(user?.id ?? null)
+        return user
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async updateProfile(payload = {}) {
+      if (!this.currentUser?.id) {
+        return {
+          ok: false,
+          message: 'Pengguna belum login. Silakan masuk ulang.',
+        }
+      }
+
+      try {
+        this.loading = true
+        const body = buildProfileFormData(payload)
+        const res = await api.put(`/api/v1/users/${this.currentUser.id}`, body)
+        const responsePayload = res.data?.data ?? res.data
+        const updatedUser = responsePayload?.user ?? responsePayload
+        this.currentUser = updatedUser
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser))
+
+        let latestUser = updatedUser
+        try {
+          const refreshed = await this.fetchProfile({ force: true })
+          if (refreshed) latestUser = refreshed
+        } catch (refreshErr) {
+          console.warn('[AuthStore] gagal memuat profil setelah pembaruan', refreshErr)
+        }
+
+        const activityStore = useActivityStore()
+        activityStore.setActiveUser(latestUser?.id ?? null)
+        activityStore.addEvent({
+          type: 'profile',
+          title: 'Profil diperbarui',
+          description: `${latestUser?.name || 'Pengguna'} memperbarui profil`,
+          status: 'success',
+        })
+        return {
+          ok: true,
+          user: latestUser,
+          message: res.data?.message || 'Profil berhasil diperbarui.',
+        }
+      } catch (err) {
+        const msg =
+          err.response?.data?.message ||
+          'Gagal memperbarui profil. Periksa kembali data yang Anda masukkan.'
+        const errors = err.response?.data?.errors || null
+        const status = err.response?.status || err.response?.data?.code || null
+        return {
+          ok: false,
+          message: msg,
+          errors,
+          status,
+        }
+      } finally {
+        this.loading = false
+      }
+    },
+
     async init() {
       if (this.token) {
         try {
-          const res = await api.get('/api/v1/users/me')
-          this.currentUser = res.data.data.user
-          localStorage.setItem('currentUser', JSON.stringify(this.currentUser))
-          const activityStore = useActivityStore()
-          activityStore.setActiveUser(this.currentUser?.id ?? null)
+          await this.fetchProfile({ force: true })
         } catch (err) {
           console.warn('Token invalid, logout otomatis')
           this.logout()
