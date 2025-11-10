@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/useAuthStore';
+import { buildPermissionSet, isSuperAdminUser } from '@/composables/useAuthorization';
 import DashboardPage from '../pages/DashboardPage.vue';
 
 // Lazy-load pages
@@ -57,10 +58,26 @@ const routes = [
   { path: '/laporan-keuangan', component: KeuanganPage },
   { path: '/laporan', component: LaporanPage },
   { path: '/riwayat', component: RiwayatPage },
-  { path: '/users', component: UsersPage },
-  { path: '/roles', component: RolesPage },
-  { path: '/permissions', component: PermissionsPage },
-  { path: '/kode-undangan', component: KodeUndanganPage },
+  {
+    path: '/users',
+    component: UsersPage,
+    meta: { requiredPermission: 'users.index' },
+  },
+  {
+    path: '/roles',
+    component: RolesPage,
+    meta: { requiredPermission: 'roles.index' },
+  },
+  {
+    path: '/permissions',
+    component: PermissionsPage,
+    meta: { requiredPermission: 'permissions.index' },
+  },
+  {
+    path: '/kode-undangan',
+    component: KodeUndanganPage,
+    meta: { requiredPermission: 'users.store' },
+  },
 ];
 
 const router = createRouter({
@@ -87,6 +104,18 @@ router.beforeEach((to, from, next) => {
 
   if (!authStore.currentUser && !token) {
     return next('/login');
+  }
+
+  const requiredPermission = to.meta?.requiredPermission;
+  if (requiredPermission) {
+    const permissionSet = buildPermissionSet(authStore.currentUser);
+    const normalized = requiredPermission.trim().toLowerCase();
+    if (
+      !isSuperAdminUser(authStore.currentUser) &&
+      !permissionSet.has(normalized)
+    ) {
+      return next('/dashboard');
+    }
   }
 
   next();

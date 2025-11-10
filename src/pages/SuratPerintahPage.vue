@@ -191,8 +191,6 @@ import { useRoute } from 'vue-router';
 import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 import { useUserStore } from '@/stores/useUserStore';
 import { useTestStore } from '@/stores/useTestStore';
-// SignaturePad removed - using file input for signatures
-import PrintArea from '@/components/PrintArea.vue';
 
 const route = useRoute();
 const orderStore = useKajiUlangStore();

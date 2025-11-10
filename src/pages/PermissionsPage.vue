@@ -1,8 +1,19 @@
 <template>
   <div class="space-y-5">
-    <header
-      class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    <div
+      v-if="!canViewPermissions"
+      class="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700"
     >
+      <p class="text-base font-semibold">Akses ditolak</p>
+      <p class="mt-1">
+        Anda tidak memiliki izin permissions.index sehingga halaman manajemen permission tidak dapat dibuka.
+      </p>
+    </div>
+
+    <template v-else>
+      <header
+        class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
       <div>
         <h2 class="text-xl font-semibold text-surfaceDark sm:text-2xl">
           Manajemen Permission
@@ -26,13 +37,6 @@
             ]"
           />
           Muat Ulang
-        </button>
-        <button
-          class="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
-          @click="openCreateForm"
-        >
-          <PlusIcon class="h-5 w-5" />
-          Tambah Permission
         </button>
       </div>
     </header>
@@ -114,43 +118,6 @@
             </span>
           </template>
 
-          <template #timeline="{ row }">
-            <div class="space-y-1 text-xs text-gray-600">
-              <p>
-                Dibuat:
-                <span class="font-medium text-gray-700">
-                  {{ formatDate(row.createdAt) }}
-                </span>
-              </p>
-              <p>
-                Diperbarui:
-                <span class="font-medium text-gray-700">
-                  {{ formatDate(row.updatedAt) }}
-                </span>
-              </p>
-            </div>
-          </template>
-
-          <template #actions="{ row }">
-            <div class="flex gap-2">
-              <button
-                class="rounded-md inline-flex items-center gap-1 p-1.5 text-primary transition hover:bg-primary/10"
-                title="Edit permission"
-                @click="openEditForm(row)"
-              >
-                <PencilSquareIcon class="h-5 w-5" />
-                Edit
-              </button>
-              <button
-                class="rounded-md inline-flex items-center gap-1 p-1.5 text-danger transition hover:bg-danger/10"
-                title="Hapus permission"
-                @click="handleDelete(row)"
-              >
-                <TrashIcon class="h-5 w-5" />
-                Hapus
-              </button>
-            </div>
-          </template>
         </DataTable>
 
         <div
@@ -187,83 +154,27 @@
       </div>
     </section>
 
-    <transition name="fade">
-      <div
-        v-if="showForm"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8 backdrop-blur-sm"
-      >
-        <div
-          class="relative w-[95%] md:w-[560px] rounded-2xl bg-white p-4 shadow-xl"
-        >
-          <button
-            class="absolute right-4 top-4 text-gray-400 transition hover:text-gray-600"
-            @click="closeForm"
-          >
-            <span class="sr-only">Tutup</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="1.5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-          <h3 class="mb-4 text-lg font-semibold text-surfaceDark">
-            {{ isEdit ? 'Edit Permission' : 'Tambah Permission' }}
-          </h3>
-          <FormPermission
-            :model-value="selectedPermission"
-            :loading="permissionStore.saving"
-            :is-edit="isEdit"
-            @cancel="closeForm"
-            @submit="handleSubmit"
-          />
-        </div>
-      </div>
-    </transition>
+    </template>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
-import {
-  ArrowPathIcon,
-  MagnifyingGlassIcon,
-  PencilSquareIcon,
-  PlusIcon,
-  TrashIcon,
-} from '@heroicons/vue/24/outline';
+import { ArrowPathIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
 import DataTable from '@/components/DataTable.vue';
-import FormPermission from '@/components/form/FormPermission.vue';
 import { usePermissionStore } from '@/stores/usePermissionStore';
-import { useConfirmDialog } from '@/stores/useConfirmDialog';
-
-const openConfirm = useConfirmDialog();
+import { useAuthorization } from '@/composables/useAuthorization';
 const permissionStore = usePermissionStore();
+const { hasPermission } = useAuthorization();
+
+const canViewPermissions = computed(() => hasPermission('permissions.index'));
 
 const columns = [
   { field: 'name', title: 'Nama Permission' },
   { field: 'id', title: 'ID', slotName: 'id' },
-  { field: 'timeline', title: 'Riwayat', slotName: 'timeline' },
-  {
-    field: 'actions',
-    title: 'Aksi',
-    slotName: 'actions',
-    className: 'text-left',
-  },
 ];
 
 const searchTerm = ref('');
-const showForm = ref(false);
-const selectedPermission = ref(null);
-const isEdit = ref(false);
 const initialized = ref(false);
 const lastRefreshedAt = ref(null);
 let debounceTimer = null;
@@ -287,6 +198,7 @@ const lastRefreshedLabel = computed(() => {
 });
 
 watch(searchTerm, (value) => {
+  if (!canViewPermissions.value) return;
   permissionStore.setSearch(value);
   if (!initialized.value) return;
   clearTimeout(debounceTimer);
@@ -299,6 +211,7 @@ watch(searchTerm, (value) => {
 });
 
 onMounted(async () => {
+  if (!canViewPermissions.value) return;
   await permissionStore.fetchPermissions();
   lastRefreshedAt.value = new Date();
   initialized.value = true;
@@ -315,6 +228,7 @@ function formatDate(value) {
 }
 
 async function refreshPermissions() {
+  if (!canViewPermissions.value) return;
   await permissionStore.fetchPermissions({
     page: permissionStore.pagination.currentPage,
     search: permissionStore.search,
@@ -323,51 +237,8 @@ async function refreshPermissions() {
 }
 
 async function changePage(page) {
+  if (!canViewPermissions.value) return;
   await permissionStore.changePage(page);
-  lastRefreshedAt.value = new Date();
-}
-
-function openCreateForm() {
-  selectedPermission.value = null;
-  isEdit.value = false;
-  showForm.value = true;
-}
-
-function openEditForm(permission) {
-  selectedPermission.value = { ...permission };
-  isEdit.value = true;
-  showForm.value = true;
-}
-
-function closeForm() {
-  showForm.value = false;
-  selectedPermission.value = null;
-  isEdit.value = false;
-}
-
-async function handleSubmit(payload) {
-  if (isEdit.value && selectedPermission.value) {
-    await permissionStore.updatePermission(
-      selectedPermission.value.id,
-      payload
-    );
-  } else {
-    await permissionStore.createPermission(payload);
-  }
-  closeForm();
-  lastRefreshedAt.value = new Date();
-}
-
-async function handleDelete(permission) {
-  if (!permission?.id) return;
-  const ok = await openConfirm({
-    title: 'Hapus permission?',
-    message: `Permission ${permission.name} akan dihapus dari sistem.`,
-    confirmLabel: 'Hapus',
-    variant: 'danger',
-  });
-  if (!ok) return;
-  await permissionStore.removePermission(permission.id);
   lastRefreshedAt.value = new Date();
 }
 </script>

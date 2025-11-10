@@ -1,8 +1,19 @@
 <template>
   <div class="space-y-5">
-    <header
-      class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    <div
+      v-if="!canViewRoles"
+      class="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700"
     >
+      <p class="text-base font-semibold">Akses ditolak</p>
+      <p class="mt-1">
+        Anda tidak memiliki izin roles.index sehingga halaman manajemen role tidak tersedia.
+      </p>
+    </div>
+
+    <template v-else>
+      <header
+        class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
       <div>
         <h2 class="text-xl font-semibold text-surfaceDark sm:text-2xl">
           Manajemen Role
@@ -25,6 +36,7 @@
           Muat Ulang
         </button>
         <button
+          v-if="canCreateRole"
           class="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
           @click="openCreateForm"
         >
@@ -92,6 +104,9 @@
           </p>
           <p v-else-if="defaultWarning" class="text-amber-600">
             {{ defaultWarning }}
+          </p>
+          <p v-if="actionMessage" class="text-emerald-600">
+            {{ actionMessage }}
           </p>
         </div>
       </div>
@@ -184,6 +199,7 @@
           <template #actions="{ row }">
             <div class="flex gap-3">
               <button
+                v-if="canUpdateRole"
                 class="rounded-md inline-flex items-center gap-1 p-1.5 text-primary transition hover:bg-primary/10"
                 title="Edit role"
                 @click="openEditForm(row)"
@@ -192,6 +208,7 @@
                 Edit
               </button>
               <button
+                v-if="canDeleteRole"
                 class="rounded-md inline-flex items-center gap-1 p-1.5 text-danger transition hover:bg-danger/10"
                 title="Hapus role"
                 @click="handleDelete(row)"
@@ -279,6 +296,7 @@
         </div>
       </div>
     </transition>
+    </template>
   </div>
 </template>
 
@@ -296,10 +314,17 @@ import FormRole from '@/components/form/FormRole.vue';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { usePermissionStore } from '@/stores/usePermissionStore';
 import { useConfirmDialog } from '@/stores/useConfirmDialog';
+import { useAuthorization } from '@/composables/useAuthorization';
 
 const roleStore = useRoleStore();
 const permissionStore = usePermissionStore();
 const openConfirm = useConfirmDialog();
+const { hasPermission } = useAuthorization();
+
+const canViewRoles = computed(() => hasPermission('roles.index'));
+const canCreateRole = computed(() => hasPermission('roles.store'));
+const canUpdateRole = computed(() => hasPermission('roles.update'));
+const canDeleteRole = computed(() => hasPermission('roles.destroy'));
 
 const columns = [
   { field: 'name', title: 'Nama Role', slotName: 'roleName' },
@@ -329,7 +354,12 @@ const maxPermissionChip = 3;
 let debounceTimer = null;
 const defaultWarning = ref('');
 const defaultSuccess = ref('');
+const actionMessage = ref('');
 const DEFAULT_ELIGIBLE_NAMES = ['customer'];
+
+function clearActionMessage() {
+  actionMessage.value = '';
+}
 
 const rows = computed(() => roleStore.roles);
 const currentDefaultRole = computed(() =>
@@ -348,7 +378,7 @@ const noDataText = computed(() => {
 });
 
 function canSetDefault(role) {
-  if (!role?.name) return false;
+  if (!role?.name || !canUpdateRole.value) return false;
   return DEFAULT_ELIGIBLE_NAMES.includes(role.name.toLowerCase());
 }
 
@@ -362,6 +392,8 @@ const topRoleLabel = computed(() => {
 });
 
 watch(searchTerm, (value) => {
+  clearActionMessage();
+  if (!canViewRoles.value) return;
   roleStore.setSearch(value);
   if (!initialized.value) return;
   clearTimeout(debounceTimer);
@@ -371,6 +403,8 @@ watch(searchTerm, (value) => {
 });
 
 onMounted(async () => {
+  clearActionMessage();
+  if (!canViewRoles.value) return;
   await Promise.all([
     permissionStore.fetchPermissions({ perPage: 200 }),
     roleStore.fetchRoles(),
@@ -403,6 +437,8 @@ function limitedPermissions(list = []) {
 }
 
 async function refreshRoles() {
+  clearActionMessage();
+  if (!canViewRoles.value) return;
   defaultWarning.value = '';
   defaultSuccess.value = '';
   await roleStore.fetchRoles({
@@ -412,16 +448,24 @@ async function refreshRoles() {
 }
 
 async function changePage(page) {
+  clearActionMessage();
+  if (!canViewRoles.value) return;
   await roleStore.changePage(page);
 }
 
 function openCreateForm() {
+  clearActionMessage();
+  if (!canViewRoles.value) return;
+  if (!canCreateRole.value) return;
   selectedRole.value = null;
   isEdit.value = false;
   showForm.value = true;
 }
 
 function openEditForm(role) {
+  clearActionMessage();
+  if (!canViewRoles.value) return;
+  if (!canUpdateRole.value) return;
   selectedRole.value = { ...role };
   isEdit.value = true;
   showForm.value = true;
@@ -434,15 +478,29 @@ function closeForm() {
 }
 
 async function handleSubmit(payload) {
-  if (isEdit.value && selectedRole.value) {
-    await roleStore.updateRole(selectedRole.value.id, payload);
-  } else {
-    await roleStore.createRole(payload);
+  clearActionMessage();
+  if (!canViewRoles.value) return;
+  try {
+    if (isEdit.value && selectedRole.value) {
+      if (!canUpdateRole.value) return;
+      await roleStore.updateRole(selectedRole.value.id, payload);
+      actionMessage.value = `Role ${payload.name || selectedRole.value.name} berhasil diperbarui.`;
+    } else {
+      if (!canCreateRole.value) return;
+      const result = await roleStore.createRole(payload);
+      const roleName = payload.name || result?.data?.name || 'Role';
+      actionMessage.value = `Role ${roleName} berhasil dibuat.`;
+    }
+    roleStore.error = null;
+    closeForm();
+  } catch (err) {
+    actionMessage.value = '';
   }
-  closeForm();
 }
 
 async function handleDelete(role) {
+  if (!canViewRoles.value) return;
+  if (!canDeleteRole.value) return;
   if (!role?.id) return;
   defaultWarning.value = '';
   defaultSuccess.value = '';
@@ -463,6 +521,8 @@ async function handleDelete(role) {
 }
 
 async function handleSetDefault(role) {
+  if (!canViewRoles.value) return;
+  if (!canUpdateRole.value) return;
   if (!role?.id || role.isDefault || !canSetDefault(role)) return;
   defaultWarning.value = '';
   defaultSuccess.value = '';

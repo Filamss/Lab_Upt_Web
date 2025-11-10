@@ -1,5 +1,16 @@
 <template>
   <div class="space-y-6">
+    <div
+      v-if="!canManageInvites"
+      class="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700"
+    >
+      <p class="text-base font-semibold">Akses ditolak</p>
+      <p class="mt-1">
+        Anda tidak memiliki izin untuk mengelola kode undangan. Hubungi administrator jika membutuhkan akses users.store.
+      </p>
+    </div>
+
+    <template v-else>
     <header class="flex flex-col gap-2">
       <p class="text-xs font-semibold uppercase tracking-wide text-primaryLight">
         Manajemen Pengguna
@@ -182,6 +193,7 @@
         </div>
       </div>
     </section>
+    </template>
   </div>
 </template>
 
@@ -190,15 +202,18 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ArrowPathIcon, DocumentDuplicateIcon, PlusIcon } from '@heroicons/vue/24/outline';
 import { useKodeUndanganStore } from '@/stores/useKodeUndanganStore';
 import { useRoleStore } from '@/stores/useRoleStore';
+import { useAuthorization } from '@/composables/useAuthorization';
 
 const kodeUndanganStore = useKodeUndanganStore();
 const roleStore = useRoleStore();
+const { hasPermission } = useAuthorization();
 
 const form = reactive({
   roleId: '',
 });
 
 const latestCode = computed(() => kodeUndanganStore.latestCode);
+const canManageInvites = computed(() => hasPermission('users.store'));
 const isLoadingRoles = computed(() => roleStore.loading);
 const isSaving = computed(() => kodeUndanganStore.saving);
 const errorMessage = computed(() => kodeUndanganStore.error);
@@ -213,20 +228,27 @@ const roleOptions = computed(() =>
 );
 
 const isGenerateDisabled = computed(
-  () => !form.roleId || isSaving.value || !roleOptions.value.length
+  () =>
+    !canManageInvites.value ||
+    !form.roleId ||
+    isSaving.value ||
+    !roleOptions.value.length
 );
 
 onMounted(async () => {
+  if (!canManageInvites.value) return;
   await roleStore.fetchRoles({ perPage: 100 });
 });
 
 async function handleRefresh() {
+  if (!canManageInvites.value) return;
   formError.value = '';
   successMessage.value = '';
   await roleStore.fetchRoles({ perPage: 100 });
 }
 
 async function handleGenerate() {
+  if (!canManageInvites.value) return;
   formError.value = '';
   successMessage.value = '';
   if (!form.roleId) {
@@ -249,6 +271,7 @@ async function handleGenerate() {
 }
 
 async function copyLatestCode() {
+  if (!canManageInvites.value) return;
   if (!latestCode.value) return;
   try {
     await navigator.clipboard.writeText(latestCode.value.code);

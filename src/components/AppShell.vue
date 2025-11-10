@@ -5,15 +5,36 @@
       :class="[
         'fixed md:static inset-y-0 left-0 z-50 flex h-screen md:min-h-screen flex-col bg-surface text-gray-800 transition-all duration-300 ease-in-out md:self-stretch shadow-lg md:shadow-none',
         collapsed ? 'w-14 md:w-14' : 'w-60 md:w-56',
-        showMobileSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+        showMobileSidebar
+          ? 'translate-x-0'
+          : '-translate-x-full md:translate-x-0',
       ]"
     >
       <!-- Header -->
-      <div class="flex items-center justify-between h-16 px-4 border-b border-border">
-        <span v-if="!collapsed" class="font-bold text-lg text-primaryDark">SIAPEL</span>
-        <button class="focus:outline-none" @click="toggleCollapse" title="Toggle sidebar">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5M3.75 12h16.5M3.75 18.75h16.5" />
+      <div
+        class="flex items-center justify-between h-16 px-4 border-b border-border"
+      >
+        <span v-if="!collapsed" class="font-bold text-lg text-primaryDark"
+          >SIAPEL</span
+        >
+        <button
+          class="focus:outline-none"
+          @click="toggleCollapse"
+          title="Toggle sidebar"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-6 h-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M3.75 5.25h16.5M3.75 12h16.5M3.75 18.75h16.5"
+            />
           </svg>
         </button>
       </div>
@@ -27,7 +48,8 @@
               :title="'Dashboard'"
               class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2 transition text-left"
               :class="{
-                'bg-gradient-to-r from-primaryLight to-primaryDark text-white': route.path === '/dashboard',
+                'bg-gradient-to-r from-primaryLight to-primaryDark text-white':
+                  route.path === '/dashboard',
                 'justify-center': collapsed,
               }"
             >
@@ -41,7 +63,8 @@
             <button
               class="flex items-center justify-between w-[calc(100%-1rem)] px-3 py-3 rounded-md mx-2 hover:bg-primaryLight hover:text-white transition-all duration-200 text-left"
               :class="{
-                'bg-gradient-to-r from-primaryLight to-primaryDark text-white': openGroup === group.label,
+                'bg-gradient-to-r from-primaryLight to-primaryDark text-white':
+                  openGroup === group.label,
                 'justify-center': collapsed,
               }"
               @click="toggleGroup(group.label)"
@@ -60,7 +83,11 @@
                 stroke-width="1.5"
                 :class="{ 'rotate-90': openGroup === group.label }"
               >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                />
               </svg>
             </button>
 
@@ -72,7 +99,8 @@
                     :title="collapsed ? child.label : ''"
                     class="flex items-center gap-3 p-3 rounded-md hover:bg-primaryLight hover:text-white mx-2 mb-2 transition-all duration-200 text-left"
                     :class="{
-                      'bg-gradient-to-r from-primaryLight to-primaryDark text-white': route.path === child.path,
+                      'bg-gradient-to-r from-primaryLight to-primaryDark text-white':
+                        route.path === child.path,
                       'justify-center': collapsed,
                     }"
                   >
@@ -102,8 +130,19 @@
           class="flex items-center gap-3 p-3 rounded-md hover:bg-danger hover:text-white mx-1 mb-2 w-full transition-all duration-200 text-left"
           :class="{ 'justify-center': collapsed }"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25a.75.75 0 00-.75-.75H5.25A.75.75 0 004.5 5.25v13.5a.75.75 0 00.75.75h9.75a.75.75 0 00.75-.75V15m3 0l3-3m0 0l-3-3m3 3H9" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-6 h-6 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15.75 9V5.25a.75.75 0 00-.75-.75H5.25A.75.75 0 004.5 5.25v13.5a.75.75 0 00.75.75h9.75a.75.75 0 00.75-.75V15m3 0l3-3m0 0l-3-3m3 3H9"
+            />
           </svg>
           <span v-if="!collapsed">Logout</span>
         </button>
@@ -120,27 +159,53 @@
     <!-- Main content -->
     <div class="flex-1 flex flex-col min-h-screen md:min-h-0">
       <!-- Top Navbar -->
-      <header class="bg-gradient-to-r from-primaryLight to-primaryDark text-white h-16 flex justify-between items-center px-4">
+      <header
+        class="bg-gradient-to-r from-primaryLight to-primaryDark text-white h-16 flex justify-between items-center px-4"
+      >
         <div class="flex items-center gap-3">
           <!-- Hamburger only visible on mobile -->
-          <button class="md:hidden focus:outline-none" @click="showMobileSidebar = true">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5M3.75 12h16.5M3.75 18.75h16.5" />
+          <button
+            class="md:hidden focus:outline-none"
+            @click="showMobileSidebar = true"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-7 h-7"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M3.75 5.25h16.5M3.75 12h16.5M3.75 18.75h16.5"
+              />
             </svg>
           </button>
-          <h1 class="text-lg sm:text-xl font-semibold text-surface">{{ pageTitle }}</h1>
+          <h1 class="text-lg sm:text-xl font-semibold text-surface">
+            {{ pageTitle }}
+          </h1>
         </div>
 
         <div class="flex items-center gap-4 px-2 sm:px-6">
-          <span class="hidden sm:block text-gray-100">{{ currentUserName }}</span>
+          <span class="hidden sm:block text-gray-100">{{
+            currentUserName
+          }}</span>
           <router-link to="/profile">
-            <img :src="avatarUrl" alt="Profile" class="w-8 h-8 rounded-full ring-2 ring-white cursor-pointer hover:opacity-80 transition" />
+            <img
+              :src="avatarUrl"
+              alt="Profile"
+              class="w-8 h-8 rounded-full ring-2 ring-white cursor-pointer hover:opacity-80 transition"
+            />
           </router-link>
         </div>
       </header>
 
       <!-- Page Content -->
-      <main class="flex-1 w-full p-4 sm:p-6 lg:p-8 overflow-x-hidden md:overflow-y-auto md:max-h-[calc(100vh-4rem)]">
+      <main
+        class="flex-1 w-full p-4 sm:p-6 lg:p-8 overflow-x-hidden md:overflow-y-auto md:max-h-[calc(100vh-4rem)]"
+      >
         <slot />
       </main>
     </div>
@@ -159,8 +224,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import {
   HomeIcon,
   ClipboardDocumentListIcon,
@@ -174,103 +239,151 @@ import {
   FolderIcon,
   ClockIcon,
   KeyIcon,
-} from '@heroicons/vue/24/outline'
-import { useAuthStore } from '@/stores/useAuthStore'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import { provideConfirmDialog } from '@/stores/useConfirmDialog'
+} from '@heroicons/vue/24/outline';
+import { useAuthStore } from '@/stores/useAuthStore';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import { provideConfirmDialog } from '@/stores/useConfirmDialog';
+import { useAuthorization } from '@/composables/useAuthorization';
 
-const collapsed = ref(false)
-const showMobileSidebar = ref(false)
-const openGroup = ref(null)
-const route = useRoute()
-const authStore = useAuthStore()
+const collapsed = ref(false);
+const showMobileSidebar = ref(false);
+const openGroup = ref(null);
+const route = useRoute();
+const authStore = useAuthStore();
+const { hasPermission } = useAuthorization();
 const {
   state: confirmState,
   confirm: resolveConfirmDialog,
   cancel: cancelConfirmDialog,
   open: openConfirmDialog,
-} = provideConfirmDialog()
+} = provideConfirmDialog();
 
 function toggleGroup(label) {
-  openGroup.value = openGroup.value === label ? null : label
+  openGroup.value = openGroup.value === label ? null : label;
 }
 
 function toggleCollapse() {
-  if (window.innerWidth >= 768) collapsed.value = !collapsed.value
-  else showMobileSidebar.value = !showMobileSidebar.value
+  if (window.innerWidth >= 768) collapsed.value = !collapsed.value;
+  else showMobileSidebar.value = !showMobileSidebar.value;
 }
 
 function handleItemClick() {
   if (window.innerWidth < 768) {
-    showMobileSidebar.value = false
+    showMobileSidebar.value = false;
   }
 }
 
 watch(
   () => route.path,
   () => {
-    handleItemClick()
+    handleItemClick();
   }
-)
+);
 
 const baseMenu = [
   {
     label: 'Pengujian',
     icon: FolderIcon,
     children: [
-      { label: 'Permintaan', path: '/permintaan', icon: ClipboardDocumentListIcon },
+      {
+        label: 'Permintaan',
+        path: '/permintaan',
+        icon: ClipboardDocumentListIcon,
+      },
       { label: 'Kaji Ulang', path: '/kaji-ulang', icon: CheckCircleIcon },
     ],
   },
   {
     label: 'Layanan & Tarif',
     icon: Cog6ToothIcon,
-    children: [{ label: 'Daftar Layanan', path: '/layanan', icon: Cog6ToothIcon }],
+    children: [
+      { label: 'Daftar Layanan', path: '/layanan', icon: Cog6ToothIcon },
+    ],
   },
   {
     label: 'Cetak',
     icon: BriefcaseIcon,
     children: [
       { label: 'Validasi', path: '/validasi', icon: CheckCircleIcon },
-      { label: 'Kartu Kendali', path: '/kartu-kendali', icon: IdentificationIcon },
+      {
+        label: 'Kartu Kendali',
+        path: '/kartu-kendali',
+        icon: IdentificationIcon,
+      },
       { label: 'Surat Perintah', path: '/surat-perintah', icon: BriefcaseIcon },
     ],
   },
   {
     label: 'Laporan',
     icon: ChartBarIcon,
-    children: [{ label: 'Keuangan', path: '/laporan-keuangan', icon: CreditCardIcon }],
+    children: [
+      { label: 'Keuangan', path: '/laporan-keuangan', icon: CreditCardIcon },
+    ],
   },
   {
     label: 'Monitoring',
     icon: ClockIcon,
-    children: [{ label: 'Riwayat Aktivitas', path: '/riwayat', icon: ClockIcon }],
+    children: [
+      { label: 'Riwayat Aktivitas', path: '/riwayat', icon: ClockIcon },
+    ],
   },
   {
     label: 'Manajemen Pengguna',
     icon: UserGroupIcon,
     children: [
-      { label: 'Pengguna', path: '/users', icon: UserGroupIcon },
-      { label: 'Role', path: '/roles', icon: Cog6ToothIcon },
-      { label: 'Permission', path: '/permissions', icon: Cog6ToothIcon },
-      { label: 'Kode Undangan', path: '/kode-undangan', icon: KeyIcon },
+      {
+        label: 'Pengguna',
+        path: '/users',
+        icon: UserGroupIcon,
+        requiredPermission: 'users.index',
+      },
+      {
+        label: 'Role',
+        path: '/roles',
+        icon: Cog6ToothIcon,
+        requiredPermission: 'roles.index',
+      },
+      {
+        label: 'Permission',
+        path: '/permissions',
+        icon: Cog6ToothIcon,
+        requiredPermission: 'permissions.index',
+      },
+      {
+        label: 'Kode Undangan',
+        path: '/kode-undangan',
+        icon: KeyIcon,
+        requiredPermission: 'users.store',
+      },
     ],
   },
-]
+];
 
-const groupedMenu = computed(() => baseMenu)
+const groupedMenu = computed(() =>
+  baseMenu
+    .map((group) => {
+      const allowedChildren = group.children.filter((child) => {
+        if (!child.requiredPermission) return true;
+        return hasPermission(child.requiredPermission);
+      });
+      return { ...group, children: allowedChildren };
+    })
+    .filter((group) => group.children.length)
+);
 
 const pageTitle = computed(() => {
   const activeChild = groupedMenu.value
     .flatMap((g) => g.children)
-    .find((i) => i.path === route.path)
-  if (activeChild) return activeChild.label
-  const raw = route.path.replace('/', '') || 'Dashboard'
-  return raw.charAt(0).toUpperCase() + raw.slice(1)
-})
+    .find((i) => i.path === route.path);
+  if (activeChild) return activeChild.label;
+  const raw = route.path.replace('/', '') || 'Dashboard';
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+});
 
-const currentUserName = computed(() => authStore.currentUser?.name || 'Guest')
-const avatarUrl = computed(() => authStore.currentUser?.avatarUrl || '/img/avatar-default.png')
+const currentUserName = computed(() => authStore.currentUser?.name || 'Guest');
+const avatarUrl = computed(
+  () => authStore.currentUser?.avatarUrl || '/img/avatar-default.png'
+);
 
 async function logout() {
   const ok = await openConfirmDialog({
@@ -278,10 +391,10 @@ async function logout() {
     message: 'Sesi Anda akan ditutup dan perlu login kembali.',
     confirmLabel: 'Logout',
     variant: 'danger',
-  })
-  if (!ok) return
-  authStore.logout()
-  window.location.href = '/login'
+  });
+  if (!ok) return;
+  authStore.logout();
+  window.location.href = '/login';
 }
 </script>
 
@@ -300,6 +413,3 @@ aside::-webkit-scrollbar {
   transform: translateY(-5px);
 }
 </style>
-
-
-

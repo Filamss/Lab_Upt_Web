@@ -1,23 +1,38 @@
 <template>
   <div class="space-y-5">
-    <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h2 class="text-xl font-semibold text-surfaceDark sm:text-2xl">Manajemen Pengguna</h2>
-        <p class="text-sm text-gray-500">
-          Atur akun, role, dan status akses pengguna Sistem Informasi Pelayanan Pengujian.
-        </p>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <button
-          class="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
-          @click="refreshUsers"
-        >
+    <div
+      v-if="!canViewUsers"
+      class="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700"
+    >
+      <p class="text-base font-semibold">Akses ditolak</p>
+      <p class="mt-1">
+        Anda tidak memiliki izin untuk mengakses halaman manajemen pengguna. Hubungi administrator
+        bila Anda memerlukan akses users.index.
+      </p>
+    </div>
+
+    <template v-else>
+      <header
+        class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div>
+          <h2 class="text-xl font-semibold text-surfaceDark sm:text-2xl">Manajemen Pengguna</h2>
+          <p class="text-sm text-gray-500">
+            Atur akun, role, dan status akses pengguna Sistem Informasi Pelayanan Pengujian.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button
+            class="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
+            @click="refreshUsers"
+          >
           <ArrowPathIcon
             :class="['h-5 w-5', userStore.loading ? 'animate-spin text-primary' : 'text-gray-500']"
           />
           Muat Ulang
         </button>
         <button
+          v-if="canCreateUser"
           class="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
           @click="openCreateForm"
         >
@@ -142,11 +157,19 @@
               >
                 {{ row.isActive ? 'Aktif' : 'Tidak Aktif' }}
               </span>
-              <label class="relative inline-flex cursor-pointer items-center">
+              <label
+                class="relative inline-flex items-center"
+                :class="[
+                  canUpdateUser
+                    ? 'cursor-pointer'
+                    : 'cursor-not-allowed opacity-60 pointer-events-none',
+                ]"
+              >
                 <input
                   :checked="row.isActive"
                   type="checkbox"
                   class="peer sr-only"
+                  :disabled="!canUpdateUser"
                   @change="(event) => handleToggleStatus(row, event.target.checked)"
                 />
                 <div class="h-5 w-10 rounded-full bg-gray-300 transition peer-checked:bg-primary"></div>
@@ -175,6 +198,7 @@
           <template #actions="{ row }">
             <div class="flex gap-1">
               <button
+                v-if="canUpdateUser"
                 class="rounded-md inline-flex items-center gap-1 p-1.5 text-primary transition hover:bg-primary/10"
                 title="Edit pengguna"
                 @click="openEditForm(row)"
@@ -182,6 +206,7 @@
                 <PencilSquareIcon class="h-4 w-4" />
               </button>
               <button
+                v-if="canDeleteUser"
                 class="rounded-md inline-flex items-center gap-1 p-1.5 text-danger transition hover:bg-danger/10"
                 title="Hapus pengguna"
                 @click="handleDelete(row)"
@@ -249,6 +274,7 @@
         </div>
       </div>
     </transition>
+    </template>
   </div>
 </template>
 
@@ -266,10 +292,17 @@ import FormUser from '@/components/form/FormUser.vue';
 import { useUserStore } from '@/stores/useUserStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useConfirmDialog } from '@/stores/useConfirmDialog';
+import { useAuthorization } from '@/composables/useAuthorization';
 
 const userStore = useUserStore();
 const roleStore = useRoleStore();
 const openConfirm = useConfirmDialog();
+const { hasPermission } = useAuthorization();
+
+const canViewUsers = computed(() => hasPermission('users.index'));
+const canCreateUser = computed(() => hasPermission('users.store'));
+const canUpdateUser = computed(() => hasPermission('users.update'));
+const canDeleteUser = computed(() => hasPermission('users.destroy'));
 
 const columns = [
   { field: 'name', title: 'Nama', isSortable: false },
@@ -329,6 +362,7 @@ const lastRefreshedLabel = computed(() => {
 watch(
   searchTerm,
   (value) => {
+    if (!canViewUsers.value) return;
     userStore.setSearch(value);
     if (!initialized.value) return;
     clearTimeout(debounceTimer);
@@ -341,6 +375,7 @@ watch(
 watch(
   selectedRole,
   (value) => {
+    if (!canViewUsers.value) return;
     userStore.setRoleFilter(value);
     if (!initialized.value) return;
     userStore.fetchUsers({ page: 1, roleId: value });
@@ -350,6 +385,7 @@ watch(
 watch(
   statusFilter,
   (value) => {
+    if (!canViewUsers.value) return;
     userStore.setStatusFilter(value);
     if (!initialized.value) return;
     const mapped = value === 'inactive' ? 'inactive' : value === 'active' ? 'active' : '';
@@ -361,6 +397,7 @@ watch(
 );
 
 onMounted(async () => {
+  if (!canViewUsers.value) return;
   await Promise.all([roleStore.fetchRoles({ perPage: 100 }), userStore.fetchUsers()]);
   lastRefreshedAt.value = new Date();
   initialized.value = true;
@@ -377,6 +414,7 @@ function formatDate(value) {
 }
 
 async function refreshUsers() {
+  if (!canViewUsers.value) return;
   await userStore.fetchUsers({
     page: userStore.pagination.currentPage,
     search: userStore.filters.search,
@@ -387,17 +425,22 @@ async function refreshUsers() {
 }
 
 async function changePage(page) {
+  if (!canViewUsers.value) return;
   await userStore.changePage(page);
   lastRefreshedAt.value = new Date();
 }
 
 function openCreateForm() {
+  if (!canViewUsers.value) return;
+  if (!canCreateUser.value) return;
   selectedUser.value = null;
   isEdit.value = false;
   showForm.value = true;
 }
 
 function openEditForm(user) {
+  if (!canViewUsers.value) return;
+  if (!canUpdateUser.value) return;
   selectedUser.value = { ...user };
   isEdit.value = true;
   showForm.value = true;
@@ -410,9 +453,12 @@ function closeForm() {
 }
 
 async function handleSubmit(payload) {
+  if (!canViewUsers.value) return;
   if (isEdit.value && selectedUser.value) {
+    if (!canUpdateUser.value) return;
     await userStore.updateUser(selectedUser.value.id, payload);
   } else {
+    if (!canCreateUser.value) return;
     await userStore.createUser(payload);
   }
   closeForm();
@@ -420,6 +466,8 @@ async function handleSubmit(payload) {
 }
 
 async function handleDelete(user) {
+  if (!canViewUsers.value) return;
+  if (!canDeleteUser.value) return;
   if (!user?.id) return;
   const ok = await openConfirm({
     title: 'Hapus pengguna?',
@@ -433,6 +481,8 @@ async function handleDelete(user) {
 }
 
 async function handleToggleStatus(user, isActive) {
+  if (!canViewUsers.value) return;
+  if (!canUpdateUser.value) return;
   await userStore.toggleActive(user.id, isActive);
   lastRefreshedAt.value = new Date();
 }

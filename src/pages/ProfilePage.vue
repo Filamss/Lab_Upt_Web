@@ -211,10 +211,8 @@
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { useUserStore } from '@/stores/useUserStore'
 
 const authStore = useAuthStore()
-const userStore = useUserStore()
 const { currentUser: user } = storeToRefs(authStore)
 
 const editMode = ref(false)
@@ -370,17 +368,17 @@ const saveProfile = async () => {
       avatar: avatarFile.value || undefined,
     }
 
-    const { data: updated } = await userStore.updateUser(user.value.id, payload)
-    authStore.currentUser = updated
-
-    await authStore.init()
+    const result = await authStore.updateProfile(payload)
+    if (!result?.ok) {
+      throw new Error(result?.message || 'Gagal menyimpan profil')
+    }
 
     editMode.value = false
     previewAvatar.value = null
     avatarFile.value = null
     form.password = ''
 
-    window.alert('Profile updated successfully!')
+    window.alert(result?.message || 'Profile updated successfully!')
   } catch (err) {
     console.error('Error saving profile:', err)
     window.alert('Failed to update profile.')
