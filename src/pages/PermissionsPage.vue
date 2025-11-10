@@ -161,9 +161,9 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { ArrowPathIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
-import DataTable from '@/components/DataTable.vue';
+import DataTable from '@/components/common/DataTable.vue';
 import { usePermissionStore } from '@/stores/usePermissionStore';
-import { useAuthorization } from '@/composables/useAuthorization';
+import { useAuthorization } from '@/composables/auth/useAuthorization';
 const permissionStore = usePermissionStore();
 const { hasPermission } = useAuthorization();
 
@@ -253,3 +253,4 @@ async function changePage(page) {
   opacity: 0;
 }
 </style>
+

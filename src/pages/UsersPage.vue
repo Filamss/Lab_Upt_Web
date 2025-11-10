@@ -287,12 +287,12 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@heroicons/vue/24/outline';
-import DataTable from '@/components/DataTable.vue';
+import DataTable from '@/components/common/DataTable.vue';
 import FormUser from '@/components/form/FormUser.vue';
 import { useUserStore } from '@/stores/useUserStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useConfirmDialog } from '@/stores/useConfirmDialog';
-import { useAuthorization } from '@/composables/useAuthorization';
+import { useAuthorization } from '@/composables/auth/useAuthorization';
 
 const userStore = useUserStore();
 const roleStore = useRoleStore();
@@ -498,3 +498,4 @@ async function handleToggleStatus(user, isActive) {
   opacity: 0;
 }
 </style>
+

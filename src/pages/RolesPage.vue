@@ -309,12 +309,12 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@heroicons/vue/24/outline';
-import DataTable from '@/components/DataTable.vue';
+import DataTable from '@/components/common/DataTable.vue';
 import FormRole from '@/components/form/FormRole.vue';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { usePermissionStore } from '@/stores/usePermissionStore';
 import { useConfirmDialog } from '@/stores/useConfirmDialog';
-import { useAuthorization } from '@/composables/useAuthorization';
+import { useAuthorization } from '@/composables/auth/useAuthorization';
 
 const roleStore = useRoleStore();
 const permissionStore = usePermissionStore();
@@ -566,3 +566,4 @@ async function handleSetDefault(role) {
   opacity: 0;
 }
 </style>
+

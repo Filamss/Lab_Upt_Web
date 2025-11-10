@@ -484,7 +484,7 @@ import {
 } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/useAuthStore';
-import AlertBanner from '@/components/AlertBanner.vue';
+import AlertBanner from '@/components/feedback/AlertBanner.vue';
 import {
   EyeIcon as OutlineEyeIcon,
   EyeSlashIcon,
@@ -1091,3 +1091,4 @@ const FormPasswordField = defineComponent({
   transform: translateY(16px);
 }
 </style>
+

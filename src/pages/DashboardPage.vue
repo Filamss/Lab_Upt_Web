@@ -171,8 +171,8 @@ import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 import { useCustomerStore } from '@/stores/useCustomerStore';
 import { useActivityStore } from '@/stores/useActivityStore';
 import { useUserStore } from '@/stores/useUserStore';
-import StatCard from '@/components/StatCard.vue';
-import Badge from '@/components/Badge.vue';
+import StatCard from '@/components/common/StatCard.vue';
+import Badge from '@/components/common/Badge.vue';
 
 // === Store setup ===
 const orderStore = useKajiUlangStore();
@@ -264,3 +264,4 @@ const visibleActivities = computed(() =>
   color: #075985;
 }
 </style>
+

@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia'
 import api from '@/services/apiServices'
 import { useActivityStore } from '@/stores/useActivityStore'
+import { tokenStorage } from '@/utils/storage/tokenStorage'
 
 const isString = (value) => typeof value === 'string'
 
@@ -85,7 +86,7 @@ const buildProfileFormData = (payload = {}) => {
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     currentUser: JSON.parse(localStorage.getItem('currentUser') || 'null'),
-    token: localStorage.getItem('token') || null,
+    token: tokenStorage.get(),
     loading: false,
   }),
 
@@ -163,7 +164,7 @@ export const useAuthStore = defineStore('auth', {
         this.token = token
         this.currentUser = user
 
-        localStorage.setItem('token', token)
+        tokenStorage.set(token)
         localStorage.setItem('currentUser', JSON.stringify(user))
 
         let hydratedUser = user
@@ -408,7 +409,9 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async fetchProfile({ force = false, include } = {}) {
-      if (!this.token) {
+      const activeToken = this.token || tokenStorage.get()
+      this.token = activeToken
+      if (!activeToken) {
         this.currentUser = null
         const activityStore = useActivityStore()
         activityStore.setActiveUser(null)
@@ -511,7 +514,7 @@ export const useAuthStore = defineStore('auth', {
       } catch {}
       this.currentUser = null
       this.token = null
-      localStorage.removeItem('token')
+      tokenStorage.clear()
       localStorage.removeItem('currentUser')
 
       if (lastUser) {

@@ -1,6 +1,7 @@
 // src/services/apiServices.js
 import axios from 'axios';
 import router from '@/router';
+import { tokenStorage } from '@/utils/storage/tokenStorage';
 
 const rawApiUrl = import.meta.env.VITE_API_URL?.trim();
 const isDev = import.meta.env.DEV;
@@ -32,7 +33,7 @@ const api = axios.create({
 // Menyisipkan token otomatis sebelum kirim request
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = tokenStorage.get();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -50,7 +51,7 @@ api.interceptors.response.use(
     const config = error.config || {};
     if (status === 401 && !config.skipAuthRedirect) {
       // Token invalid / expired -> logout dan arahkan ke login
-      localStorage.removeItem('token');
+      tokenStorage.clear();
       localStorage.removeItem('currentUser');
       delete axios.defaults.headers.common.Authorization;
 

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/useAuthStore';
-import { buildPermissionSet, isSuperAdminUser } from '@/composables/useAuthorization';
+import { buildPermissionSet, isSuperAdminUser } from '@/composables/auth/useAuthorization';
+import { tokenStorage } from '@/utils/storage/tokenStorage';
 import DashboardPage from '../pages/DashboardPage.vue';
 
 // Lazy-load pages
@@ -95,7 +96,7 @@ router.beforeEach((to, from, next) => {
     return next();
   }
 
-  const token = authStore.token || localStorage.getItem('token');
+  const token = authStore.token || tokenStorage.get();
   if (!authStore.currentUser && token && !authStore.loading) {
     authStore.init().catch((err) => {
       console.warn('Gagal sinkronisasi pengguna saat navigasi', err);

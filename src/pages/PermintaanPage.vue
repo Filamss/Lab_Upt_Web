@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="space-y-3">
     <!-- Header -->
     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -108,7 +108,7 @@
             @click="closeModal"
             class="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
           >
-            âœ•
+            ✕
           </button>
 
           <FormPermintaan
@@ -141,7 +141,7 @@ import { useTestStore } from '@/stores/useTestStore';
 import { PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import FormPermintaan from '@/components/form/FormPermintaan.vue';
 import FormPayment from '@/components/form/FormPayment.vue';
-import Badge from '@/components/Badge.vue';
+import Badge from '@/components/common/Badge.vue';
 import DataTable from '../components/DataTable.vue';
 import { useConfirmDialog } from '@/stores/useConfirmDialog';
 
@@ -393,3 +393,4 @@ async function handlePaymentSaved(detail) {
   opacity: 0;
 }
 </style>
+

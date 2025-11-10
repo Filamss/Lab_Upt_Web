@@ -44,7 +44,7 @@
 import { reactive, computed } from 'vue';
 import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 import { useCustomerStore } from '@/stores/useCustomerStore';
-import DataTable from '@/components/DataTable.vue';
+import DataTable from '@/components/common/DataTable.vue';
 
 const orderStore = useKajiUlangStore();
 const customerStore = useCustomerStore();
@@ -101,3 +101,4 @@ function exportCsv() {
   document.body.removeChild(link);
 }
 </script>
+

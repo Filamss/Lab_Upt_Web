@@ -241,9 +241,9 @@ import {
   KeyIcon,
 } from '@heroicons/vue/24/outline';
 import { useAuthStore } from '@/stores/useAuthStore';
-import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import ConfirmDialog from '@/components/feedback/ConfirmDialog.vue';
 import { provideConfirmDialog } from '@/stores/useConfirmDialog';
-import { useAuthorization } from '@/composables/useAuthorization';
+import { useAuthorization } from '@/composables/auth/useAuthorization';
 
 const collapsed = ref(false);
 const showMobileSidebar = ref(false);
@@ -413,3 +413,4 @@ aside::-webkit-scrollbar {
   transform: translateY(-5px);
 }
 </style>
+

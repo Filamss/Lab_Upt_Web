@@ -199,8 +199,8 @@
 
 <script setup>
 import { reactive, ref, computed } from 'vue';
-import DataTable from '@/components/DataTable.vue';
-import Badge from '@/components/Badge.vue';
+import DataTable from '@/components/common/DataTable.vue';
+import Badge from '@/components/common/Badge.vue';
 import FormKajiUlang from '@/components/form/FormKajiUlang.vue';
 import { PencilIcon, TrashIcon, EyeIcon, XCircleIcon } from '@heroicons/vue/24/outline';
 import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
@@ -653,3 +653,4 @@ function formatFileSize(size) {
   return `${value.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`;
 }
 </script>
+

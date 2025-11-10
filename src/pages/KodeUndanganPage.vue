@@ -202,7 +202,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ArrowPathIcon, DocumentDuplicateIcon, PlusIcon } from '@heroicons/vue/24/outline';
 import { useKodeUndanganStore } from '@/stores/useKodeUndanganStore';
 import { useRoleStore } from '@/stores/useRoleStore';
-import { useAuthorization } from '@/composables/useAuthorization';
+import { useAuthorization } from '@/composables/auth/useAuthorization';
 
 const kodeUndanganStore = useKodeUndanganStore();
 const roleStore = useRoleStore();

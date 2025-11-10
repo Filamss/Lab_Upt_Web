@@ -94,7 +94,7 @@
 import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/useAuthStore';
-import AlertBanner from '@/components/AlertBanner.vue';
+import AlertBanner from '@/components/feedback/AlertBanner.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -268,3 +268,4 @@ onBeforeUnmount(() => {
   }
 });
 </script>
+
