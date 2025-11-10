@@ -733,16 +733,42 @@ function getRowClasses() {
 }
 
 function getSelectionCellClasses() {
-  const classes = [
-    'px-2 py-2 text-left md:px-3 md:py-3 md:text-center w-12 max-w-[48px] min-w-[32px]',
-  ];
   if (isStackMode.value) {
-    classes.unshift('flex items-center justify-between gap-3');
-    classes.push('md:table-cell');
-  } else {
-    classes.unshift('table-cell align-middle text-center');
+    return [
+      'flex',
+      'items-center',
+      'justify-between',
+      'gap-3',
+      'w-full',
+      'px-3',
+      'py-2',
+      'rounded-xl',
+      'border',
+      'border-gray-100',
+      'bg-white',
+      'md:table-cell',
+      'md:w-12',
+      'md:max-w-[48px]',
+      'md:min-w-[32px]',
+      'md:px-3',
+      'md:py-3',
+      'md:rounded-none',
+      'md:border-0',
+      'md:bg-transparent',
+    ];
   }
-  return classes;
+  return [
+    'table-cell',
+    'align-middle',
+    'text-center',
+    'px-2',
+    'py-2',
+    'md:px-3',
+    'md:py-3',
+    'w-12',
+    'max-w-[48px]',
+    'min-w-[32px]',
+  ];
 }
 
 function getTheadClasses() {

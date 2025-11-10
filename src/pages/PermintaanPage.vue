@@ -12,7 +12,9 @@
           Buat Permintaan Pengujian baru atau kelola permintaan yang sudah ada.
         </p>
       </div>
-      <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+      <div
+        class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap"
+      >
         <button
           class="inline-flex w-full items-center justify-center rounded-md bg-gradient-to-r from-primaryLight to-primaryDark px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 sm:w-auto"
           @click="openAddModal"
@@ -43,12 +45,13 @@
       <div class="overflow-x-auto md:overflow-visible">
         <DataTable
           :columns="columns"
-          :rows="store.requestList"
+          :rows="tableRows"
           :page-size="10"
           searchable
           filterable
           selectable
           :status-options="requestStatusOptions"
+          row-key="__rowKey"
           scroll-body-on-mobile
           body-scroll-height="55vh"
           @update:selected="selectedRows = $event"
@@ -147,7 +150,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { usePermintaanStore } from '@/stores/usePermintaanStore';
 import { useTestStore } from '@/stores/useTestStore';
 import { PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
@@ -232,6 +235,13 @@ const requestStatusOptions = [
   { value: 'payment_review_rejected', label: 'Bukti Pembayaran Ditolak' },
   { value: 'cancelled', label: 'Dibatalkan' },
 ];
+
+const tableRows = computed(() =>
+  (store.requestList ?? []).map((row, index) => ({
+    ...row,
+    __rowKey: row.idOrder ? `${row.idOrder}-${index}` : `row-${index}`,
+  })),
+);
 
 // === Modal logic ===
 function openAddModal() {
@@ -405,5 +415,4 @@ async function handlePaymentSaved(detail) {
 .fade-leave-to {
   opacity: 0;
 }
-
 </style>
