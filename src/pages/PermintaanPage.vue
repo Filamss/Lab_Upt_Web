@@ -560,11 +560,17 @@ async function deleteSelected() {
 }
 
 function formatOrderNumber(row) {
-  if (!row || !row.orderNumber) return '-';
-  const year =
-    row.orderYear ||
-    (row.entryDate ? new Date(row.entryDate).getFullYear() : '');
-  return year ? `${row.orderNumber}/${year}` : String(row.orderNumber);
+  if (!row) return '-';
+  const explicit =
+    row.orderDisplay || row.orderCode || row.formattedOrder || row.orderNumber;
+  if (typeof explicit === 'string' && explicit.trim()) {
+    return explicit.trim();
+  }
+  const orderNumber = Number(row.orderNumber);
+  if (Number.isFinite(orderNumber)) {
+    return orderNumber.toString().padStart(3, '0');
+  }
+  return '-';
 }
 
 function resolveTestName(detail) {
