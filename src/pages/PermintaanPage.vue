@@ -91,7 +91,7 @@
           </template>
 
           <template #actions="{ row }">
-            <div class="flex gap-2 justify-center">
+            <div class="flex items-center justify-center gap-2">
               <button
                 class="p-1.5 rounded-md hover:bg-blue-50 text-blue-600 hover:text-blue-800"
                 @click="openEditModal(row)"
@@ -103,6 +103,14 @@
                 @click="deleteRequest(row)"
               >
                 <TrashIcon class="w-5 h-5" />
+              </button>
+              <button
+                class="p-1.5 rounded-md hover:bg-emerald-50 text-emerald-600 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                :title="canPrint(row) ? 'Preview & Cetak' : 'Cetak tersedia setelah pembayaran terverifikasi'"
+                :disabled="!canPrint(row)"
+                @click="openPreviewModal(row)"
+              >
+                <EyeIcon class="w-5 h-5" />
               </button>
             </div>
           </template>
@@ -146,6 +154,163 @@
       @close="closePaymentModal"
       @payment-saved="handlePaymentSaved"
     />
+
+    <transition name="fade">
+      <div
+        v-if="showPreviewModal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-2"
+      >
+        <div
+          class="relative w-[98vw] max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+        >
+          <button
+            class="absolute right-4 top-4 text-gray-500 transition hover:text-gray-700"
+            @click="closePreviewModal"
+          >
+            <span class="sr-only">Tutup</span>
+            ✕
+          </button>
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <img
+              :src="logoDinas"
+              alt="Logo Dinas Kabupaten Tegal"
+              class="h-16 w-16 object-contain"
+            />
+            <div>
+              <h3 class="text-xl font-semibold text-surfaceDark">
+                Preview Permintaan & Invoice
+              </h3>
+              <p class="text-sm text-gray-500">
+                Tinjau seluruh informasi sebelum mencetak dokumen resmi.
+              </p>
+            </div>
+          </div>
+          <div class="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <section class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <h4 class="text-sm font-semibold text-surfaceDark uppercase tracking-wide">
+                Detail Permintaan
+              </h4>
+              <dl class="mt-4 grid gap-3 text-sm text-gray-700 sm:grid-cols-2">
+                <div>
+                  <dt class="text-xs uppercase text-gray-500">ID Order</dt>
+                  <dd>{{ previewRequest?.idOrder || '-' }}</dd>
+                </div>
+                <div>
+                  <dt class="text-xs uppercase text-gray-500">Nomor Order</dt>
+                  <dd>{{ formatOrderNumber(previewRequest) }}</dd>
+                </div>
+                <div>
+                  <dt class="text-xs uppercase text-gray-500">Tanggal Masuk</dt>
+                  <dd>{{ formatFullDate(previewRequest?.entryDate) }}</dd>
+                </div>
+                <div>
+                  <dt class="text-xs uppercase text-gray-500">Status</dt>
+                  <dd>{{ translateStatus(previewRequest?.status) }}</dd>
+                </div>
+                <div>
+                  <dt class="text-xs uppercase text-gray-500">Customer</dt>
+                  <dd>{{ previewRequest?.customerName || '-' }}</dd>
+                </div>
+                <div>
+                  <dt class="text-xs uppercase text-gray-500">Kontak</dt>
+                  <dd>{{ previewRequest?.phoneNumber || '-' }}</dd>
+                </div>
+                <div class="sm:col-span-2">
+                  <dt class="text-xs uppercase text-gray-500">Alamat</dt>
+                  <dd>{{ previewRequest?.address || '-' }}</dd>
+                </div>
+              </dl>
+              <div class="mt-5">
+                <h5 class="text-xs font-semibold uppercase text-gray-500">
+                  Detail Pengujian
+                </h5>
+                <div class="mt-2 space-y-3">
+                  <article
+                    v-for="(item, idx) in previewRequest?.testItems || []"
+                    :key="`preview-test-${idx}`"
+                    class="rounded-lg border border-gray-200 bg-white p-3 text-sm"
+                  >
+                    <div class="flex items-center justify-between text-xs text-gray-500">
+                      <span>Pengujian {{ idx + 1 }}</span>
+                      <span>{{ item.quantity }} x</span>
+                    </div>
+                    <p class="mt-1 font-semibold text-surfaceDark">
+                      {{ item.testName || resolveTestName(item) }}
+                    </p>
+                    <p class="text-xs text-gray-500">
+                      {{ item.objectName || '-' }}
+                    </p>
+                    <p class="mt-1 text-sm text-gray-700">
+                      Tarif: {{ formatCurrency(item.price) }}
+                    </p>
+                  </article>
+                  <p
+                    v-if="!(previewRequest?.testItems || []).length"
+                    class="text-xs text-gray-500"
+                  >
+                    Belum ada detail pengujian.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section class="rounded-xl border border-gray-200 p-4">
+              <h4 class="text-sm font-semibold text-surfaceDark uppercase tracking-wide">
+                Ringkasan Pembayaran
+              </h4>
+              <div
+                class="mt-4 space-y-3 rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm text-gray-700"
+              >
+                <div class="flex items-center justify-between">
+                  <span>Total Tagihan</span>
+                  <strong>{{ formatCurrency(previewTotals.total) }}</strong>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span>Pembayaran Diterima</span>
+                  <strong>{{ formatCurrency(previewTotals.paid) }}</strong>
+                </div>
+                <div class="flex items-center justify-between text-amber-700">
+                  <span>Sisa Pembayaran</span>
+                  <strong>{{ formatCurrency(previewTotals.outstanding) }}</strong>
+                </div>
+              </div>
+              <div class="mt-4 space-y-2 text-xs text-gray-500">
+                <p>
+                  Status saat ini: <strong>{{ translateStatus(previewRequest?.status) }}</strong>
+                </p>
+                <p>
+                  Batas pembayaran mengikuti ketentuan invoice. Sample uji harap dikirim setelah
+                  pembayaran dan bukti dikonfirmasi.
+                </p>
+              </div>
+            </section>
+          </div>
+
+          <div
+            class="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end"
+          >
+            <button
+              class="w-full rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100 sm:w-auto"
+              @click="closePreviewModal"
+            >
+              Tutup
+            </button>
+            <button
+              class="w-full rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100 sm:w-auto"
+              @click="printFromPreview('request')"
+            >
+              Cetak Permintaan
+            </button>
+            <button
+              class="w-full rounded-md bg-primary text-white px-4 py-2 text-sm font-semibold transition hover:bg-primaryDark sm:w-auto"
+              @click="printFromPreview('invoice')"
+            >
+              Cetak Invoice
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -153,22 +318,31 @@
 import { ref, onMounted, computed } from 'vue';
 import { usePermintaanStore } from '@/stores/usePermintaanStore';
 import { useTestStore } from '@/stores/useTestStore';
-import { PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { PencilIcon, TrashIcon, EyeIcon } from '@heroicons/vue/24/outline';
 import FormPermintaan from '@/components/form/FormPermintaan.vue';
 import FormPayment from '@/components/form/FormPayment.vue';
 import Badge from '@/components/common/Badge.vue';
 import DataTable from '../components/common/DataTable.vue';
 import { useConfirmDialog } from '@/stores/useConfirmDialog';
 import { useNotificationCenter } from '@/stores/useNotificationCenter';
+import {
+  buildPermintaanPrintHtml,
+  formatCurrency,
+  formatFullDate,
+  translateStatus,
+} from '@/utils/printTemplates';
+import logoDinas from '@/assets/LOGO DINAS KAB TEGAL.png';
 
 const store = usePermintaanStore();
 const testStore = useTestStore();
 const showModal = ref(false);
 const showPaymentModal = ref(false);
+const showPreviewModal = ref(false);
 const isEdit = ref(false);
 const selectedRequest = ref(null);
 const selectedRows = ref([]);
 const paymentContext = ref(null);
+const previewRequest = ref(null);
 const openConfirm = useConfirmDialog();
 const { notify } = useNotificationCenter();
 const sampleShipmentMessage =
@@ -225,7 +399,7 @@ const columns = [
   {
     field: 'actions',
     title: 'Aksi',
-    className: 'md:shrink-0 md:w-24',
+    className: 'md:shrink-0 md:w-auto',
     sortable: false,
   },
 ];
@@ -246,6 +420,22 @@ const tableRows = computed(() =>
     __rowKey: row.idOrder ? `${row.idOrder}-${index}` : `row-${index}`,
   }))
 );
+
+const previewTotals = computed(() => {
+  const row = previewRequest.value;
+  if (!row) {
+    return { total: 0, paid: 0, outstanding: 0 };
+  }
+  const items = row.testItems || [];
+  const total = items.reduce((sum, item) => {
+    const quantity = Math.max(1, Number(item.quantity) || 1);
+    const price = Math.max(0, Number(item.price) || 0);
+    return sum + quantity * price;
+  }, 0);
+  const paid = Number(row.paymentInfo?.amountPaid || 0);
+  const outstanding = Math.max(0, total - paid);
+  return { total, paid, outstanding };
+});
 
 // === Modal logic ===
 function openAddModal() {
@@ -413,6 +603,75 @@ async function handlePaymentSaved(detail) {
     message: sampleShipmentMessage,
     duration: 8000,
   });
+}
+
+function canPrint(row) {
+  if (!row) return false;
+  const printableStatuses = ['payment_verified', 'completed', 'done'];
+  return printableStatuses.includes(row.status);
+}
+
+function openPreviewModal(row) {
+  previewRequest.value = row || null;
+  showPreviewModal.value = Boolean(row);
+}
+
+function closePreviewModal() {
+  showPreviewModal.value = false;
+  previewRequest.value = null;
+}
+
+function printFromPreview(type) {
+  if (!previewRequest.value) return;
+  printDocument(previewRequest.value, type);
+}
+
+function printDocument(row, type = 'request') {
+  if (!row) return;
+  const title =
+    type === 'invoice'
+      ? 'Invoice Pembayaran Permintaan'
+      : 'Form Permintaan Pengujian';
+  const html = buildPermintaanPrintHtml(row, type, {
+    logoSrc: logoDinas,
+    title,
+  });
+  const printWindow = window.open('', '_blank', 'width=900,height=650');
+  if (!printWindow) {
+    alert('Tidak dapat membuka jendela cetak. Izinkan pop-up pada browser Anda.');
+    return;
+  }
+  try {
+    printWindow.document.open('text/html', 'replace');
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    const triggerPrint = () => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (err) {
+        console.warn('Gagal memicu dialog print', err);
+      }
+    };
+    if ('onload' in printWindow) {
+      printWindow.onload = () => {
+        triggerPrint();
+      };
+    } else {
+      setTimeout(triggerPrint, 300);
+    }
+    printWindow.onafterprint = () => {
+      try {
+        printWindow.close();
+      } catch (err) {
+        console.warn('Gagal menutup jendela cetak', err);
+      }
+    };
+  } catch (err) {
+    console.error('Tidak dapat menulis konten ke jendela cetak', err);
+    alert('Terjadi kesalahan saat menyiapkan dokumen cetak.');
+  }
 }
 </script>
 

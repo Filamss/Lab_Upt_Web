@@ -195,12 +195,6 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           <button
             class="w-full rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100 sm:w-auto"
-            @click="downloadInvoice"
-          >
-            Unduh Invoice
-          </button>
-          <button
-            class="w-full rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100 sm:w-auto"
             @click="handleClose"
           >
             Tutup
@@ -378,10 +372,6 @@ async function savePayment() {
   };
   emit('payment-saved', detail);
   handleClose();
-}
-
-function downloadInvoice() {
-  alert('Fitur unduh invoice akan tersedia setelah integrasi dokumen.');
 }
 
 function handleClose() {
