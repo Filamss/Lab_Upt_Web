@@ -125,21 +125,34 @@
         class="fixed inset-0 bg-black/40 flex justify-center items-center z-50 px-2"
       >
         <div
-          class="bg-white rounded-2xl shadow-2xl w-[98vw] max-w-5xl max-h-[90vh] overflow-y-auto relative"
+          class="flex max-h-[90vh] w-[98vw] max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
         >
-          <button
-            @click="closeModal"
-            class="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
-          >
-            ✕
-          </button>
+          <div class="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white px-6 py-4">
+            <div>
+              <p class="text-sm uppercase tracking-wide text-gray-500">
+                {{ isEdit ? 'Edit Permintaan' : 'Tambah Permintaan' }}
+              </p>
+              <h3 class="text-lg font-semibold text-surfaceDark">
+                {{ selectedRequest?.idOrder || 'Permintaan Baru' }}
+              </h3>
+            </div>
+            <button
+              @click="closeModal"
+              class="rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+            >
+              <span class="sr-only">Tutup</span>
+              <XCircleIcon class="h-6 w-6" />
+            </button>
+          </div>
 
-          <FormPermintaan
-            :model-value="selectedRequest"
-            :is-edit="isEdit"
-            @submit="handleFormSubmit"
-            @cancel="closeModal"
-          />
+          <div class="flex-1 overflow-y-auto px-6 pb-6">
+            <FormPermintaan
+              :model-value="selectedRequest"
+              :is-edit="isEdit"
+              @submit="handleFormSubmit"
+              @cancel="closeModal"
+            />
+          </div>
         </div>
       </div>
     </transition>
@@ -318,7 +331,12 @@
 import { ref, onMounted, computed } from 'vue';
 import { usePermintaanStore } from '@/stores/usePermintaanStore';
 import { useTestStore } from '@/stores/useTestStore';
-import { PencilIcon, TrashIcon, EyeIcon } from '@heroicons/vue/24/outline';
+import {
+  PencilIcon,
+  TrashIcon,
+  EyeIcon,
+  XCircleIcon,
+} from '@heroicons/vue/24/outline';
 import FormPermintaan from '@/components/form/FormPermintaan.vue';
 import FormPayment from '@/components/form/FormPayment.vue';
 import Badge from '@/components/common/Badge.vue';

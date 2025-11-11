@@ -200,6 +200,103 @@
       </section>
 
       <section class="space-y-4">
+        <h2 class="text-lg font-semibold text-slate-900">Evaluasi Kaji Ulang</h2>
+        <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+          <table class="min-w-full table-fixed divide-y divide-slate-200 text-sm text-slate-700">
+            <thead class="bg-slate-50 text-slate-500">
+              <tr>
+                <th class="px-4 py-3 text-left font-semibold">No</th>
+                <th class="px-4 py-3 text-left font-semibold">Perihal</th>
+                <th class="px-4 py-3 text-left font-semibold">Hasil</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr>
+                <td class="px-4 py-3">1.</td>
+                <td class="px-4 py-3">Peralatan</td>
+                <td class="px-4 py-3">
+                  <select
+                    v-model="evaluation.equipment"
+                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  >
+                    <option value="">Pilih hasil</option>
+                    <option v-for="opt in yesNoOptions" :key="`equip-${opt}`" :value="opt">{{ opt }}</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3">2.</td>
+                <td class="px-4 py-3">Personel</td>
+                <td class="px-4 py-3">
+                  <select
+                    v-model="evaluation.personnel"
+                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  >
+                    <option value="">Pilih hasil</option>
+                    <option v-for="opt in yesNoOptions" :key="`person-${opt}`" :value="opt">{{ opt }}</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3">3.</td>
+                <td class="px-4 py-3">Waktu</td>
+                <td class="px-4 py-3">
+                  <select
+                    v-model="evaluation.time"
+                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  >
+                    <option value="">Pilih hasil</option>
+                    <option v-for="opt in yesNoOptions" :key="`time-${opt}`" :value="opt">{{ opt }}</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3">4.</td>
+                <td class="px-4 py-3">Kondisi</td>
+                <td class="px-4 py-3">
+                  <select
+                    v-model="evaluation.condition"
+                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  >
+                    <option value="">Pilih hasil</option>
+                    <option v-for="opt in conditionOptions" :key="`condition-${opt}`" :value="opt">{{ opt }}</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3">5.</td>
+                <td class="px-4 py-3">Laboratorium Subkontrak</td>
+                <td class="px-4 py-3">
+                  <select
+                    v-model="evaluation.subcontract"
+                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  >
+                    <option value="">Pilih hasil</option>
+                    <option v-for="opt in yesNoOptions" :key="`subcontract-${opt}`" :value="opt">{{ opt }}</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3">6.</td>
+                <td class="px-4 py-3">Metode Uji</td>
+                <td class="px-4 py-3">
+                  <select
+                    v-model="evaluation.method"
+                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  >
+                    <option value="">Pilih metode</option>
+                    <option v-for="method in methodOptions" :key="`method-${method}`" :value="method">
+                      {{ method }}
+                    </option>
+                  </select>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="space-y-4">
         <h2 class="text-lg font-semibold text-slate-900">Catatan Tambahan</h2>
         <textarea
           v-model="form.note"
@@ -239,7 +336,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 
 const props = defineProps({
   form: {
@@ -269,6 +366,42 @@ const props = defineProps({
 })
 
 defineEmits(['save-draft', 'lolos-kaji-ulang', 'tolak', 'close', 'lookup-order'])
+
+const yesNoOptions = ['Ada', 'Tidak']
+const conditionOptions = ['Siap Uji', 'Prepare Sampel']
+const defaultEvaluation = () => ({
+  equipment: '',
+  personnel: '',
+  time: '',
+  condition: '',
+  subcontract: '',
+  method: '',
+})
+
+watch(
+  () => props.form,
+  (val) => {
+    if (val && !val.evaluation) {
+      val.evaluation = defaultEvaluation()
+    }
+  },
+  { immediate: true }
+)
+
+const evaluation = computed(() => {
+  if (!props.form.evaluation) {
+    props.form.evaluation = defaultEvaluation()
+  }
+  return props.form.evaluation
+})
+
+const methodOptions = computed(() => {
+  const methods = (props.tests || [])
+    .map((test) => test?.method)
+    .filter((method) => typeof method === 'string' && method.trim())
+    .map((method) => method.trim())
+  return Array.from(new Set(methods))
+})
 
 const testItems = computed(() => {
   const items = props.form.testItems || []
@@ -317,6 +450,7 @@ const formattedOrderNumber = computed(() => {
   return orderYear.value ? `${number}/${orderYear.value}` : String(number)
 })
 
+
 const monthYearLabel = computed(() => {
   const date = resolveDate(props.form.date)
   if (date) {
@@ -332,6 +466,7 @@ const ensureTestCode = (item) => {
   if (item.testCode && item.testCode.trim()) return item.testCode
   if (item.testId) {
     const base = String(item.testId).split('-')[0]
+
     item.testCode = base
     return base
   }
