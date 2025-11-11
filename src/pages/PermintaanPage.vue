@@ -159,6 +159,7 @@ import FormPayment from '@/components/form/FormPayment.vue';
 import Badge from '@/components/common/Badge.vue';
 import DataTable from '../components/common/DataTable.vue';
 import { useConfirmDialog } from '@/stores/useConfirmDialog';
+import { useNotificationCenter } from '@/stores/useNotificationCenter';
 
 const store = usePermintaanStore();
 const testStore = useTestStore();
@@ -169,6 +170,9 @@ const selectedRequest = ref(null);
 const selectedRows = ref([]);
 const paymentContext = ref(null);
 const openConfirm = useConfirmDialog();
+const { notify } = useNotificationCenter();
+const sampleShipmentMessage =
+  'Sample uji harap dikirim ke Laboratorium UPT lab di Jalan Raya Dampyak KM 4, Kec. Kramat, Kabupaten Tegal, Jawa Tengah 52181 untuk proses kaji ulang.';
 
 onMounted(() => {
   store.fetchAll();
@@ -240,7 +244,7 @@ const tableRows = computed(() =>
   (store.requestList ?? []).map((row, index) => ({
     ...row,
     __rowKey: row.idOrder ? `${row.idOrder}-${index}` : `row-${index}`,
-  })),
+  }))
 );
 
 // === Modal logic ===
@@ -403,6 +407,12 @@ async function handlePaymentSaved(detail) {
     paymentInfo,
   });
   closePaymentModal();
+  notify({
+    tone: 'info',
+    title: 'Kirim Sampel Uji',
+    message: sampleShipmentMessage,
+    duration: 8000,
+  });
 }
 </script>
 

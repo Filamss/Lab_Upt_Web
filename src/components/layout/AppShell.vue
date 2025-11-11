@@ -189,6 +189,109 @@
         </div>
 
         <div class="flex items-center gap-4 px-2 sm:px-6">
+          <div
+            ref="notificationContainer"
+            class="relative"
+          >
+            <button
+              class="relative rounded-full bg-white/10 p-2 text-white/80 transition hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70"
+              aria-label="Notifikasi"
+              @click="toggleNotifications"
+              type="button"
+            >
+              <BellIcon class="h-5 w-5" />
+              <span
+                v-if="unreadCount"
+                class="absolute -top-1 -right-1 min-w-[1.5rem] rounded-full bg-rose-500 px-1 text-center text-[10px] font-semibold text-white"
+              >
+                {{ unreadCount > 9 ? '9+' : unreadCount }}
+              </span>
+            </button>
+            <transition name="fade">
+              <div
+                v-if="showNotifications"
+                class="absolute right-0 z-50 mt-3 w-80 origin-top-right rounded-2xl border border-gray-100 bg-white text-surface shadow-2xl"
+              >
+                <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                  <div>
+                    <p class="text-sm font-semibold text-surfaceDark">Notifikasi</p>
+                    <p class="text-xs text-gray-500">
+                      {{
+                        notificationItems.length
+                          ? `${notificationItems.length} notifikasi tersimpan`
+                          : 'Tidak ada notifikasi'
+                      }}
+                    </p>
+                  </div>
+                  <button
+                    v-if="notificationItems.length"
+                    class="text-xs font-medium text-primary hover:text-primaryDark"
+                    type="button"
+                    @click="clearStoredNotifications"
+                  >
+                    Bersihkan
+                  </button>
+                </div>
+                <ul class="max-h-96 divide-y divide-gray-100 overflow-y-auto">
+                  <li
+                    v-for="item in notificationItems"
+                    :key="item.id"
+                    class="flex items-start gap-3 px-4 py-3"
+                  >
+                    <div
+                      :class="[
+                        'mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl text-sm',
+                        toneMeta(item.tone).badge,
+                      ]"
+                    >
+                      <component
+                        :is="toneMeta(item.tone).icon"
+                        class="h-4 w-4"
+                      />
+                    </div>
+                    <div class="flex-1">
+                      <p class="text-sm font-semibold text-surfaceDark">
+                        {{ item.title }}
+                      </p>
+                      <p class="text-xs text-gray-600">
+                        {{ item.message }}
+                      </p>
+                      <p class="mt-1 text-[11px] uppercase tracking-wide text-gray-400">
+                        {{ formatNotificationTime(item.createdAt) }}
+                      </p>
+                    </div>
+                    <button
+                      class="text-gray-400 transition hover:text-gray-600"
+                      type="button"
+                      aria-label="Tutup notifikasi"
+                      @click="dismissStoredNotification(item.id)"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        class="h-4 w-4"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </li>
+                  <li
+                    v-if="!notificationItems.length"
+                    class="px-4 py-6 text-center text-sm text-gray-500"
+                  >
+                    Anda belum memiliki notifikasi baru.
+                  </li>
+                </ul>
+              </div>
+            </transition>
+          </div>
           <span class="hidden sm:block text-gray-100">{{
             currentUserName
           }}</span>
@@ -220,11 +323,15 @@
       @confirm="resolveConfirmDialog"
       @cancel="cancelConfirmDialog"
     />
+    <NotificationStack
+      :items="notificationState.queue"
+      @dismiss="dismissToastNotification"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import {
   HomeIcon,
@@ -239,10 +346,20 @@ import {
   FolderIcon,
   ClockIcon,
   KeyIcon,
+  BellIcon,
 } from '@heroicons/vue/24/outline';
+import {
+  CheckCircleIcon as CheckCircleSolidIcon,
+  ExclamationTriangleIcon as ExclamationSolidIcon,
+  InformationCircleIcon as InformationSolidIcon,
+  XCircleIcon as XCircleSolidIcon,
+} from '@heroicons/vue/24/solid';
 import { useAuthStore } from '@/stores/useAuthStore';
 import ConfirmDialog from '@/components/feedback/ConfirmDialog.vue';
+import NotificationStack from '@/components/feedback/NotificationStack.vue';
 import { provideConfirmDialog } from '@/stores/useConfirmDialog';
+import { provideNotificationCenter } from '@/stores/useNotificationCenter';
+import { useNotificationStore } from '@/stores/useNotificationStore';
 import { useAuthorization } from '@/composables/auth/useAuthorization';
 
 const collapsed = ref(false);
@@ -257,6 +374,16 @@ const {
   cancel: cancelConfirmDialog,
   open: openConfirmDialog,
 } = provideConfirmDialog();
+const {
+  state: notificationState,
+  dismiss: dismissToastNotification,
+  clearAll: clearToastNotifications,
+} = provideNotificationCenter();
+const notificationStore = useNotificationStore();
+const showNotifications = ref(false);
+const notificationContainer = ref(null);
+const notificationItems = computed(() => notificationStore.items);
+const unreadCount = computed(() => notificationStore.unreadCount);
 
 function toggleGroup(label) {
   openGroup.value = openGroup.value === label ? null : label;
@@ -266,6 +393,72 @@ function toggleCollapse() {
   if (window.innerWidth >= 768) collapsed.value = !collapsed.value;
   else showMobileSidebar.value = !showMobileSidebar.value;
 }
+
+function toggleNotifications() {
+  showNotifications.value = !showNotifications.value;
+}
+
+function clearStoredNotifications() {
+  notificationStore.clear();
+  clearToastNotifications();
+}
+
+function dismissStoredNotification(id) {
+  notificationStore.remove(id);
+}
+
+function formatNotificationTime(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return new Intl.DateTimeFormat('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: 'short',
+  }).format(date);
+}
+
+function toneMeta(tone) {
+  switch (tone) {
+    case 'success':
+      return {
+        badge: 'bg-emerald-100 text-emerald-700',
+        icon: CheckCircleSolidIcon,
+      };
+    case 'warning':
+      return {
+        badge: 'bg-amber-100 text-amber-700',
+        icon: ExclamationSolidIcon,
+      };
+    case 'error':
+      return {
+        badge: 'bg-rose-100 text-rose-700',
+        icon: XCircleSolidIcon,
+      };
+    default:
+      return {
+        badge: 'bg-sky-100 text-sky-700',
+        icon: InformationSolidIcon,
+      };
+  }
+}
+
+function handleDocumentClick(event) {
+  if (!showNotifications.value) return;
+  const container = notificationContainer.value;
+  if (container && container.contains(event.target)) return;
+  showNotifications.value = false;
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleDocumentClick);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick);
+});
 
 function handleItemClick() {
   if (window.innerWidth < 768) {
@@ -279,6 +472,12 @@ watch(
     handleItemClick();
   }
 );
+
+watch(showNotifications, (isOpen) => {
+  if (isOpen) {
+    notificationStore.markAllAsRead();
+  }
+});
 
 const baseMenu = [
   {

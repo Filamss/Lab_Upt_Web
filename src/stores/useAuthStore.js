@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia'
 import api from '@/services/apiServices'
 import { useActivityStore } from '@/stores/useActivityStore'
+import { useNotificationStore } from '@/stores/useNotificationStore'
 import { tokenStorage } from '@/utils/storage/tokenStorage'
 
 const isString = (value) => typeof value === 'string'
@@ -176,7 +177,9 @@ export const useAuthStore = defineStore('auth', {
         }
 
         const activityStore = useActivityStore()
+        const notificationStore = useNotificationStore()
         activityStore.setActiveUser(hydratedUser?.id ?? null)
+        notificationStore.setActiveUser(hydratedUser?.id ?? null)
         activityStore.addEvent({
           type: 'login',
           title: 'Login berhasil',
@@ -414,7 +417,9 @@ export const useAuthStore = defineStore('auth', {
       if (!activeToken) {
         this.currentUser = null
         const activityStore = useActivityStore()
+        const notificationStore = useNotificationStore()
         activityStore.setActiveUser(null)
+        notificationStore.setActiveUser(null)
         return null
       }
 
@@ -431,7 +436,9 @@ export const useAuthStore = defineStore('auth', {
         this.currentUser = user
         localStorage.setItem('currentUser', JSON.stringify(user))
         const activityStore = useActivityStore()
+        const notificationStore = useNotificationStore()
         activityStore.setActiveUser(user?.id ?? null)
+        notificationStore.setActiveUser(user?.id ?? null)
         return user
       } finally {
         this.loading = false
@@ -464,7 +471,9 @@ export const useAuthStore = defineStore('auth', {
         }
 
         const activityStore = useActivityStore()
+        const notificationStore = useNotificationStore()
         activityStore.setActiveUser(latestUser?.id ?? null)
+        notificationStore.setActiveUser(latestUser?.id ?? null)
         activityStore.addEvent({
           type: 'profile',
           title: 'Profil diperbarui',
@@ -503,7 +512,9 @@ export const useAuthStore = defineStore('auth', {
         }
       } else {
         const activityStore = useActivityStore()
+        const notificationStore = useNotificationStore()
         activityStore.setActiveUser(null)
+        notificationStore.setActiveUser(null)
       }
     },
 
@@ -519,6 +530,7 @@ export const useAuthStore = defineStore('auth', {
 
       if (lastUser) {
         const activityStore = useActivityStore()
+        const notificationStore = useNotificationStore()
         activityStore.setActiveUser(lastUser.id ?? null)
         activityStore.addEvent({
           type: 'login',
@@ -528,6 +540,7 @@ export const useAuthStore = defineStore('auth', {
           metadata: { email: lastUser.email },
         })
         activityStore.setActiveUser(null)
+        notificationStore.setActiveUser(null)
       }
     },
   },

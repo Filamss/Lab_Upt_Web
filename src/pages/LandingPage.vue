@@ -82,7 +82,7 @@
             <h2 class="text-3xl font-semibold text-slate-900">Lihat progres order secara mandiri</h2>
             <p class="text-base text-slate-600">
               Masukkan ID order Anda untuk mengetahui posisi permintaan di UPT Laboratorium Kabupaten Tegal.
-              Fitur ini mirip pelacakan status di aplikasi e-commerce sehingga memudahkan pemohon memantau progres.
+              
             </p>
 
             <form
@@ -287,8 +287,7 @@
         <div class="space-y-6" data-reveal data-reveal-delay="240">
           <h2 class="text-3xl font-semibold text-slate-900">Tentang UPT Laboratorium Kabupaten Tegal</h2>
           <p class="text-base text-slate-600">
-            UPT Laboratorium Kabupaten Tegal memberikan layanan pengujian kualitas lingkungan, kesehatan, dan
-            produk lokal untuk mendukung pembangunan daerah. Kami berkomitmen pada kualitas layanan, integritas,
+            UPT Laboratorium Kabupaten Tegal memberikan layanan pengujian kualitas perindustrian untuk mendukung pembangunan daerah. Kami berkomitmen pada kualitas layanan, integritas,
             dan hasil pengujian yang akurat.
           </p>
           <p class="text-base text-slate-600">
@@ -365,7 +364,7 @@
             <p class="text-sm text-slate-600">Senin - Jumat, 08.00 - 15.30 WIB</p>
 
             <p class="mt-6 text-sm font-semibold text-slate-900">Kontak</p>
-            <p class="text-sm text-slate-600">Jl. Dr. Soetomo No. 5, Slawi, Kabupaten Tegal</p>
+            <p class="text-sm text-slate-600">Jalan Raya Dampyak KM 4, Kec. Kramat, Kabupaten Tegal, Jawa Tengah 52181</p>
             <p class="text-sm text-slate-600">Email: uptlab@tegalkab.go.id</p>
             <p class="text-sm text-slate-600">Telp: (0283) 123456</p>
           </div>
@@ -465,12 +464,12 @@ const statusToStepKey = {
   cancelled: 'pending_payment',
 }
 
-const specialStatusMap = {
-  payment_review_rejected: {
-    title: 'Bukti Pembayaran Perlu Diperbaiki',
-    message:
-      'Bukti pembayaran yang Anda unggah belum dapat kami verifikasi. Silakan unggah ulang bukti pembayaran atau hubungi petugas keuangan untuk konfirmasi lebih lanjut.',
-  },
+  const specialStatusMap = {
+    payment_review_rejected: {
+      title: 'Bukti Pembayaran Perlu Diperbaiki',
+      message:
+        'Bukti pembayaran yang Anda unggah belum dapat kami verifikasi. Silakan unggah ulang bukti pembayaran atau hubungi petugas keuangan untuk konfirmasi lebih lanjut.',
+    },
   rejected: {
     title: 'Permintaan Ditolak',
     message:
