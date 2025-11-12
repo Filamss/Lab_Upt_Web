@@ -39,8 +39,15 @@
         scroll-body-on-mobile
         body-scroll-height="55vh"
       >
-        <template #sampleNo="{ value }">
-          <span class="text-sm text-gray-700">{{ value || '-' }}</span>
+        <template #sampleNo="{ row }">
+          <div class="text-sm text-gray-700">
+            <template v-if="row.sampleCodes && row.sampleCodes.length">
+              <p v-for="code in row.sampleCodes" :key="`${row.id}-sample-${code}`">
+                {{ code }}
+              </p>
+            </template>
+            <span v-else>-</span>
+          </div>
         </template>
         <template #date="{ value }">
           <span class="text-sm text-gray-700">{{
@@ -268,11 +275,18 @@ import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 import { useTestStore } from '@/stores/useTestStore';
 import { useConfirmDialog } from '@/stores/useConfirmDialog';
 import { usePermintaanStore } from '@/stores/usePermintaanStore';
+import { useNotificationCenter } from '@/stores/useNotificationCenter';
 
 const kajiUlangStore = useKajiUlangStore();
 const testStore = useTestStore();
 const openConfirm = useConfirmDialog();
 const permintaanStore = usePermintaanStore();
+const { notify } = useNotificationCenter();
+const pushToast = (options = {}) =>
+  notify({
+    duration: options.duration ?? 4500,
+    ...options,
+  });
 
 const showForm = ref(false);
 const editingOrderId = ref(null);
@@ -292,15 +306,15 @@ const makeDefaultReviewRows = () => [
   { topic: 'Laboratorium Subkontrak', result: '' },
 ];
 
-const cloneTestItems = (items = [], fallbackSample = '') =>
+const cloneTestItems = (items = []) =>
   items.map((item) => ({
     ...item,
     sampleNo:
       item.sampleNo !== undefined &&
       item.sampleNo !== null &&
       item.sampleNo !== ''
-        ? item.sampleNo
-        : fallbackSample || '',
+        ? String(item.sampleNo).trim()
+        : '',
     testCode:
       item.testCode && item.testCode.trim()
         ? item.testCode
@@ -395,6 +409,54 @@ const statusOptions = [
   { value: 'cancelled', label: 'Dibatalkan' },
 ];
 
+const formatOrderNumberForSample = (orderNumber) => {
+  if (orderNumber === null || orderNumber === undefined || orderNumber === '') return '--';
+  if (typeof orderNumber === 'number') return String(orderNumber).padStart(3, '0');
+  const trimmed = String(orderNumber).trim();
+  if (!trimmed) return '--';
+  return /^\d+$/.test(trimmed) ? trimmed.padStart(3, '0') : trimmed;
+};
+
+const resolveMonthYearLabel = (dateValue, fallbackYear = '') => {
+  if (dateValue) {
+    const parsed = new Date(dateValue);
+    if (!Number.isNaN(parsed.getTime())) {
+      const month = String(parsed.getMonth() + 1).padStart(2, '0');
+      return `${month}/${parsed.getFullYear()}`;
+    }
+  }
+  const now = new Date();
+  const year = fallbackYear || String(now.getFullYear());
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${month}/${year}`;
+};
+
+const deriveTestCode = (item = {}) => {
+  if (item.testCode && String(item.testCode).trim()) return String(item.testCode).trim();
+  if (item.testId) return String(item.testId).split('-')[0];
+  if (item.testName) return String(item.testName).trim();
+  if (item.name) return String(item.name).trim();
+  return '--';
+};
+
+const deriveSampleValue = (item = {}) => {
+  const value = item.sampleNo !== undefined && item.sampleNo !== null ? String(item.sampleNo).trim() : '';
+  if (value) return value;
+  if (item.sampleCode) return String(item.sampleCode).trim();
+  return '--';
+};
+
+const buildSampleCodes = (order = {}) => {
+  if (!Array.isArray(order.testItems) || !order.testItems.length) return [];
+  const prefix = resolveMonthYearLabel(order.date, order.orderYear);
+  const orderSegment = formatOrderNumberForSample(order.orderNumber);
+  return order.testItems.map((item, idx) => {
+    const code = deriveTestCode(item) || `ITEM-${idx + 1}`;
+    const sampleSegment = deriveSampleValue(item);
+    return `${prefix}.${orderSegment}/${code}/${sampleSegment}`;
+  });
+};
+
 const tableRows = computed(() =>
   kajiUlangStore.orders
     .filter((order) => !!order.paymentInfo && order.status !== 'cancelled')
@@ -406,10 +468,12 @@ const tableRows = computed(() =>
           : reviewStatus === 'rejected'
           ? 'payment_review_rejected'
           : 'payment_pending_review';
+      const sampleCodes = buildSampleCodes(order);
       return {
         id: order.id,
         orderNo: order.orderNo,
-        sampleNo: order.sampleNo || '',
+        sampleNo: sampleCodes.join(', ') || order.sampleNo || '',
+        sampleCodes,
         date: order.date || '',
         customerName: order.customerName || '',
         status: order.status,
@@ -452,7 +516,7 @@ function applyOrderToForm(order) {
     note: order.note || '',
     paymentInfo: clonePaymentInfo(order.paymentInfo),
   });
-  form.testItems = cloneTestItems(order.testItems || [], order.sampleNo);
+  form.testItems = cloneTestItems(order.testItems || []);
   setReviewRows(order.kajiUlangRows);
 }
 
@@ -489,9 +553,11 @@ function handleEdit(row) {
     kajiUlangStore.orders.find((o) => o.orderNo === row.orderNo);
   if (!order) return;
   if (order.paymentInfo?.reviewStatus !== 'approved') {
-    alert(
-      'Bukti pembayaran belum disetujui. Selesaikan review terlebih dahulu.'
-    );
+    pushToast({
+      tone: 'warning',
+      title: 'Belum Bisa Dibuka',
+      message: 'Bukti pembayaran belum disetujui. Selesaikan review terlebih dahulu.',
+    });
     return;
   }
   isEditing.value = true;
@@ -518,7 +584,11 @@ function openPaymentReview(row) {
     kajiUlangStore.orders.find((o) => o.id === row.id) ||
     kajiUlangStore.orders.find((o) => o.orderNo === row.orderNo);
   if (!order?.paymentInfo) {
-    alert('Tidak ada bukti pembayaran yang dapat direview.');
+    pushToast({
+      tone: 'warning',
+      title: 'Bukti Tidak Ditemukan',
+      message: 'Tidak ada bukti pembayaran yang dapat direview.',
+    });
     return;
   }
   reviewingOrder.value = order;
@@ -544,7 +614,11 @@ async function approvePaymentEvidence() {
       status: 'payment_verified',
       paymentInfo: updated.paymentInfo,
     });
-    alert('Bukti pembayaran disetujui.');
+    pushToast({
+      tone: 'success',
+      title: 'Pembayaran Disetujui',
+      message: `Order ${updated.orderNo || '-'} siap dilanjutkan ke kaji ulang.`,
+    });
   }
   closeReviewModal();
 }
@@ -568,7 +642,11 @@ async function rejectPaymentEvidence() {
       status: 'payment_review_rejected',
       paymentInfo: updated.paymentInfo,
     });
-    alert('Bukti pembayaran ditolak dan permintaan dibatalkan.');
+    pushToast({
+      tone: 'error',
+      title: 'Bukti Ditolak',
+      message: `Permintaan ${updated.orderNo || '-'} dibatalkan.`,
+    });
   }
   closeReviewModal();
 }
@@ -639,15 +717,22 @@ async function lookupOrder(orderNo) {
 
 function saveDraft() {
   if (!form.orderNo) {
-    alert('Masukkan ID Order terlebih dahulu.');
+    pushToast({
+      tone: 'warning',
+      title: 'ID Order Kosong',
+      message: 'Masukkan ID Order terlebih dahulu.',
+    });
     return;
   }
   if (!editingOrderId.value) {
-    alert('Cari ID Order terlebih dahulu sebelum menyimpan.');
+    pushToast({
+      tone: 'warning',
+      title: 'Belum Ada Data',
+      message: 'Cari ID Order terlebih dahulu sebelum menyimpan.',
+    });
     return;
   }
   kajiUlangStore.updateOrder(editingOrderId.value, {
-    sampleNo: form.sampleNo,
     orderNumber: form.orderNumber,
     orderYear: form.orderYear,
     customerName: form.customerName,
@@ -655,28 +740,39 @@ function saveDraft() {
     customerAddress: form.customerAddress,
     testType: form.testType,
     note: form.note,
-    testItems: cloneTestItems(form.testItems, form.sampleNo),
+    testItems: cloneTestItems(form.testItems),
     paymentInfo: clonePaymentInfo(form.paymentInfo),
   });
   kajiUlangStore.updateReview(editingOrderId.value, {
     rows: reviewRows,
     note: form.note,
   });
-  alert('Draft disimpan');
+  pushToast({
+    tone: 'success',
+    title: 'Draft Disimpan',
+    message: 'Perubahan kaji ulang telah tersimpan sementara.',
+  });
 }
 
 function approveReview() {
   if (!form.orderNo) {
-    alert('Masukkan ID Order terlebih dahulu.');
+    pushToast({
+      tone: 'warning',
+      title: 'ID Order Kosong',
+      message: 'Masukkan ID Order terlebih dahulu.',
+    });
     return;
   }
   if (!form.testItems.length) {
-    alert('Data pengujian belum tersedia. Cari ID Order yang valid.');
+    pushToast({
+      tone: 'warning',
+      title: 'Pengujian Belum Ada',
+      message: 'Data pengujian belum tersedia. Cari ID Order yang valid.',
+    });
     return;
   }
   if (editingOrderId.value) {
     kajiUlangStore.updateOrder(editingOrderId.value, {
-      sampleNo: form.sampleNo,
       orderNumber: form.orderNumber,
       orderYear: form.orderYear,
       customerName: form.customerName,
@@ -684,7 +780,7 @@ function approveReview() {
       customerAddress: form.customerAddress,
       testType: form.testType,
       note: form.note,
-      testItems: cloneTestItems(form.testItems, form.sampleNo),
+      testItems: cloneTestItems(form.testItems),
       paymentInfo: clonePaymentInfo(form.paymentInfo),
     });
     kajiUlangStore.updateReview(editingOrderId.value, {
@@ -698,14 +794,13 @@ function approveReview() {
       orderNo: form.orderNo,
       orderNumber: form.orderNumber,
       orderYear: form.orderYear,
-      sampleNo: form.sampleNo,
       date: form.date,
       customerName: form.customerName,
       customerPhone: form.customerPhone,
       customerAddress: form.customerAddress,
       testType: form.testType,
       note: form.note,
-      testItems: cloneTestItems(form.testItems, form.sampleNo),
+      testItems: cloneTestItems(form.testItems),
       status: 'pending_validation',
       paymentInfo: clonePaymentInfo(form.paymentInfo) || {
         status: 'payment_verified',
@@ -721,6 +816,11 @@ function approveReview() {
   }
   showForm.value = false;
   resetForm();
+  pushToast({
+    tone: 'success',
+    title: 'Kaji Ulang Disimpan',
+    message: 'Data siap melanjutkan proses validasi.',
+  });
 }
 
 function rejectReview() {

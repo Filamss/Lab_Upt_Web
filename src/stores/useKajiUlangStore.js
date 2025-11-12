@@ -25,6 +25,49 @@ function sumTestItems(testItems = []) {
   }, 0);
 }
 
+function normalizeSampleNo(value) {
+  if (value === null || value === undefined) return '';
+  return String(value).trim();
+}
+
+function extractSampleIndex(value) {
+  const sample = normalizeSampleNo(value);
+  if (!sample) return null;
+  const match = sample.match(/(\d+)(?!.*\d)/);
+  return match ? Number(match[1]) : null;
+}
+
+function getSampleGroupKey(item = {}) {
+  if (item.sampleGroupKey) return String(item.sampleGroupKey).trim();
+  if (item.testCode) return String(item.testCode).trim();
+  if (item.testId) return String(item.testId).split('-')[0];
+  if (item.testName) return String(item.testName).trim();
+  if (item.name) return String(item.name).trim();
+  return 'default-group';
+}
+
+function enrichTestItems(testItems = []) {
+  if (!Array.isArray(testItems)) return [];
+  const counters = new Map();
+  return testItems.map((item) => {
+    const prepared = { ...item };
+    const groupKey = getSampleGroupKey(prepared);
+    const currentMax = counters.get(groupKey) || 0;
+    const existingSample = normalizeSampleNo(prepared.sampleNo);
+    if (existingSample) {
+      const parsed = extractSampleIndex(existingSample);
+      const nextMax = parsed ? Math.max(currentMax, parsed) : currentMax;
+      counters.set(groupKey, nextMax);
+      prepared.sampleNo = existingSample;
+      return prepared;
+    }
+    const nextIndex = currentMax + 1;
+    counters.set(groupKey, nextIndex);
+    prepared.sampleNo = String(nextIndex).padStart(3, '0');
+    return prepared;
+  });
+}
+
 function normalizeTransferFiles(list = [], orderNo = '') {
   return Array.isArray(list)
     ? list
@@ -89,7 +132,7 @@ function buildDummyOrder(base = {}, paymentDetail = {}) {
     customerAddress: base.customerAddress || '',
     testType: base.testType || '',
     note: base.note || '',
-    testItems: Array.isArray(base.testItems) ? base.testItems : [],
+    testItems: enrichTestItems(base.testItems),
     paymentInfo,
     kajiUlangRows: createDefaultReviewRows(),
     kajiUlangNote: '',
@@ -107,9 +150,9 @@ function createDummyOrders() {
     {
       id: 1,
       requestId: '01K-A1',
-      orderNo: 'ORD-202501-001',
+      orderNo: '01K8WJ96E56HTJCC9CJ97MM78P',
       orderNumber: 1,
-      sampleNo: 'S-2025-001',
+      sampleNo: '001',
       date: '2025-01-06',
       customerName: 'PT Maju Jaya Sejahtera',
       customerPhone: '021-555-0101',
@@ -339,7 +382,7 @@ export const useKajiUlangStore = defineStore('kajiUlang', {
     upsertFromRequest(request = {}, { paymentDetail = null } = {}) {
       if (!request) return null;
       const requestId = request.idOrder || request.id || null;
-      const testItems = Array.isArray(request.testItems) ? request.testItems : [];
+      const testItems = enrichTestItems(request.testItems);
       const totalFromItems = sumTestItems(testItems);
       const normalizedPayment = normalizePaymentDetail(
         paymentDetail,

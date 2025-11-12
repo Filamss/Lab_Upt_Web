@@ -51,22 +51,13 @@
     <main class="flex-1 space-y-8 bg-white px-4 py-6 md:px-8 lg:px-12">
       <section class="grid gap-6 lg:grid-cols-3">
         <div class="space-y-4 lg:col-span-2">
-          <div class="grid gap-4 sm:grid-cols-3">
+          <div class="grid gap-4 sm:grid-cols-2">
             <div class="flex flex-col gap-1">
               <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Tanggal Permintaan</label>
               <input
                 v-model="form.date"
                 type="date"
                 class="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-              />
-            </div>
-            <div class="flex flex-col gap-1">
-              <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">No Sampel</label>
-              <input
-                v-model="form.sampleNo"
-                type="text"
-                placeholder="Masukkan nomor sampel utama"
-                class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
               />
             </div>
             <div class="flex flex-col gap-1">
@@ -141,12 +132,12 @@
                   <td class="px-4 py-3">{{ item.testName || item.name || '-' }}</td>
                   <td class="px-4 py-3">
                     <input
-                      v-model="item.sampleNo"
+                      :value="sampleCode(item)"
                       type="text"
-                      placeholder="No sampel"
+                      placeholder="Format kode sampel"
                       class="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                      @input="(event) => handleSampleInput(event, item)"
                     />
-                    <p class="mt-1 text-xs text-slate-500">{{ sampleCode(item) }}</p>
                   </td>
                   <td class="px-4 py-3">{{ item.objectName || '-' }}</td>
                   <td class="px-4 py-3 text-right">Rp {{ formatCurrency(item.price) }}</td>
@@ -174,12 +165,12 @@
               <div class="mt-3 flex flex-col gap-2">
                 <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">No Sampel</label>
                 <input
-                  v-model="item.sampleNo"
+                  :value="sampleCode(item)"
                   type="text"
-                  placeholder="No sampel"
+                  placeholder="Format kode sampel"
                   class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  @input="(event) => handleSampleInput(event, item)"
                 />
-                <p class="text-xs text-slate-500">Kode: {{ sampleCode(item) }}</p>
               </div>
               <div class="mt-3 grid grid-cols-2 gap-3">
                 <div>
@@ -336,7 +327,9 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useTestStore } from '@/stores/useTestStore'
 
 const props = defineProps({
   form: {
@@ -367,6 +360,15 @@ const props = defineProps({
 
 defineEmits(['save-draft', 'lolos-kaji-ulang', 'tolak', 'close', 'lookup-order'])
 
+const testStore = useTestStore()
+const { methods: storeMethods } = storeToRefs(testStore)
+
+onMounted(() => {
+  if (!storeMethods.value.length && !testStore.loading) {
+    testStore.fetchAll().catch(() => {})
+  }
+})
+
 const yesNoOptions = ['Ada', 'Tidak']
 const conditionOptions = ['Siap Uji', 'Prepare Sampel']
 const defaultEvaluation = () => ({
@@ -395,12 +397,28 @@ const evaluation = computed(() => {
   return props.form.evaluation
 })
 
+const normalizeMethodLabel = (method) => {
+  if (typeof method === 'string') return method.trim()
+  if (!method) return ''
+  const label =
+    method.name ||
+    method.MethodName ||
+    method.method ||
+    method.title ||
+    method.label ||
+    ''
+  return typeof label === 'string' ? label.trim() : String(label).trim()
+}
+
 const methodOptions = computed(() => {
-  const methods = (props.tests || [])
-    .map((test) => test?.method)
-    .filter((method) => typeof method === 'string' && method.trim())
-    .map((method) => method.trim())
-  return Array.from(new Set(methods))
+  const storeOptions = (storeMethods.value || []).map(normalizeMethodLabel).filter(Boolean)
+  if (storeOptions.length) {
+    return Array.from(new Set(storeOptions))
+  }
+  const fallback = (props.tests || [])
+    .map((test) => normalizeMethodLabel(test?.method))
+    .filter(Boolean)
+  return Array.from(new Set(fallback))
 })
 
 const testItems = computed(() => {
@@ -446,8 +464,10 @@ const orderYear = computed(() => {
 
 const formattedOrderNumber = computed(() => {
   const number = props.form.orderNumber
-  if (!number) return '-'
-  return orderYear.value ? `${number}/${orderYear.value}` : String(number)
+  if (number === null || number === undefined || number === '') return '-'
+  if (typeof number === 'number') return String(number).padStart(3, '0')
+  const trimmed = String(number).trim()
+  return /^\d+$/.test(trimmed) ? trimmed.padStart(3, '0') : trimmed
 })
 
 
@@ -479,10 +499,22 @@ const sampleCode = (item) => {
   const code = ensureTestCode(item)
   const sampleValue = item && item.sampleNo && String(item.sampleNo).trim()
     ? String(item.sampleNo).trim()
-    : props.form.sampleNo && String(props.form.sampleNo).trim()
-      ? String(props.form.sampleNo).trim()
-      : '--'
+    : '--'
   return `${prefix}.${orderNo}/${code}/${sampleValue}`
+}
+
+const handleSampleInput = (event, item) => {
+  if (!item || !event?.target) return
+  const rawValue = String(event.target.value || '')
+  const tailSegment = rawValue.split('/').pop()?.trim() || rawValue.trim()
+  const digits = tailSegment.replace(/[^0-9]/g, '')
+  if (!digits) {
+    item.sampleNo = ''
+    event.target.value = sampleCode(item)
+    return
+  }
+  item.sampleNo = digits.padStart(3, '0')
+  event.target.value = sampleCode(item)
 }
 
 const lookupDisabled = computed(() => props.isEditing || !props.form.orderNo || !props.form.orderNo.trim() || props.lookupLoading)
