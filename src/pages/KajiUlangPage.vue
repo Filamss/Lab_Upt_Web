@@ -63,6 +63,13 @@
         <template #actions="{ row }">
           <div class="flex justify-center gap-2 text-surfaceDark">
             <button
+              class="rounded-md bg-slate-50 p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-800"
+              @click="printKajiUlang(row)"
+              title="Cetak Berita Acara"
+            >
+              <PrinterIcon class="h-5 w-5" />
+            </button>
+            <button
               v-if="row.canReviewPayment"
               class="rounded-md bg-blue-50 p-1.5 text-blue-600 transition hover:bg-blue-100 hover:text-blue-800"
               @click="openPaymentReview(row)"
@@ -270,7 +277,10 @@ import {
   TrashIcon,
   EyeIcon,
   XCircleIcon,
+  PrinterIcon,
 } from '@heroicons/vue/24/outline';
+import logoDinas from '@/assets/LOGO DINAS KAB TEGAL.png';
+import { buildKajiUlangPrintHtml } from '@/utils/printTemplates';
 import { useKajiUlangStore } from '@/stores/useKajiUlangStore';
 import { useTestStore } from '@/stores/useTestStore';
 import { useConfirmDialog } from '@/stores/useConfirmDialog';
@@ -602,6 +612,28 @@ function closeReviewModal() {
   showReviewModal.value = false;
 }
 
+function printKajiUlang(row) {
+  const order =
+    kajiUlangStore.orders.find((o) => o.id === row.id) ||
+    kajiUlangStore.orders.find((o) => o.orderNo === row.orderNo);
+  if (!order) {
+    pushToast({
+      tone: 'error',
+      title: 'Data Tidak Ditemukan',
+      message: 'Order kaji ulang tidak tersedia untuk dicetak.',
+    });
+    return;
+  }
+  const html = buildKajiUlangPrintHtml(order, {
+    logoSrc: logoDinas,
+    title:
+      order.status === 'rejected' || order.status === 'cancelled'
+        ? 'Berita Acara Kaji Ulang (Ditolak)'
+        : 'Berita Acara Kaji Ulang',
+  });
+  openPrintWindow(html);
+}
+
 async function approvePaymentEvidence() {
   if (!reviewingOrder.value) return;
   const updated = kajiUlangStore.reviewPayment(reviewingOrder.value.id, {
@@ -838,6 +870,51 @@ function rejectReview() {
 function closeForm() {
   showForm.value = false;
   resetForm();
+}
+
+function openPrintWindow(html) {
+  if (!html) return;
+  const printWindow = window.open('', '_blank', 'width=900,height=650');
+  if (!printWindow) {
+    pushToast({
+      tone: 'error',
+      title: 'Cetak Diblokir',
+      message: 'Izinkan pop-up pada browser Anda untuk mencetak dokumen.',
+    });
+    return;
+  }
+  try {
+    printWindow.document.open('text/html', 'replace');
+    printWindow.document.write(html);
+    printWindow.document.close();
+    const triggerPrint = () => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (err) {
+        console.warn('Gagal memicu dialog cetak', err);
+      }
+    };
+    if ('onload' in printWindow) {
+      printWindow.onload = () => triggerPrint();
+    } else {
+      setTimeout(triggerPrint, 300);
+    }
+    printWindow.onafterprint = () => {
+      try {
+        printWindow.close();
+      } catch (err) {
+        console.warn('Gagal menutup jendela cetak', err);
+      }
+    };
+  } catch (err) {
+    console.error('Tidak dapat menulis konten ke jendela cetak', err);
+    pushToast({
+      tone: 'error',
+      title: 'Gagal Mencetak',
+      message: 'Terjadi kesalahan saat menyiapkan dokumen cetak.',
+    });
+  }
 }
 
 function formatDateDisplay(value) {

@@ -70,17 +70,13 @@ function enrichTestItems(testItems = []) {
 
 function normalizeTransferFiles(list = [], orderNo = '') {
   return Array.isArray(list)
-    ? list
-        .filter(Boolean)
-        .map((item, idx) => ({
-          id:
-            item.id ||
-            `${orderNo || 'order'}-evidence-${idx + 1}`,
-          name: item.name || `Lampiran-${idx + 1}`,
-          size: item.size || 0,
-          type: item.type || 'application/octet-stream',
-          previewUrl: item.previewUrl || '',
-        }))
+    ? list.filter(Boolean).map((item, idx) => ({
+        id: item.id || `${orderNo || 'order'}-evidence-${idx + 1}`,
+        name: item.name || `Lampiran-${idx + 1}`,
+        size: item.size || 0,
+        type: item.type || 'application/octet-stream',
+        previewUrl: item.previewUrl || '',
+      }))
     : [];
 }
 
@@ -94,9 +90,7 @@ function normalizePaymentDetail(detail = {}, orderNo = '') {
   return {
     ...detail,
     status:
-      detail.status ||
-      statusMapping[reviewStatus] ||
-      'payment_pending_review',
+      detail.status || statusMapping[reviewStatus] || 'payment_pending_review',
     reviewStatus,
     reviewedBy: detail.reviewedBy || '',
     reviewedAt: detail.reviewedAt || null,
@@ -114,7 +108,8 @@ function deriveOrderStatusFromPayment(paymentInfo) {
 
 function buildDummyOrder(base = {}, paymentDetail = {}) {
   const paymentInfo = normalizePaymentDetail(paymentDetail, base.orderNo);
-  const orderYear = base.orderYear || (base.date ? String(base.date).slice(0, 4) : '');
+  const orderYear =
+    base.orderYear || (base.date ? String(base.date).slice(0, 4) : '');
   return {
     id: base.id,
     requestId: base.requestId || '',
@@ -193,7 +188,8 @@ function createDummyOrders() {
           name: 'Bukti-Transfer-ORD-001.png',
           size: 245678,
           type: 'image/png',
-          previewUrl: 'https://dummyimage.com/600x360/edf2f7/1a202c&text=Bukti+Transfer',
+          previewUrl:
+            'https://dummyimage.com/600x360/edf2f7/1a202c&text=Bukti+Transfer',
         },
       ],
     }
@@ -236,7 +232,8 @@ function createDummyOrders() {
           name: 'Screenshot-Transfer-ORD-004.jpg',
           size: 198765,
           type: 'image/jpeg',
-          previewUrl: 'https://dummyimage.com/600x360/fefcbf/7f5539&text=Screenshot',
+          previewUrl:
+            'https://dummyimage.com/600x360/fefcbf/7f5539&text=Screenshot',
         },
       ],
     }
@@ -282,7 +279,8 @@ function createDummyOrders() {
           name: 'Foto-WhatsApp.jpg',
           size: 156789,
           type: 'image/jpeg',
-          previewUrl: 'https://dummyimage.com/600x360/ffe0e0/9b2c2c&text=Foto+Blur',
+          previewUrl:
+            'https://dummyimage.com/600x360/ffe0e0/9b2c2c&text=Foto+Blur',
         },
       ],
     }
@@ -326,7 +324,10 @@ export const useKajiUlangStore = defineStore('kajiUlang', {
 
     addOrder(order) {
       const nextId = this.getNextId();
-      const paymentInfo = normalizePaymentDetail(order?.paymentInfo, order?.orderNo);
+      const paymentInfo = normalizePaymentDetail(
+        order?.paymentInfo,
+        order?.orderNo
+      );
       const newOrder = {
         id: nextId,
         kajiUlangRows: createDefaultReviewRows(),
@@ -395,7 +396,9 @@ export const useKajiUlangStore = defineStore('kajiUlang', {
           request.orderNumber !== undefined && request.orderNumber !== null
             ? Number(request.orderNumber)
             : null,
-        orderYear: request.orderYear || (request.entryDate ? String(request.entryDate).slice(0, 4) : ''),
+        orderYear:
+          request.orderYear ||
+          (request.entryDate ? String(request.entryDate).slice(0, 4) : ''),
         sampleNo: request.sampleNo || '',
         date: request.entryDate || new Date().toISOString().slice(0, 10),
         status: deriveOrderStatusFromPayment(normalizedPayment),
@@ -418,7 +421,8 @@ export const useKajiUlangStore = defineStore('kajiUlang', {
           (testItems[0]?.testName ||
             testItems[0]?.name ||
             request.testCategory ||
-            request.purpose) ?? '',
+            request.purpose) ??
+          '',
         note: request.note || '',
         testItems,
         paymentInfo: normalizedPayment,
@@ -472,16 +476,17 @@ export const useKajiUlangStore = defineStore('kajiUlang', {
       const current = this.orders[idx];
       if (!current.paymentInfo) return current;
       const reviewStatus = approved ? 'approved' : 'rejected';
-      const status = approved
-        ? 'ready_for_kaji_ulang'
-        : 'cancelled';
+      const status = approved ? 'ready_for_kaji_ulang' : 'cancelled';
       const paymentInfo = {
         ...current.paymentInfo,
         status: approved ? 'payment_verified' : 'payment_review_rejected',
         reviewStatus,
         reviewedBy: reviewer || '',
         reviewedAt: new Date().toISOString(),
-        reviewNote: typeof note === 'string' ? note : current.paymentInfo.reviewNote || '',
+        reviewNote:
+          typeof note === 'string'
+            ? note
+            : current.paymentInfo.reviewNote || '',
       };
       this.orders[idx] = {
         ...current,
@@ -499,14 +504,11 @@ export const useKajiUlangStore = defineStore('kajiUlang', {
       const current = this.orders[idx];
       const nextRows = rows
         ? cloneReviewRows(rows)
-        : cloneReviewRows(
-            current.kajiUlangRows || createDefaultReviewRows()
-          );
+        : cloneReviewRows(current.kajiUlangRows || createDefaultReviewRows());
       this.orders[idx] = {
         ...current,
         kajiUlangRows: nextRows,
-        kajiUlangNote:
-          typeof note === 'string' ? note : current.kajiUlangNote,
+        kajiUlangNote: typeof note === 'string' ? note : current.kajiUlangNote,
         kajiUlangSignatures: signatures
           ? {
               admin: signatures.admin || '',

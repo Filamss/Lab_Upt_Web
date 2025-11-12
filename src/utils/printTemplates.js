@@ -1,10 +1,12 @@
-import logoDefault from '@/assets/LOGO DINAS KAB TEGAL.png';
+﻿import logoDefault from '@/assets/LOGO DINAS KAB TEGAL.png';
 
 const DEFAULT_HEADER = {
   title: 'UPT LABORATORIUM PERINDUSTRIAN\nKABUPATEN TEGAL',
-  subtitle: 'Dinas Perindustrian, Transmigrasi dan Tenaga Kerja Kabupaten Tegal',
-  address: 'Komplek LIK TAKARU,Jalan Raya Dampyak KM 4, Kec. Kramat, Kab. Tegal, Jawa Tengah 52181',
-  contact: 'Telepon (0283) 357311 • Email uptlab@tegal.go.id',
+  subtitle:
+    'Dinas Perindustrian, Transmigrasi dan Tenaga Kerja Kabupaten Tegal',
+  address:
+    'Komplek LIK TAKARU,Jalan Raya Dampyak KM 4, Kec. Kramat, Kab. Tegal, Jawa Tengah 52181',
+  contact: 'Telepon (0283) 357311 , Email uptlab@tegal.go.id',
 };
 
 export function buildPermintaanPrintHtml(row, type = 'request', options = {}) {
@@ -32,18 +34,18 @@ export function buildPermintaanPrintHtml(row, type = 'request', options = {}) {
   const styles = `
     <style>
       @page { margin: 6mm 12mm 16mm; }
-      body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; color: #1f2937; }
+      body { font-family: 'Times New Roman', 'Times', serif; margin: 0; color: #000000; }
       .page { padding: 6px 6px 0; }
       .letterhead { display: flex; gap: 16px; align-items: center; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb; margin-bottom: 16px; }
       .letterhead img { width: 72px; height: 72px; object-fit: contain; }
       .letterhead h1 { margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 1px; }
-      .letterhead p { margin: 2px 0; font-size: 12px; color: #4b5563; }
-      h2 { margin-top: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.08em; color: #111827; }
+      .letterhead p { margin: 2px 0; font-size: 12px; color: #000000; }
+      h2 { margin-top: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.08em; color: #000000; }
       table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 12px; }
       .info-table td { padding: 4px 6px; vertical-align: top; }
-      .info-table td:first-child { width: 32%; color: #6b7280; font-weight: 600; }
+      .info-table td:first-child { width: 32%; color: #000000; font-weight: 600; }
       .items-table th, .items-table td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
-      .items-table th { background: #f3f4f6; text-transform: uppercase; font-size: 11px; color: #374151; }
+      .items-table th { background: #f3f4f6; text-transform: uppercase; font-size: 11px; color: #000000; }
       .totals { margin-top: 12px; width: 50%; float: right; border: 1px solid #d1d5db; border-collapse: collapse; }
       .totals td { padding: 8px; border: 1px solid #d1d5db; }
       .totals td:first-child { background: #f9fafb; font-weight: 600; width: 60%; }
@@ -105,6 +107,79 @@ export function buildPermintaanPrintHtml(row, type = 'request', options = {}) {
   `;
 }
 
+export function buildKajiUlangPrintHtml(order = {}, options = {}) {
+  const title =
+    typeof options.title === 'string' && options.title.trim()
+      ? options.title
+      : 'Berita Acara Kaji Ulang Permintaan Pengujian';
+  const header = { ...DEFAULT_HEADER, ...(options.header || {}) };
+  const logoSrc = options.logoSrc || logoDefault;
+  const styles = `
+    <style>
+      @page { margin: 6mm 12mm 16mm; }
+      body { font-family: 'Times New Roman', 'Times', serif; margin: 0; color: #000000; }
+      .page { padding: 6px 6px 18px; }
+      .letterhead { display: flex; gap: 16px; align-items: center; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb; margin-bottom: 16px; }
+      .letterhead img { width: 72px; height: 72px; object-fit: contain; }
+      .letterhead h1 { margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 1px; }
+      .letterhead p { margin: 2px 0; font-size: 12px; color: #000000; }
+      h2 { margin-top: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.08em; color: #000000; }
+      table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 12px; }
+      .info-table td { padding: 4px 6px; vertical-align: top; }
+      .info-table td:first-child { width: 32%; color: #000000; font-weight: 600; }
+      .items-table th, .items-table td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+      .items-table th { background: #f3f4f6; text-transform: uppercase; font-size: 11px; color: #000000; }
+      .decision { margin-top: 20px; border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; background: #f8fafc; font-size: 12px; }
+      .decision strong { color: #000000; }
+      .notes { margin-top: 16px; font-size: 12px; }
+      .evaluation-table th, .evaluation-table td { border: 1px solid #d1d5db; padding: 6px; text-align: left; }
+      .evaluation-table th { background: #f3f4f6; text-transform: uppercase; font-size: 11px; color: #000000; }
+      .signature { margin: 16px auto 0; display: flex; justify-content: space-between; gap: 24px; font-size: 12px; }
+      .signature div { flex: 1; text-align: center; }
+    </style>
+  `;
+
+  const letterhead = `
+    <header class="letterhead">
+      <img src="${logoSrc}" alt="Logo Dinas Kabupaten Tegal" />
+      <div>
+        <h1>${toLineMarkup(header.title)}</h1>
+        <p>${toLineMarkup(header.subtitle)}</p>
+        <p>${sanitize(header.address)}</p>
+        <p>${sanitize(header.contact)}</p>
+      </div>
+    </header>
+  `;
+
+  const infoTable = buildKajiUlangInfoTable(order);
+  const itemsTable = buildKajiUlangItemsTable(order);
+  const evaluationTable = buildKajiUlangEvaluationTable(order);
+  const decisionSection = buildKajiUlangDecisionSection(order);
+  const signature = buildKajiUlangSignature(order);
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <title>${sanitize(title)}</title>
+        ${styles}
+      </head>
+      <body>
+        <div class="page">
+          ${letterhead}
+          <h2>${sanitize(title)}</h2>
+          ${infoTable}
+          ${itemsTable}
+          ${evaluationTable}
+          ${decisionSection}
+          ${signature}
+        </div>
+      </body>
+    </html>
+  `;
+}
+
 function buildInfoTable(row, type) {
   const info = [
     ['ID Order', row.idOrder || '-'],
@@ -126,7 +201,7 @@ function buildInfoTable(row, type) {
               <td>${label}</td>
               <td>${sanitize(value)}</td>
             </tr>
-          `,
+          `
         )
         .join('')}
     </table>
@@ -220,10 +295,11 @@ function buildNotes(type) {
 
 function formatOrderNumber(row) {
   if (!row || !row.orderNumber) return '-';
-  const year =
-    row.orderYear ||
-    (row.entryDate ? new Date(row.entryDate).getFullYear() : '');
-  return year ? `${row.orderNumber}/${year}` : String(row.orderNumber);
+  const number =
+    typeof row.orderNumber === 'number'
+      ? String(row.orderNumber).padStart(3, '0')
+      : String(row.orderNumber).padStart(3, '0');
+  return number;
 }
 
 export function formatCurrency(value) {
@@ -281,4 +357,210 @@ function toLineMarkup(value) {
     return sanitize(value);
   }
   return lines.map((line) => `<span>${sanitize(line)}</span>`).join('<br />');
+}
+
+function buildKajiUlangInfoTable(order) {
+  const info = [
+    ['ID Order', order.orderNo || order.requestId || '-'],
+    ['Nomor Order', formatOrderNumber(order)],
+    ['Tanggal Permintaan', formatFullDate(order.date || order.entryDate)],
+    ['Nama Customer', order.customerName || '-'],
+    ['Kontak', order.customerPhone || '-'],
+    ['Alamat', order.customerAddress || '-'],
+    ['Status Kaji Ulang', translateKajiUlangStatus(order.status)],
+  ];
+  return `
+    <table class="info-table">
+      ${info
+        .map(
+          ([label, value]) => `
+            <tr>
+              <td>${label}</td>
+              <td>${sanitize(value)}</td>
+            </tr>
+          `
+        )
+        .join('')}
+    </table>
+  `;
+}
+
+function buildKajiUlangItemsTable(order) {
+  const items = Array.isArray(order.testItems) ? order.testItems : [];
+  if (!items.length) {
+    return `
+      <section class="notes">
+        <strong>Ringkasan Pengujian:</strong>
+        <p>Data pengujian belum tersedia.</p>
+      </section>
+    `;
+  }
+  return `
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Nama Pengujian</th>
+          <th>Objek Uji</th>
+          <th>Jumlah</th>
+          <th>Tarif (Rp)</th>
+          <th>Kode Sampel</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items
+          .map((item, idx) => {
+            const quantity = Math.max(1, Number(item.quantity) || 1);
+            const price = Math.max(0, Number(item.price) || 0);
+            return `
+              <tr>
+                <td>${idx + 1}</td>
+                <td>${sanitize(item.testName || item.name || '-')}</td>
+                <td>${sanitize(item.objectName || '-')}</td>
+                <td>${quantity}</td>
+                <td>${formatNumber(price)}</td>
+                <td>${sanitize(formatSampleCode(order, item, idx))}</td>
+              </tr>
+            `;
+          })
+          .join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function buildKajiUlangEvaluationTable(order) {
+  const rows =
+    (Array.isArray(order.kajiUlangRows) && order.kajiUlangRows.length
+      ? order.kajiUlangRows
+      : [
+          { topic: 'Peralatan', result: order.evaluation?.equipment || '' },
+          { topic: 'Personel', result: order.evaluation?.personnel || '' },
+          { topic: 'Waktu', result: order.evaluation?.time || '' },
+          { topic: 'Kondisi', result: order.evaluation?.condition || '' },
+          {
+            topic: 'Laboratorium Subkontrak',
+            result: order.evaluation?.subcontract || '',
+          },
+          { topic: 'Metode Uji', result: order.evaluation?.method || '' },
+        ]) || [];
+  if (!rows.length) return '';
+  return `
+    <table class="evaluation-table">
+      <thead>
+        <tr>
+          <th style="width:12%;">No</th>
+          <th>Perihal</th>
+          <th>Hasil</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map(
+            (row, idx) => `
+            <tr>
+              <td>${idx + 1}</td>
+              <td>${sanitize(row.topic || '-')}</td>
+              <td>${sanitize(row.result || '-')}</td>
+            </tr>
+          `
+          )
+          .join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function buildKajiUlangDecisionSection(order) {
+  const note = order.kajiUlangNote || order.note || '-';
+  const reviewer =
+    order.kajiUlangValidatedBy || order.paymentInfo?.reviewedBy || '-';
+  const reviewedAt = formatFullDate(
+    order.kajiUlangValidatedAt || order.paymentInfo?.reviewedAt
+  );
+  const isRejected =
+    order.status === 'rejected' || order.status === 'cancelled';
+  const decisionLabel = isRejected ? 'DITOLAK' : 'DITERIMA';
+  return `
+    <section class="decision">
+      <p><strong>Keputusan:</strong> ${decisionLabel}</p>
+      <p><strong>Status:</strong> ${translateKajiUlangStatus(order.status)}</p>
+      <p><strong>Catatan:</strong> ${sanitize(note)}</p>
+      <p><strong>Ditinjau Oleh:</strong> ${sanitize(reviewer)}</p>
+      <p><strong>Tanggal Review:</strong> ${sanitize(reviewedAt)}</p>
+    </section>
+  `;
+}
+
+function buildKajiUlangSignature(order) {
+  const admin = order.kajiUlangSignatures?.admin || 'Admin UPT Lab';
+  const customer =
+    order.kajiUlangSignatures?.customer || order.customerName || '-';
+  const decisionDate = formatFullDate(order.kajiUlangValidatedAt || order.date);
+  return `
+    <section class="signature">
+      <div>
+        <p>Tegal, ${decisionDate}</p>
+        <p>Mengetahui</p>
+        <br /><br /><br />
+        <p><strong>${sanitize(admin)}</strong></p>
+      </div>
+      <div>
+        <p>Tegal, ${decisionDate}</p>
+        <p>Pemohon</p>
+        <br /><br /><br />
+        <p><strong>${sanitize(customer)}</strong></p>
+      </div>
+    </section>
+  `;
+}
+
+function translateKajiUlangStatus(status) {
+  switch (status) {
+    case 'ready_for_kaji_ulang':
+      return 'Siap Kaji Ulang';
+    case 'pending_validation':
+      return 'Menunggu Validasi';
+    case 'in_testing':
+      return 'Sedang Pengujian';
+    case 'completed':
+      return 'Selesai';
+    case 'rejected':
+      return 'Ditolak';
+    case 'cancelled':
+      return 'Dibatalkan';
+    default:
+      return translateStatus(status);
+  }
+}
+
+function formatSampleCode(order, item, index) {
+  const date = order.date || order.entryDate || new Date().toISOString();
+  const monthYear = formatMonthYear(date);
+  const orderSegment = order.orderNumber
+    ? String(order.orderNumber).padStart(3, '0')
+    : '--';
+  const testCode =
+    (item.testCode && String(item.testCode).trim()) ||
+    (item.testId ? String(item.testId).split('-')[0] : `ITEM-${index + 1}`);
+  const sampleSegment =
+    (item.sampleNo && String(item.sampleNo).trim()) ||
+    (item.sampleCode && String(item.sampleCode).trim()) ||
+    '--';
+  return `${monthYear}.${orderSegment}/${testCode}/${sampleSegment}`;
+}
+
+function formatMonthYear(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    const now = new Date();
+    return `${String(now.getMonth() + 1).padStart(
+      2,
+      '0'
+    )}/${now.getFullYear()}`;
+  }
+  return `${String(date.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}/${date.getFullYear()}`;
 }
