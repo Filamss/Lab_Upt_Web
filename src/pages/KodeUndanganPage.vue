@@ -28,18 +28,7 @@
       <div class="flex flex-col gap-5">
           <div class="flex flex-col gap-4 lg:flex-row lg:items-end">
             <div class="flex-1 space-y-2">
-              <div class="flex items-center justify-between gap-2">
               <label class="text-sm font-medium text-gray-700">Role tujuan</label>
-              <button
-                type="button"
-                class="hidden lg:inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:border-primary/50 hover:text-primary transition"
-                :disabled="isLoadingRoles"
-                @click="handleRefresh"
-              >
-                <ArrowPathIcon class="h-4 w-4" />
-                Segarkan Role
-              </button>
-            </div>
             <select
               v-model="form.roleId"
               class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-inner transition focus:border-primary focus:ring-2 focus:ring-primary/40 disabled:bg-gray-100"

@@ -105,9 +105,6 @@
           <p v-else-if="defaultWarning" class="text-amber-600">
             {{ defaultWarning }}
           </p>
-          <p v-if="actionMessage" class="text-emerald-600">
-            {{ actionMessage }}
-          </p>
         </div>
       </div>
 
@@ -313,11 +310,13 @@ import FormRole from '@/components/form/FormRole.vue';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { usePermissionStore } from '@/stores/usePermissionStore';
 import { useConfirmDialog } from '@/stores/useConfirmDialog';
+import { useNotificationCenter } from '@/stores/useNotificationCenter';
 import { useAuthorization } from '@/composables/auth/useAuthorization';
 
 const roleStore = useRoleStore();
 const permissionStore = usePermissionStore();
 const openConfirm = useConfirmDialog();
+const { notify } = useNotificationCenter();
 const { hasPermission } = useAuthorization();
 
 const canViewRoles = computed(() => hasPermission('roles.index'));
@@ -353,12 +352,9 @@ const maxPermissionChip = 3;
 let debounceTimer = null;
 const defaultWarning = ref('');
 const defaultSuccess = ref('');
-const actionMessage = ref('');
 const DEFAULT_ELIGIBLE_NAMES = ['customer'];
 
-function clearActionMessage() {
-  actionMessage.value = '';
-}
+function clearActionMessage() {}
 
 const rows = computed(() => roleStore.roles);
 const currentDefaultRole = computed(() =>
@@ -483,17 +479,36 @@ async function handleSubmit(payload) {
     if (isEdit.value && selectedRole.value) {
       if (!canUpdateRole.value) return;
       await roleStore.updateRole(selectedRole.value.id, payload);
-      actionMessage.value = `Role ${payload.name || selectedRole.value.name} berhasil diperbarui.`;
+      notify({
+        tone: 'success',
+        title: 'Role diperbarui',
+        message: `Role ${payload.name || selectedRole.value.name} berhasil diperbarui.`,
+        persist: false,
+      });
     } else {
       if (!canCreateRole.value) return;
       const result = await roleStore.createRole(payload);
       const roleName = payload.name || result?.data?.name || 'Role';
-      actionMessage.value = `Role ${roleName} berhasil dibuat.`;
+      notify({
+        tone: 'success',
+        title: 'Role dibuat',
+        message: `Role ${roleName} berhasil dibuat.`,
+        persist: false,
+      });
     }
     roleStore.error = null;
     closeForm();
   } catch (err) {
-    actionMessage.value = '';
+    const message =
+      err.response?.data?.message ||
+      err.message ||
+      'Gagal menyimpan role. Silakan coba lagi.';
+    notify({
+      tone: 'error',
+      title: 'Gagal menyimpan role',
+      message,
+      persist: false,
+    });
   }
 }
 
@@ -501,6 +516,7 @@ async function handleDelete(role) {
   if (!canViewRoles.value) return;
   if (!canDeleteRole.value) return;
   if (!role?.id) return;
+  clearActionMessage();
   defaultWarning.value = '';
   defaultSuccess.value = '';
   if (role.isDefault) {
@@ -516,7 +532,27 @@ async function handleDelete(role) {
     variant: 'danger',
   });
   if (!ok) return;
-  await roleStore.removeRole(role.id);
+  try {
+    await roleStore.removeRole(role.id);
+    notify({
+      tone: 'success',
+      title: 'Role dihapus',
+      message: `Role ${role.name} berhasil dihapus.`,
+      persist: false,
+    });
+  } catch (err) {
+    const message =
+      err.response?.data?.message ||
+      err.message ||
+      'Gagal menghapus role. Silakan coba lagi.';
+    defaultWarning.value = message;
+    notify({
+      tone: 'error',
+      title: 'Gagal menghapus role',
+      message,
+      persist: false,
+    });
+  }
 }
 
 async function handleSetDefault(role) {

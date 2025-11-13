@@ -49,10 +49,6 @@ const buildProfileFormData = (payload = {}) => {
   appendIfPresent(formData, 'name', normalizeString(payload.name))
   appendIfPresent(formData, 'email', normalizeString(payload.email))
 
-  if ('password' in payload) {
-    appendIfPresent(formData, 'password', payload.password, { trim: false })
-  }
-
   const phone = payload.phone_number ?? payload.phoneNumber ?? payload.phone
   appendIfPresent(formData, 'phone_number', normalizeString(phone))
 
@@ -80,6 +76,26 @@ const buildProfileFormData = (payload = {}) => {
     const isActive = payload.is_active ?? payload.isActive
     formData.append('is_active', isActive ? 'true' : 'false')
   }
+
+  return formData
+}
+
+const buildPasswordFormData = (payload = {}) => {
+  const formData = new FormData()
+  const currentPassword =
+    payload.current_password ?? payload.currentPassword ?? payload.oldPassword
+  const newPassword = payload.password ?? payload.newPassword
+  const confirmation =
+    payload.password_confirmation ??
+    payload.passwordConfirmation ??
+    payload.passwordConfirm ??
+    newPassword
+
+  appendIfPresent(formData, 'current_password', currentPassword, { trim: false })
+  appendIfPresent(formData, 'password', newPassword, { trim: false })
+  appendIfPresent(formData, 'password_confirmation', confirmation, {
+    trim: false,
+  })
 
   return formData
 }
@@ -456,7 +472,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         this.loading = true
         const body = buildProfileFormData(payload)
-        const res = await api.put(`/api/v1/users/${this.currentUser.id}`, body)
+        const res = await api.put('/api/v1/users/me', body)
         const responsePayload = res.data?.data ?? res.data
         const updatedUser = responsePayload?.user ?? responsePayload
         this.currentUser = updatedUser
@@ -489,6 +505,46 @@ export const useAuthStore = defineStore('auth', {
         const msg =
           err.response?.data?.message ||
           'Gagal memperbarui profil. Periksa kembali data yang Anda masukkan.'
+        const errors = err.response?.data?.errors || null
+        const status = err.response?.status || err.response?.data?.code || null
+        return {
+          ok: false,
+          message: msg,
+          errors,
+          status,
+        }
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async updatePassword(payload = {}) {
+      if (!this.currentUser?.id) {
+        return {
+          ok: false,
+          message: 'Pengguna belum login. Silakan masuk ulang.',
+        }
+      }
+
+      try {
+        this.loading = true
+        const body = buildPasswordFormData(payload)
+        const res = await api.patch('/api/v1/users/me/password', body)
+        const activityStore = useActivityStore()
+        activityStore.addEvent({
+          type: 'profile',
+          title: 'Password diperbarui',
+          description: `${this.currentUser?.name || 'Pengguna'} mengganti password`,
+          status: 'success',
+        })
+        return {
+          ok: true,
+          message: res.data?.message || 'Password berhasil diperbarui.',
+        }
+      } catch (err) {
+        const msg =
+          err.response?.data?.message ||
+          'Gagal memperbarui password. Periksa kembali data yang Anda masukkan.'
         const errors = err.response?.data?.errors || null
         const status = err.response?.status || err.response?.data?.code || null
         return {

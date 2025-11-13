@@ -148,14 +148,49 @@
         <p class="mt-1 text-xs text-gray-400">Role ditetapkan oleh administrator.</p>
       </div>
 
-      <div>
-        <label class="block text-gray-600 text-sm mb-1">Password Baru</label>
-        <input
-          v-model="form.password"
-          type="password"
-          class="w-full border border-border rounded-lg px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
-          placeholder="Kosongkan jika tidak diganti"
-        />
+      <div class="border-t border-border pt-4">
+        <h3 class="text-md font-semibold text-gray-700 mb-3">Ganti Password</h3>
+        <p class="text-xs text-gray-500 mb-4">
+          Isi seluruh kolom di bawah ini apabila Anda ingin memperbarui password akun.
+        </p>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="sm:col-span-2">
+            <label class="block text-gray-600 text-sm mb-1">Password Saat Ini</label>
+            <input
+              v-model="passwordForm.current"
+              type="password"
+              autocomplete="current-password"
+              class="w-full border border-border rounded-lg px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+              placeholder="Masukkan password sekarang"
+            />
+          </div>
+          <div>
+            <label class="block text-gray-600 text-sm mb-1">Password Baru</label>
+            <input
+              v-model="passwordForm.new"
+              type="password"
+              autocomplete="new-password"
+              class="w-full border border-border rounded-lg px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+              placeholder="Minimal 8 karakter"
+            />
+          </div>
+          <div>
+            <label class="block text-gray-600 text-sm mb-1">Konfirmasi Password Baru</label>
+            <input
+              v-model="passwordForm.confirmation"
+              type="password"
+              autocomplete="new-password"
+              class="w-full border border-border rounded-lg px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+              placeholder="Ulangi password baru"
+            />
+          </div>
+        </div>
+        <p
+          v-if="isPasswordDirty && !canChangePassword"
+          class="mt-2 text-xs text-red-500"
+        >
+          {{ passwordErrorMessage }}
+        </p>
       </div>
 
       <div class="pt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -227,7 +262,12 @@ const form = reactive({
   email: '',
   phone: '',
   employmentIdentityNumber: '',
-  password: '',
+})
+
+const passwordForm = reactive({
+  current: '',
+  new: '',
+  confirmation: '',
 })
 
 onMounted(async () => {
@@ -243,7 +283,6 @@ watch(
     form.phone = value.phoneNumber || value.phone || ''
     form.employmentIdentityNumber =
       value.employmentIdentityNumber || value.employment_identity_number || ''
-    form.password = ''
   },
   { immediate: true }
 )
@@ -292,7 +331,36 @@ const nipLabel = computed(
       : '-'
 )
 
-const canSave = computed(() => !!form.name.trim() && !!form.email.trim())
+const isPasswordDirty = computed(() =>
+  Boolean(passwordForm.current || passwordForm.new || passwordForm.confirmation)
+)
+
+const canChangePassword = computed(() => {
+  if (!isPasswordDirty.value) return true
+  if (!passwordForm.current || !passwordForm.new || !passwordForm.confirmation) {
+    return false
+  }
+  if (passwordForm.new.length < 8) return false
+  return passwordForm.new === passwordForm.confirmation
+})
+
+const passwordErrorMessage = computed(() => {
+  if (!isPasswordDirty.value || canChangePassword.value) return ''
+  if (!passwordForm.current || !passwordForm.new || !passwordForm.confirmation) {
+    return 'Isi seluruh kolom password sebelum menyimpan.'
+  }
+  if (passwordForm.new.length < 8) {
+    return 'Password baru minimal 8 karakter.'
+  }
+  if (passwordForm.new !== passwordForm.confirmation) {
+    return 'Konfirmasi password harus sama persis.'
+  }
+  return 'Password baru tidak valid.'
+})
+
+const canSave = computed(
+  () => !!form.name.trim() && !!form.email.trim() && canChangePassword.value
+)
 
 const resetForm = () => {
   if (!user.value) return
@@ -301,9 +369,15 @@ const resetForm = () => {
   form.phone = user.value.phoneNumber || user.value.phone || ''
   form.employmentIdentityNumber =
     user.value.employmentIdentityNumber || user.value.employment_identity_number || ''
-  form.password = ''
   previewAvatar.value = null
   avatarFile.value = null
+  resetPasswordForm()
+}
+
+const resetPasswordForm = () => {
+  passwordForm.current = ''
+  passwordForm.new = ''
+  passwordForm.confirmation = ''
 }
 
 const toggleEditMode = () => {
@@ -350,6 +424,13 @@ const logout = async () => {
 
 const saveProfile = async () => {
   if (!user.value || saving.value) return
+  if (!canSave.value) {
+    window.alert('Lengkapi data profil dan password sebelum menyimpan.')
+    return
+  }
+
+  const passwordDirtyBeforeSave = isPasswordDirty.value
+  let profileUpdated = false
 
   try {
     saving.value = true
@@ -366,7 +447,6 @@ const saveProfile = async () => {
     const payload = {
       name: form.name.trim(),
       email: form.email.trim(),
-      password: form.password || undefined,
       phone,
       phone_number: phone,
       employment_identity_number: nip,
@@ -378,20 +458,47 @@ const saveProfile = async () => {
       avatar: avatarFile.value || undefined,
     }
 
-    const result = await authStore.updateProfile(payload)
-    if (!result?.ok) {
-      throw new Error(result?.message || 'Gagal menyimpan profil')
+    const profileResult = await authStore.updateProfile(payload)
+    if (!profileResult?.ok) {
+      throw new Error(profileResult?.message || 'Gagal menyimpan profil')
+    }
+    profileUpdated = true
+
+    let passwordMessage = ''
+    if (passwordDirtyBeforeSave) {
+      const passwordResult = await authStore.updatePassword({
+        current_password: passwordForm.current,
+        password: passwordForm.new,
+        password_confirmation: passwordForm.confirmation,
+      })
+      if (!passwordResult?.ok) {
+        throw new Error(passwordResult?.message || 'Gagal memperbarui password')
+      }
+      passwordMessage = passwordResult?.message || 'Password berhasil diperbarui.'
     }
 
     editMode.value = false
     previewAvatar.value = null
     avatarFile.value = null
-    form.password = ''
+    resetPasswordForm()
 
-    window.alert(result?.message || 'Profile updated successfully!')
+    const profileMessage =
+      profileResult?.message || 'Profil berhasil diperbarui.'
+    window.alert(
+      passwordDirtyBeforeSave
+        ? `${profileMessage}\n${passwordMessage}`
+        : profileMessage
+    )
   } catch (err) {
     console.error('Error saving profile:', err)
-    window.alert('Failed to update profile.')
+    if (profileUpdated) {
+      window.alert(
+        err.message ||
+          'Profil tersimpan, tetapi gagal memperbarui password. Silakan coba lagi.'
+      )
+    } else {
+      window.alert(err.message || 'Failed to update profile.')
+    }
   } finally {
     saving.value = false
   }

@@ -59,15 +59,16 @@ function buildRoleFormData(payload = {}) {
       ? payload.permission_ids
       : Array.isArray(payload.permissions)
       ? payload.permissions
-      : payload.permission_id
-      ? [payload.permission_id]
+      : payload.permission_id !== undefined
+      ? Array.isArray(payload.permission_id)
+        ? payload.permission_id
+        : [payload.permission_id]
       : []
   )
     .map((permission) => (typeof permission === 'object' ? permission.id : permission))
     .filter(Boolean);
 
   permissionIds.forEach((permissionId) => formData.append('permission_id', permissionId));
-  formData.append('permission_ids', JSON.stringify(permissionIds));
 
   if (payload.is_default !== undefined || payload.isDefault !== undefined) {
     const isDefault = payload.is_default ?? payload.isDefault;

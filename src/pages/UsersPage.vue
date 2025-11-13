@@ -291,11 +291,13 @@ import FormUser from '@/components/form/FormUser.vue';
 import { useUserStore } from '@/stores/useUserStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useConfirmDialog } from '@/stores/useConfirmDialog';
+import { useNotificationCenter } from '@/stores/useNotificationCenter';
 import { useAuthorization } from '@/composables/auth/useAuthorization';
 
 const userStore = useUserStore();
 const roleStore = useRoleStore();
 const openConfirm = useConfirmDialog();
+const { notify } = useNotificationCenter();
 const { hasPermission } = useAuthorization();
 
 const canViewUsers = computed(() => hasPermission('users.index'));
@@ -453,15 +455,40 @@ function closeForm() {
 
 async function handleSubmit(payload) {
   if (!canViewUsers.value) return;
-  if (isEdit.value && selectedUser.value) {
-    if (!canUpdateUser.value) return;
-    await userStore.updateUser(selectedUser.value.id, payload);
-  } else {
-    if (!canCreateUser.value) return;
-    await userStore.createUser(payload);
+  try {
+    if (isEdit.value && selectedUser.value) {
+      if (!canUpdateUser.value) return;
+      const result = await userStore.updateUser(selectedUser.value.id, payload);
+      notify({
+        tone: 'success',
+        title: 'Pengguna diperbarui',
+        message: `${result?.data?.name || selectedUser.value.name || 'Pengguna'} berhasil diperbarui.`,
+        persist: false,
+      });
+    } else {
+      if (!canCreateUser.value) return;
+      const result = await userStore.createUser(payload);
+      notify({
+        tone: 'success',
+        title: 'Pengguna ditambahkan',
+        message: `${result?.data?.name || payload.name} berhasil ditambahkan.`,
+        persist: false,
+      });
+    }
+    closeForm();
+    lastRefreshedAt.value = new Date();
+  } catch (err) {
+    const message =
+      err.response?.data?.message ||
+      err.message ||
+      'Gagal menyimpan data pengguna. Silakan coba lagi.';
+    notify({
+      tone: 'error',
+      title: 'Gagal menyimpan pengguna',
+      message,
+      persist: false,
+    });
   }
-  closeForm();
-  lastRefreshedAt.value = new Date();
 }
 
 async function handleDelete(user) {
@@ -475,15 +502,53 @@ async function handleDelete(user) {
     variant: 'danger',
   });
   if (!ok) return;
-  await userStore.removeUser(user.id);
-  lastRefreshedAt.value = new Date();
+  try {
+    await userStore.removeUser(user.id);
+    notify({
+      tone: 'success',
+      title: 'Pengguna dihapus',
+      message: `${user.name} berhasil dihapus.`,
+      persist: false,
+    });
+    lastRefreshedAt.value = new Date();
+  } catch (err) {
+    const message =
+      err.response?.data?.message ||
+      err.message ||
+      'Gagal menghapus pengguna. Silakan coba lagi.';
+    notify({
+      tone: 'error',
+      title: 'Gagal menghapus pengguna',
+      message,
+      persist: false,
+    });
+  }
 }
 
 async function handleToggleStatus(user, isActive) {
   if (!canViewUsers.value) return;
   if (!canUpdateUser.value) return;
-  await userStore.toggleActive(user.id, isActive);
-  lastRefreshedAt.value = new Date();
+  try {
+    await userStore.toggleActive(user.id, isActive);
+    notify({
+      tone: 'success',
+      title: 'Status diperbarui',
+      message: `${user.name} sekarang ${isActive ? 'aktif' : 'tidak aktif'}.`,
+      persist: false,
+    });
+    lastRefreshedAt.value = new Date();
+  } catch (err) {
+    const message =
+      err.response?.data?.message ||
+      err.message ||
+      'Gagal memperbarui status pengguna.';
+    notify({
+      tone: 'error',
+      title: 'Gagal memperbarui status',
+      message,
+      persist: false,
+    });
+  }
 }
 </script>
 
