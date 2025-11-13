@@ -22,6 +22,8 @@ function normalizeUser(entry = {}) {
 
   const createdAt = entry.created_at || entry.createdAt || entry.created || '';
   const updatedAt = entry.updated_at || entry.updatedAt || entry.updated || '';
+  const activatedAt = entry.activated_at || entry.activatedAt || null;
+  const deactivatedAt = entry.deactivated_at || entry.deactivatedAt || null;
   const lastLoginAt =
     entry.last_login_at || entry.lastLoginAt || entry.lastSeen || '';
 
@@ -33,7 +35,7 @@ function normalizeUser(entry = {}) {
     entry.is_active ??
     entry.active ??
     (entry.status ? entry.status === 'active' : null) ??
-    (entry.deleted_at ? false : true);
+    (deactivatedAt ? false : activatedAt ? true : null);
 
   return {
     id: entry.id || `user-${Math.random().toString(36).slice(2, 10)}`,
@@ -49,6 +51,8 @@ function normalizeUser(entry = {}) {
     isActive,
     createdAt,
     updatedAt,
+    activatedAt,
+    deactivatedAt,
     lastLoginAt,
   };
 }
@@ -350,6 +354,37 @@ export const useUserStore = defineStore('user', {
 
     async toggleActive(id, isActive) {
       return this.updateUser(id, { is_active: isActive });
+    },
+
+    async toggleActivation(id) {
+      this.saving = true;
+      try {
+        const res = await api.patch(`/api/v1/users/${id}/activation/toggle`);
+        const payload = res.data?.data ?? res.data;
+        const updated = normalizeUser(payload?.user ?? payload);
+        const idx = this.users.findIndex((user) => user.id === id);
+        if (idx !== -1) this.users[idx] = updated;
+        await this.fetchUsers({ page: this.pagination.currentPage });
+        return {
+          ok: true,
+          data: updated,
+          message: res.data?.message || 'Status pengguna berhasil diperbarui.',
+        };
+      } catch (err) {
+        console.error('[UserStore] toggle activation gagal', err);
+        const message =
+          err.response?.data?.message ||
+          err.message ||
+          'Gagal memperbarui status pengguna.';
+        return {
+          ok: false,
+          message,
+          errors: err.response?.data?.errors || null,
+          status: err.response?.status || err.response?.data?.code || null,
+        };
+      } finally {
+        this.saving = false;
+      }
     },
   },
 });

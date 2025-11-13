@@ -168,8 +168,8 @@
                   :checked="row.isActive"
                   type="checkbox"
                   class="peer sr-only"
-                  :disabled="!canUpdateUser"
-                  @change="(event) => handleToggleStatus(row, event.target.checked)"
+                  :disabled="!canUpdateUser || togglingUserId === row.id"
+                  @change="() => handleToggleStatus(row)"
                 />
                 <div class="h-5 w-10 rounded-full bg-gray-300 transition peer-checked:bg-primary"></div>
                 <div class="absolute left-1 top-1 h-3 w-3 rounded-full bg-white transition peer-checked:translate-x-5"></div>
@@ -324,6 +324,7 @@ const selectedUser = ref(null);
 const isEdit = ref(false);
 const initialized = ref(false);
 let debounceTimer = null;
+const togglingUserId = ref(null);
 
 const rows = computed(() =>
   userStore.users.map((user) => ({
@@ -525,15 +526,20 @@ async function handleDelete(user) {
   }
 }
 
-async function handleToggleStatus(user, isActive) {
-  if (!canViewUsers.value) return;
-  if (!canUpdateUser.value) return;
+async function handleToggleStatus(user) {
+  if (!canViewUsers.value || !canUpdateUser.value) return;
+  if (togglingUserId.value === user.id) return;
+  togglingUserId.value = user.id;
   try {
-    await userStore.toggleActive(user.id, isActive);
+    const result = await userStore.toggleActivation(user.id);
+    if (!result?.ok) {
+      throw new Error(result?.message || 'Gagal memperbarui status pengguna.');
+    }
+    const statusLabel = result.data?.isActive ? 'aktif' : 'tidak aktif';
     notify({
       tone: 'success',
       title: 'Status diperbarui',
-      message: `${user.name} sekarang ${isActive ? 'aktif' : 'tidak aktif'}.`,
+      message: `${result.data?.name || user.name} sekarang ${statusLabel}.`,
       persist: false,
     });
     lastRefreshedAt.value = new Date();
@@ -548,6 +554,14 @@ async function handleToggleStatus(user, isActive) {
       message,
       persist: false,
     });
+    await userStore.fetchUsers({
+      page: userStore.pagination.currentPage,
+      search: userStore.filters.search,
+      roleId: userStore.filters.roleId,
+      status: userStore.filters.status,
+    });
+  } finally {
+    togglingUserId.value = null;
   }
 }
 </script>

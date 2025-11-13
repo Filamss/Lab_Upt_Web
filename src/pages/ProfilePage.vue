@@ -246,10 +246,12 @@
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { useNotificationCenter } from '@/stores/useNotificationCenter'
 import { buildInitialAvatar } from '@/utils/avatar'
 
 const authStore = useAuthStore()
 const { currentUser: user } = storeToRefs(authStore)
+const { notify } = useNotificationCenter()
 
 const editMode = ref(false)
 const saving = ref(false)
@@ -280,7 +282,7 @@ watch(
     if (!value) return
     form.name = value.name || ''
     form.email = value.email || ''
-    form.phone = value.phoneNumber || value.phone || ''
+    form.phone = value.phoneNumber || value.phone || value.phone_number || ''
     form.employmentIdentityNumber =
       value.employmentIdentityNumber || value.employment_identity_number || ''
   },
@@ -307,9 +309,17 @@ const roleNames = computed(() => {
 
 const primaryRoleLabel = computed(() => roleNames.value[0] || 'Role belum ditetapkan')
 
-const accountStatusLabel = computed(() => (user.value?.isActive ? 'Aktif' : 'Tidak Aktif'))
+const accountIsActive = computed(() => {
+  const current = user.value || {}
+  if (current.isActive !== undefined) return Boolean(current.isActive)
+  if (current.is_active !== undefined) return Boolean(current.is_active)
+  if (current.deactivatedAt || current.deactivated_at) return false
+  if (current.activatedAt || current.activated_at) return true
+  return true
+})
+const accountStatusLabel = computed(() => (accountIsActive.value ? 'Aktif' : 'Tidak Aktif'))
 const accountStatusClass = computed(() =>
-  user.value?.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'
+  accountIsActive.value ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'
 )
 
 const hasCustomerRole = computed(() => {
@@ -323,7 +333,9 @@ const hasCustomerRole = computed(() => {
 
 const showNipField = computed(() => !hasCustomerRole.value)
 
-const phoneLabel = computed(() => user.value?.phoneNumber || user.value?.phone || '-')
+const phoneLabel = computed(
+  () => user.value?.phoneNumber || user.value?.phone || user.value?.phone_number || '-'
+)
 const nipLabel = computed(
   () =>
     showNipField.value
@@ -366,7 +378,7 @@ const resetForm = () => {
   if (!user.value) return
   form.name = user.value.name || ''
   form.email = user.value.email || ''
-  form.phone = user.value.phoneNumber || user.value.phone || ''
+  form.phone = user.value.phoneNumber || user.value.phone || user.value.phone_number || ''
   form.employmentIdentityNumber =
     user.value.employmentIdentityNumber || user.value.employment_identity_number || ''
   previewAvatar.value = null
@@ -425,12 +437,18 @@ const logout = async () => {
 const saveProfile = async () => {
   if (!user.value || saving.value) return
   if (!canSave.value) {
-    window.alert('Lengkapi data profil dan password sebelum menyimpan.')
+    notify({
+      tone: 'warning',
+      title: 'Form belum lengkap',
+      message:
+        passwordErrorMessage.value ||
+        'Lengkapi data wajib sebelum menyimpan profil.',
+      persist: false,
+    })
     return
   }
 
   const passwordDirtyBeforeSave = isPasswordDirty.value
-  let profileUpdated = false
 
   try {
     saving.value = true
@@ -453,52 +471,71 @@ const saveProfile = async () => {
       employmentIdentityNumber: nip,
       roles: roleIds,
       role_ids: roleIds,
-      isActive: user.value.isActive,
-      is_active: user.value.isActive,
+      isActive: accountIsActive.value,
+      is_active: accountIsActive.value,
       avatar: avatarFile.value || undefined,
     }
 
     const profileResult = await authStore.updateProfile(payload)
     if (!profileResult?.ok) {
-      throw new Error(profileResult?.message || 'Gagal menyimpan profil')
-    }
-    profileUpdated = true
-
-    let passwordMessage = ''
-    if (passwordDirtyBeforeSave) {
-      const passwordResult = await authStore.updatePassword({
-        current_password: passwordForm.current,
-        password: passwordForm.new,
-        password_confirmation: passwordForm.confirmation,
-      })
-      if (!passwordResult?.ok) {
-        throw new Error(passwordResult?.message || 'Gagal memperbarui password')
-      }
-      passwordMessage = passwordResult?.message || 'Password berhasil diperbarui.'
+      throw new Error(profileResult?.message || 'Gagal menyimpan profil.')
     }
 
     editMode.value = false
     previewAvatar.value = null
     avatarFile.value = null
-    resetPasswordForm()
 
-    const profileMessage =
-      profileResult?.message || 'Profil berhasil diperbarui.'
-    window.alert(
-      passwordDirtyBeforeSave
-        ? `${profileMessage}\n${passwordMessage}`
-        : profileMessage
-    )
+    notify({
+      tone: 'success',
+      title: 'Profil diperbarui',
+      message: profileResult?.message || 'Profil berhasil diperbarui.',
+      persist: false,
+    })
+
+    if (passwordDirtyBeforeSave) {
+      try {
+        const passwordResult = await authStore.updatePassword({
+          current_password: passwordForm.current,
+          password: passwordForm.new,
+          password_confirmation: passwordForm.confirmation,
+        })
+        if (!passwordResult?.ok) {
+          throw new Error(
+            passwordResult?.message || 'Gagal memperbarui password.'
+          )
+        }
+        resetPasswordForm()
+        notify({
+          tone: 'success',
+          title: 'Password diperbarui',
+          message: passwordResult?.message || 'Password berhasil diperbarui.',
+          persist: false,
+        })
+      } catch (passwordErr) {
+        console.error('Password update failed:', passwordErr)
+        notify({
+          tone: 'error',
+          title: 'Password belum berubah',
+          message:
+            passwordErr.message ||
+            'Profil tersimpan, tetapi gagal memperbarui password.',
+          persist: false,
+        })
+        return
+      }
+    } else {
+      resetPasswordForm()
+    }
   } catch (err) {
     console.error('Error saving profile:', err)
-    if (profileUpdated) {
-      window.alert(
+    notify({
+      tone: 'error',
+      title: 'Gagal menyimpan profil',
+      message:
         err.message ||
-          'Profil tersimpan, tetapi gagal memperbarui password. Silakan coba lagi.'
-      )
-    } else {
-      window.alert(err.message || 'Failed to update profile.')
-    }
+        'Terjadi kesalahan saat menyimpan profil. Silakan coba lagi.',
+      persist: false,
+    })
   } finally {
     saving.value = false
   }
