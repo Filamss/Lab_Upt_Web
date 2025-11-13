@@ -361,6 +361,7 @@ import { provideConfirmDialog } from '@/stores/useConfirmDialog';
 import { provideNotificationCenter } from '@/stores/useNotificationCenter';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 import { useAuthorization } from '@/composables/auth/useAuthorization';
+import { buildInitialAvatar } from '@/utils/avatar';
 
 const collapsed = ref(false);
 const showMobileSidebar = ref(false);
@@ -580,9 +581,13 @@ const pageTitle = computed(() => {
 });
 
 const currentUserName = computed(() => authStore.currentUser?.name || 'Guest');
-const avatarUrl = computed(
-  () => authStore.currentUser?.avatarUrl || '/img/avatar-default.png'
-);
+const avatarUrl = computed(() => {
+  const user = authStore.currentUser;
+  const directAvatar =
+    user?.avatarUrl || user?.avatar_url || user?.avatar || user?.photoUrl;
+  if (directAvatar) return directAvatar;
+  return buildInitialAvatar(user?.name || 'Guest');
+});
 
 async function logout() {
   const ok = await openConfirmDialog({

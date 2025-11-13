@@ -211,6 +211,7 @@
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { buildInitialAvatar } from '@/utils/avatar'
 
 const authStore = useAuthStore()
 const { currentUser: user } = storeToRefs(authStore)
@@ -247,7 +248,16 @@ watch(
   { immediate: true }
 )
 
-const userAvatar = computed(() => user.value?.avatar || 'https://placehold.co/100x100')
+const userAvatar = computed(() => {
+  const current = user.value
+  const directAvatar =
+    current?.avatar ||
+    current?.avatarUrl ||
+    current?.avatar_url ||
+    current?.photoUrl
+  if (directAvatar) return directAvatar
+  return buildInitialAvatar(current?.name || 'SIAPEL User')
+})
 
 const roleNames = computed(() => {
   if (!Array.isArray(user.value?.roles)) return []
