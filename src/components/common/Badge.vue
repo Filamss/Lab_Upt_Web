@@ -90,6 +90,12 @@ const statusMap = {
     border: 'border border-blue-200',
     label: 'Siap Kaji Ulang',
   },
+  awaiting_kaji_ulang: {
+    bg: 'bg-sky-100',
+    text: 'text-sky-700',
+    border: 'border border-sky-200',
+    label: 'Menunggu Kaji Ulang',
+  },
   cancelled: {
     bg: 'bg-gray-200',
     text: 'text-gray-600',

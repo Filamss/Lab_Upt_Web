@@ -246,14 +246,6 @@
         >
           {{ isEdit ? 'Simpan Perubahan' : 'Simpan' }}
         </button>
-        <button
-          type="button"
-          class="w-full sm:w-auto px-4 py-2 rounded-md bg-success text-white text-sm font-medium hover:bg-emerald-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="!canSaveAndPay"
-          @click="submitWith('save-pay')"
-        >
-          Simpan &amp; Bayar
-        </button>
       </div>
     </form>
   </div>
@@ -548,12 +540,6 @@ const canSave = computed(() => {
   return hasCustomer && hasEntryDate && normalizedTestItems.value.length > 0;
 });
 
-const canSaveAndPay = computed(() => {
-  return (
-    canSave.value && normalizedTestItems.value.every((item) => item.price > 0)
-  );
-});
-
 function itemSubtotal(item) {
   return (
     Math.max(0, Number(item.price) || 0) *
@@ -601,33 +587,24 @@ function buildPayload() {
   };
 }
 
-async function submitWith(action = 'save') {
-  if (action === 'save-pay' && !canSaveAndPay.value) return;
-  if (action !== 'save-pay' && !canSave.value) return;
+async function submitWith() {
+  if (!canSave.value) return;
   const confirmed = await openConfirm({
-    title:
-      action === 'save-pay'
-        ? 'Simpan & lanjutkan pembayaran?'
-        : isEditMode.value
-        ? 'Simpan perubahan permintaan?'
-        : 'Simpan permintaan baru?',
-    message:
-      action === 'save-pay'
-        ? 'Data permintaan akan disimpan dan Anda akan diarahkan ke form pembayaran.'
-        : 'Pastikan informasi permintaan sudah lengkap sebelum melanjutkan.',
-    confirmLabel: action === 'save-pay' ? 'Simpan & Bayar' : 'Simpan',
+    title: isEditMode.value
+      ? 'Simpan perubahan permintaan?'
+      : 'Simpan permintaan baru?',
+    message: 'Pastikan informasi permintaan sudah lengkap sebelum melanjutkan.',
+    confirmLabel: 'Simpan',
   });
   if (!confirmed) return;
   const payload = buildPayload();
-  if (action === 'save-pay') {
-    payload.status = 'pending_payment';
-  } else if (!isEditMode.value) {
-    payload.status = payload.status || 'draft';
+  if (!isEditMode.value || payload.status === 'draft') {
+    payload.status = 'awaiting_kaji_ulang';
   }
-  emit('submit', { action, data: payload });
+  emit('submit', { action: 'save', data: payload });
 }
 
 function handleSubmit() {
-  submitWith('save');
+  submitWith();
 }
 </script>

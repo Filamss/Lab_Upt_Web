@@ -335,6 +335,41 @@ const cloneTestItems = (items = []) =>
 
 const clonePaymentInfo = (info) => (info ? { ...info } : null);
 
+const sumFormTestItems = (items = []) =>
+  (items || []).reduce((total, item) => {
+    const price = Math.max(0, Number(item.price) || 0);
+    const quantity = Math.max(1, Number(item.quantity) || 1);
+    return total + price * quantity;
+  }, 0);
+
+function buildInvoiceDetail() {
+  const items = cloneTestItems(form.testItems);
+  const baseInfo = clonePaymentInfo(form.paymentInfo) || {};
+  const computedTotal = sumFormTestItems(items);
+  const allowedStatuses = ['payment_pending_review', 'payment_verified'];
+  const statusCandidate = baseInfo.status || 'pending_payment';
+  const status = allowedStatuses.includes(statusCandidate)
+    ? statusCandidate
+    : 'pending_payment';
+  const amountPaid = Math.max(0, Number(baseInfo.amountPaid) || 0);
+  const total = baseInfo.total ?? computedTotal;
+  const outstanding =
+    baseInfo.outstanding ?? Math.max(total - amountPaid, 0);
+  return {
+    ...baseInfo,
+    status,
+    reviewStatus:
+      status === 'pending_payment'
+        ? 'invoice_ready'
+        : baseInfo.reviewStatus || 'pending',
+    total,
+    amountPaid,
+    outstanding,
+    transferFiles: baseInfo.transferFiles || [],
+    testRows: items,
+  };
+}
+
 const resolveYearFromDate = (value) => {
   if (!value) return '';
   const date = new Date(value);
@@ -409,6 +444,8 @@ const columns = [
 
 const statusOptions = [
   { value: '', label: 'Semua Status' },
+  { value: 'awaiting_kaji_ulang', label: 'Menunggu Kaji Ulang' },
+  { value: 'pending_payment', label: 'Menunggu Pembayaran' },
   { value: 'payment_pending_review', label: 'Menunggu Review Pembayaran' },
   { value: 'ready_for_kaji_ulang', label: 'Siap Kaji Ulang' },
   { value: 'payment_verified', label: 'Pembayaran Terverifikasi' },
@@ -469,16 +506,14 @@ const buildSampleCodes = (order = {}) => {
 
 const tableRows = computed(() =>
   kajiUlangStore.orders
-    .filter((order) => !!order.paymentInfo && order.status !== 'cancelled')
+    .filter((order) => order.status !== 'cancelled')
     .map((order) => {
-      const reviewStatus = order.paymentInfo?.reviewStatus || 'pending';
-      const paymentBadgeStatus =
-        reviewStatus === 'approved'
-          ? 'payment_verified'
-          : reviewStatus === 'rejected'
-          ? 'payment_review_rejected'
-          : 'payment_pending_review';
       const sampleCodes = buildSampleCodes(order);
+      const hasInvoice = Boolean(order.paymentInfo);
+      const paymentStatus = order.paymentInfo?.status || 'pending_payment';
+      const paymentBadgeStatus = hasInvoice
+        ? paymentStatus
+        : 'awaiting_kaji_ulang';
       return {
         id: order.id,
         orderNo: order.orderNo,
@@ -488,14 +523,16 @@ const tableRows = computed(() =>
         customerName: order.customerName || '',
         status: order.status,
         testType: order.testType || '-',
-        paymentReviewStatus: reviewStatus,
+        paymentReviewStatus: order.paymentInfo?.reviewStatus || null,
         paymentBadgeStatus,
         paymentInfo: order.paymentInfo,
         canReviewPayment:
-          reviewStatus !== 'approved' && order.status !== 'cancelled',
-        canOpenForm:
-          reviewStatus === 'approved' &&
-          !['in_testing', 'completed'].includes(order.status),
+          order.paymentInfo?.status === 'payment_pending_review',
+        canOpenForm: ![
+          'completed',
+          'in_testing',
+          'payment_verified',
+        ].includes(order.status),
         canDelete: !['in_testing', 'completed'].includes(order.status),
       };
     })
@@ -562,11 +599,11 @@ function handleEdit(row) {
     kajiUlangStore.orders.find((o) => o.id === row.id) ||
     kajiUlangStore.orders.find((o) => o.orderNo === row.orderNo);
   if (!order) return;
-  if (order.paymentInfo?.reviewStatus !== 'approved') {
+  if (['payment_verified', 'completed', 'in_testing'].includes(order.status)) {
     pushToast({
       tone: 'warning',
       title: 'Belum Bisa Dibuka',
-      message: 'Bukti pembayaran belum disetujui. Selesaikan review terlebih dahulu.',
+      message: 'Order sudah terkunci karena pembayaran selesai.',
     });
     return;
   }
@@ -649,7 +686,7 @@ async function approvePaymentEvidence() {
     pushToast({
       tone: 'success',
       title: 'Pembayaran Disetujui',
-      message: `Order ${updated.orderNo || '-'} siap dilanjutkan ke kaji ulang.`,
+      message: `Order ${updated.orderNo || '-'} siap diteruskan ke proses pengujian.`,
     });
   }
   closeReviewModal();
@@ -677,7 +714,7 @@ async function rejectPaymentEvidence() {
     pushToast({
       tone: 'error',
       title: 'Bukti Ditolak',
-      message: `Permintaan ${updated.orderNo || '-'} dibatalkan.`,
+      message: `Permintaan ${updated.orderNo || '-'} membutuhkan unggahan ulang bukti pembayaran.`,
     });
   }
   closeReviewModal();
@@ -715,19 +752,8 @@ async function lookupOrder(orderNo) {
         }
       }
 
-      const paymentInfo = request.paymentInfo;
-      const approved =
-        paymentInfo?.reviewStatus === 'approved' ||
-        request.status === 'payment_verified';
-
-      if (!approved) {
-        lookupError.value =
-          'Pembayaran belum terverifikasi atau masih dalam review.';
-        return;
-      }
-
       order = kajiUlangStore.upsertFromRequest(request, {
-        paymentDetail: paymentInfo,
+        paymentDetail: request.paymentInfo || null,
       });
     }
 
@@ -786,7 +812,7 @@ function saveDraft() {
   });
 }
 
-function approveReview() {
+async function approveReview() {
   if (!form.orderNo) {
     pushToast({
       tone: 'warning',
@@ -803,6 +829,7 @@ function approveReview() {
     });
     return;
   }
+  const invoiceDetail = buildInvoiceDetail();
   if (editingOrderId.value) {
     kajiUlangStore.updateOrder(editingOrderId.value, {
       orderNumber: form.orderNumber,
@@ -813,7 +840,8 @@ function approveReview() {
       testType: form.testType,
       note: form.note,
       testItems: cloneTestItems(form.testItems),
-      paymentInfo: clonePaymentInfo(form.paymentInfo),
+      paymentInfo: invoiceDetail,
+      status: invoiceDetail.status,
     });
     kajiUlangStore.updateReview(editingOrderId.value, {
       rows: reviewRows,
@@ -833,11 +861,8 @@ function approveReview() {
       testType: form.testType,
       note: form.note,
       testItems: cloneTestItems(form.testItems),
-      status: 'pending_validation',
-      paymentInfo: clonePaymentInfo(form.paymentInfo) || {
-        status: 'payment_verified',
-        reviewStatus: 'approved',
-      },
+      status: invoiceDetail.status,
+      paymentInfo: invoiceDetail,
     });
     kajiUlangStore.updateReview(created.id, {
       rows: reviewRows,
@@ -846,12 +871,20 @@ function approveReview() {
       validator: 'Manajer Teknis',
     });
   }
+  try {
+    await permintaanStore.updateRequest(form.orderNo, {
+      status: invoiceDetail.status,
+      paymentInfo: invoiceDetail,
+    });
+  } catch (err) {
+    console.error('Gagal sinkron status permintaan', err);
+  }
   showForm.value = false;
   resetForm();
   pushToast({
     tone: 'success',
-    title: 'Kaji Ulang Disimpan',
-    message: 'Data siap melanjutkan proses validasi.',
+    title: 'Draft Kaji Ulang Disimpan',
+    message: 'Invoice siap dibagikan ke pelanggan untuk proses pembayaran.',
   });
 }
 

@@ -99,9 +99,10 @@ function normalizePaymentDetail(detail = {}, orderNo = '') {
   };
 }
 
-function deriveOrderStatusFromPayment(paymentInfo) {
-  if (!paymentInfo) return 'draft';
-  if (paymentInfo.reviewStatus === 'approved') return 'ready_for_kaji_ulang';
+function deriveOrderStatusFromPayment(paymentInfo, fallbackStatus = 'awaiting_kaji_ulang') {
+  if (!paymentInfo) return fallbackStatus;
+  if (paymentInfo.status) return paymentInfo.status;
+  if (paymentInfo.reviewStatus === 'approved') return 'payment_verified';
   if (paymentInfo.reviewStatus === 'rejected') return 'payment_review_rejected';
   return 'payment_pending_review';
 }
@@ -118,7 +119,7 @@ function buildDummyOrder(base = {}, paymentDetail = {}) {
     orderYear,
     sampleNo: base.sampleNo || '',
     date: base.date || new Date().toISOString().slice(0, 10),
-    status: deriveOrderStatusFromPayment(paymentInfo),
+    status: deriveOrderStatusFromPayment(paymentInfo, base.status),
     total: paymentInfo?.total ?? 0,
     downPayment: paymentInfo?.amountPaid ?? 0,
     remaining: paymentInfo?.outstanding ?? 0,
@@ -336,7 +337,7 @@ export const useKajiUlangStore = defineStore('kajiUlang', {
         kajiUlangValidatedAt: null,
         kajiUlangValidatedBy: null,
         paymentInfo,
-        status: deriveOrderStatusFromPayment(paymentInfo),
+        status: deriveOrderStatusFromPayment(paymentInfo, order?.status),
         ...order,
       };
       this.orders.push(newOrder);
@@ -356,7 +357,7 @@ export const useKajiUlangStore = defineStore('kajiUlang', {
           paymentInfo,
           status:
             updates.status ||
-            deriveOrderStatusFromPayment(paymentInfo) ||
+            deriveOrderStatusFromPayment(paymentInfo, current.status) ||
             current.status,
         };
       }
@@ -401,19 +402,21 @@ export const useKajiUlangStore = defineStore('kajiUlang', {
           (request.entryDate ? String(request.entryDate).slice(0, 4) : ''),
         sampleNo: request.sampleNo || '',
         date: request.entryDate || new Date().toISOString().slice(0, 10),
-        status: deriveOrderStatusFromPayment(normalizedPayment),
+        status: deriveOrderStatusFromPayment(normalizedPayment, request.status),
         total: normalizedPayment?.total ?? totalFromItems,
-        downPayment:
-          normalizedPayment?.amountPaid ??
-          normalizedPayment?.total ??
-          totalFromItems,
-        remaining:
-          normalizedPayment?.outstanding ??
-          Math.max(
-            (normalizedPayment?.total ?? totalFromItems) -
-              (normalizedPayment?.amountPaid ?? 0),
-            0
-          ),
+        downPayment: normalizedPayment
+          ? normalizedPayment.amountPaid ??
+            normalizedPayment.total ??
+            totalFromItems
+          : 0,
+        remaining: normalizedPayment
+          ? normalizedPayment.outstanding ??
+            Math.max(
+              (normalizedPayment.total ?? totalFromItems) -
+                (normalizedPayment.amountPaid ?? 0),
+              0
+            )
+          : totalFromItems,
         customerName: request.customerName || '',
         customerPhone: request.phoneNumber || request.customerPhone || '',
         customerAddress: request.address || request.customerAddress || '',
@@ -476,10 +479,10 @@ export const useKajiUlangStore = defineStore('kajiUlang', {
       const current = this.orders[idx];
       if (!current.paymentInfo) return current;
       const reviewStatus = approved ? 'approved' : 'rejected';
-      const status = approved ? 'ready_for_kaji_ulang' : 'cancelled';
+      const status = approved ? 'payment_verified' : 'payment_review_rejected';
       const paymentInfo = {
         ...current.paymentInfo,
-        status: approved ? 'payment_verified' : 'payment_review_rejected',
+        status,
         reviewStatus,
         reviewedBy: reviewer || '',
         reviewedAt: new Date().toISOString(),

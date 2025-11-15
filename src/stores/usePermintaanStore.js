@@ -70,6 +70,7 @@ function normalizeRequestEntry(entry = {}) {
 
 export const requestStatusLabels = {
   draft: 'Draft',
+  awaiting_kaji_ulang: 'Menunggu Kaji Ulang',
   pending_payment: 'Menunggu Pembayaran',
   payment_pending_review: 'Menunggu Review Pembayaran',
   payment_verified: 'Pembayaran Terverifikasi',
@@ -154,7 +155,7 @@ function createDummyRequests() {
       },
     },
     {
-      idOrder: '01K8WJ96E56HTJCC9CJ97MM78P',
+      idOrder: 'ORD-202501-004',
       entryDate: '2025-01-08',
       customerName: 'CV Sinar Terang Abadi',
       phoneNumber: '0283-778899',
@@ -170,25 +171,8 @@ function createDummyRequests() {
           price: 375000,
         },
       ],
-      status: 'payment_pending_review',
-      paymentInfo: {
-        status: 'payment_pending_review',
-        reviewStatus: 'pending',
-        total: 375000,
-        amountPaid: 375000,
-        outstanding: 0,
-        paymentDate: '2025-01-08T13:45:00Z',
-        paymentDeadline: '2025-01-10T00:00:00Z',
-        transferFiles: [
-          {
-            id: 'ORD-202501-004-evidence-1',
-            name: 'Screenshot-Transfer-ORD-004.jpg',
-            size: 198765,
-            type: 'image/jpeg',
-            previewUrl: 'https://dummyimage.com/600x360/fefcbf/7f5539&text=Screenshot',
-          },
-        ],
-      },
+      status: 'awaiting_kaji_ulang',
+      paymentInfo: null,
     },
     {
       idOrder: '01K8WJ96E56HTJCC9CJ97MM78P',
@@ -207,27 +191,15 @@ function createDummyRequests() {
           price: 420000,
         },
       ],
-      status: 'payment_review_rejected',
+      status: 'pending_payment',
       paymentInfo: {
-        status: 'payment_review_rejected',
-        reviewStatus: 'rejected',
+        status: 'pending_payment',
+        reviewStatus: 'invoice_ready',
         total: 420000,
         amountPaid: 0,
         outstanding: 420000,
-        paymentDate: '2025-01-09T10:15:00Z',
-        paymentDeadline: '2025-01-11T00:00:00Z',
-        reviewedBy: 'Admin Pembayaran',
-        reviewedAt: '2025-01-09T11:00:00Z',
-        reviewNote: 'Foto tidak menunjukkan bukti transfer yang jelas.',
-        transferFiles: [
-          {
-            id: '01K8WJ96E56HTJCC9CJ97MM78P-evidence-1',
-            name: 'Foto-WhatsApp.jpg',
-            size: 156789,
-            type: 'image/jpeg',
-            previewUrl: 'https://dummyimage.com/600x360/ffe0e0/9b2c2c&text=Foto+Blur',
-          },
-        ],
+        paymentDeadline: '2025-01-13T00:00:00Z',
+        transferFiles: [],
       },
     },
     {
@@ -361,6 +333,12 @@ export const usePermintaanStore = defineStore('request', {
         this.requestList = remote.map((entry) => normalizeRequestEntry(entry));
         this.rebuildOrderNumberCache();
         this.error = null;
+        const kajiUlangStore = useKajiUlangStore();
+        this.requestList.forEach((request) => {
+          kajiUlangStore.upsertFromRequest(request, {
+            paymentDetail: request.paymentInfo || null,
+          });
+        });
       } catch (err) {
         console.warn('[PermintaanStore] API belum tersedia, memakai dummy data.');
         this.error = 'Dummy mode aktif (API belum terhubung).';
@@ -393,12 +371,10 @@ export const usePermintaanStore = defineStore('request', {
         }
         this.requestList.push(newData);
         this.rebuildOrderNumberCache();
-        if (newData.paymentInfo) {
-          const kajiUlangStore = useKajiUlangStore();
-          kajiUlangStore.upsertFromRequest(newData, {
-            paymentDetail: newData.paymentInfo,
-          });
-        }
+        const kajiUlangStore = useKajiUlangStore();
+        kajiUlangStore.upsertFromRequest(newData, {
+          paymentDetail: newData.paymentInfo || null,
+        });
         logRequestEvent({
           request: newData,
           status: newData.status,
@@ -416,12 +392,10 @@ export const usePermintaanStore = defineStore('request', {
         });
         this.requestList.push(newData);
         this.rebuildOrderNumberCache();
-        if (newData.paymentInfo) {
-          const kajiUlangStore = useKajiUlangStore();
-          kajiUlangStore.upsertFromRequest(newData, {
-            paymentDetail: newData.paymentInfo,
-          });
-        }
+        const kajiUlangStore = useKajiUlangStore();
+        kajiUlangStore.upsertFromRequest(newData, {
+          paymentDetail: newData.paymentInfo || null,
+        });
         logRequestEvent({
           request: newData,
           status: newData.status,
@@ -464,13 +438,9 @@ export const usePermintaanStore = defineStore('request', {
         this.rebuildOrderNumberCache();
 
         const kajiUlangStore = useKajiUlangStore();
-        if (updated.paymentInfo) {
-          kajiUlangStore.upsertFromRequest(updated, {
-            paymentDetail: updated.paymentInfo,
-          });
-        } else {
-          kajiUlangStore.removeOrder(idOrder);
-        }
+        kajiUlangStore.upsertFromRequest(updated, {
+          paymentDetail: updated.paymentInfo || null,
+        });
 
         if (payload?.status) {
           logRequestEvent({

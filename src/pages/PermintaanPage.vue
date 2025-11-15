@@ -105,6 +105,14 @@
                 <TrashIcon class="w-5 h-5" />
               </button>
               <button
+                v-if="canOpenPayment(row)"
+                class="p-1.5 rounded-md hover:bg-amber-50 text-amber-600 hover:text-amber-800"
+                @click="openPaymentModal(row)"
+                title="Input Pembayaran"
+              >
+                <BanknotesIcon class="w-5 h-5" />
+              </button>
+              <button
                 class="p-1.5 rounded-md hover:bg-emerald-50 text-emerald-600 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
                 :title="canPrint(row) ? 'Preview & Cetak' : 'Cetak tersedia setelah pembayaran terverifikasi'"
                 :disabled="!canPrint(row)"
@@ -336,6 +344,7 @@ import {
   TrashIcon,
   EyeIcon,
   XCircleIcon,
+  BanknotesIcon,
 } from '@heroicons/vue/24/outline';
 import FormPermintaan from '@/components/form/FormPermintaan.vue';
 import FormPayment from '@/components/form/FormPayment.vue';
@@ -364,7 +373,7 @@ const previewRequest = ref(null);
 const openConfirm = useConfirmDialog();
 const { notify } = useNotificationCenter();
 const sampleShipmentMessage =
-  'Sample uji harap dikirim ke Laboratorium UPT lab di Jalan Raya Dampyak KM 4, Kec. Kramat, Kabupaten Tegal, Jawa Tengah 52181 untuk proses kaji ulang.';
+  'Bukti pembayaran telah dikirim. Admin akan mereview sebelum melanjutkan proses pengujian.';
 
 onMounted(() => {
   store.fetchAll();
@@ -425,6 +434,7 @@ const columns = [
 const requestStatusOptions = [
   { value: '', label: 'Semua Status' },
   { value: 'draft', label: 'Draft' },
+  { value: 'awaiting_kaji_ulang', label: 'Menunggu Kaji Ulang' },
   { value: 'pending_payment', label: 'Menunggu Pembayaran' },
   { value: 'payment_pending_review', label: 'Menunggu Review Pembayaran' },
   { value: 'payment_verified', label: 'Pembayaran Terverifikasi' },
@@ -489,6 +499,25 @@ function openEditModal(item) {
   showModal.value = true;
 }
 
+function canOpenPayment(row) {
+  if (!row) return false;
+  const allowedStatuses = ['pending_payment', 'payment_review_rejected'];
+  return (
+    allowedStatuses.includes(row.status) && Array.isArray(row.testItems) && row.testItems.length > 0
+  );
+}
+
+function openPaymentModal(row) {
+  if (!canOpenPayment(row)) return;
+  paymentContext.value = {
+    orderId: row.idOrder,
+    customerName: row.customerName,
+    entryDate: row.entryDate,
+    rows: buildPaymentRows(row.testItems),
+  };
+  showPaymentModal.value = true;
+}
+
 function buildPaymentRows(items = []) {
   return (items || []).map((item) => {
     const test =
@@ -511,7 +540,6 @@ function buildPaymentRows(items = []) {
 }
 
 async function handleFormSubmit(payload) {
-  const action = payload?.action || 'save';
   const data = payload?.data || {};
   let savedData = null;
 
@@ -526,17 +554,6 @@ async function handleFormSubmit(payload) {
 
   showModal.value = false;
   selectedRequest.value = null;
-
-  if (savedData && action === 'save-pay') {
-    paymentContext.value = {
-      orderId: savedData.idOrder,
-      customerName: savedData.customerName,
-      entryDate: savedData.entryDate,
-      rows: buildPaymentRows(savedData.testItems),
-    };
-    showPaymentModal.value = true;
-  }
-
   isEdit.value = false;
 }
 
